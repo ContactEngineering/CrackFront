@@ -2,7 +2,16 @@
 import numpy as np
 from Adhesion.ReferenceSolutions import JKR
 
-K = JKR.stress_intensity_factor
+def cart2pol(x1, x2):
+    r = np.sqrt(x1 ** 2 + x2 ** 2)
+    mask = r > 0
+    phi = np.zeros_like(r)
+    phi[mask] = np.arccos(x1[mask] / r[mask]) * np.sign(x2[mask])
+    return r, phi
+
+def pol2cart(radius, angle):
+    return radius * np.cos(angle), radius * np.sin(angle)
+
 
 class NegativeRadiusError(Exception):
     pass
@@ -76,3 +85,6 @@ class SphereCrackFrontPenetration():
         self.gradient = gradient
         self.hessian = hessian
 
+
+
+# TODO: assert that the full linear and the less linear converge to the same deflection of the crack front.
