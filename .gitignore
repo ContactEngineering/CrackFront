@@ -6,4 +6,7 @@ dist
 *egg-info
 .ipynb_checkpoints
 
+*.ipynb
+# since we are using jupytext
+
 
