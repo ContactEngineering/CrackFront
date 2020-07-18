@@ -4,6 +4,7 @@ from CrackFront.Circular import SphereCrackFrontPenetration
 import numpy as np
 import pytest
 
+
 @pytest.mark.parametrize("lin", [True, False])
 def test_circular_front_vs_jkr(lin):
     """
@@ -52,3 +53,84 @@ def test_circular_front_vs_jkr(lin):
         assert abs(penetration - JKR.penetration(contact_radius, )) < 1e-10
 
         a = sol.x
+
+@pytest.mark.parametrize("penetration",  [-0.4, 1.])
+@pytest.mark.parametrize("n_rays",  [1, 8])
+@pytest.mark.parametrize("npx",  [2, 3, 128])
+def test_single_sinewave(penetration, n_rays, npx):
+    r"""
+    For a sinusoidal stress intensity factor fluctuation,
+    the shape of the crack front can be solved by hand (using the fully
+    linearized version of the equaiton)
+
+    For the stress intensity factor distribution
+    .. math ::
+
+        K_c(\theta) = \bar K_c (1 + dK \cos(n \theta))
+
+    The contact radius takes the form
+
+    .. math ::
+
+        a(\theta) = a_0 + da \cos(\theta)
+
+    with
+
+    .. math ::
+
+        da = \frac{\bar K_c dK}{
+        \frac{\partial K^0}{\partial da}(a_0, \Delta) +
+        \frac{|n| K^0(a_0, \Delta)}{2 a_0}
+        }
+
+    and :math:`a_0` the solution of
+
+    .. math ::
+
+        \bar K_c = K^0(a_0, \Delta)
+
+    """
+    w = 1 / np.pi
+    Es = 3. / 4
+    mean_Kc = np.sqrt(2 * Es * w)
+
+    dK = 0.4
+
+    def kc(radius, angle):
+        return (1 + dK * np.cos(angle * n_rays)) * mean_Kc
+
+    def dkc(radius, angle):
+        return np.zeros_like(radius)
+
+    cf = SphereCrackFrontPenetration(npx,
+                                     kc=kc,
+                                     dkc=dkc,
+                                     lin=True)
+    # initial guess: 
+    a = np.ones(npx) * JKR.contact_radius(penetration=penetration)
+    sol = trustregion_newton_cg(
+                x0=a, gradient=lambda a: cf.gradient(a, penetration),
+                hessian=lambda a: cf.hessian(a, penetration),
+                trust_radius=0.25 * np.min(a),
+                maxiter=3000,
+                gtol=1e-11)
+    assert sol.success
+    assert (abs(cf.gradient(sol.x, penetration)) < 1e-11).all() #
+    radii_cf = sol.x
+    
+    # Reference
+    a0 = JKR.contact_radius(penetration=penetration)
+    radii_lin_by_hand = dK * mean_Kc / (
+        JKR.stress_intensity_factor(a0, penetration, der="1_a")
+        + JKR.stress_intensity_factor(a0, penetration) / (2*a0)
+        ) * np.cos(cf.angles) + a0
+
+
+
+
+def test_converges_to_linear():
+    r"""
+    asserts the less linearized model converges to the linearized one as the
+    radius decreases.
+    """
+    pass
