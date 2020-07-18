@@ -212,22 +212,6 @@ def simulate_CM():
 def simulate_CF(pausetime=0.00001):
 
     n = 64
-
-    dy = sy / n
-    y = np.arange(n) * dy
-
-    q = 2 * np.pi * np.fft.rfftfreq(n, sy / n)
-
-    # Defining residual and jacobian
-    elastic_jac = np.zeros((n,n))
-    v = np.fft.irfft(q/2, n=n)
-    for i in range(n):
-        for j in range(n):
-            elastic_jac[i, j] = v[i-j]
-    # check elastic jacobian
-    a_test = np.random.normal(size = n)
-    np.testing.assert_allclose(elastic_jac @ a_test, np.fft.irfft(q / 2 * np.fft.rfft(a_test), n=n))
-
     cf = SinewaveCrackFrontLoad(n=n, sy=sy, kc=kc, dkc=dkc)
 
     #TODO: implement hessian product
