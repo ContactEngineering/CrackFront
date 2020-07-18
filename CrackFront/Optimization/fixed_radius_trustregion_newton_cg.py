@@ -4,7 +4,8 @@ from scipy.optimize._trustregion_ncg import CGSteihaugSubproblem
 import numpy as np
 
 def trustregion_newton_cg(x0, gradient, hessian=None, hessian_product=None,
-                                 trust_radius=0.5, gtol=1e-6, maxiter=1000):
+                                 trust_radius=0.5, gtol=1e-6, maxiter=1000,
+                                 trust_radius_from_x=None):
     r"""
     minimizes the function having the given gradient and hessian
     In other words it finds only roots of gradient where the hessian is positive semi-definite
@@ -17,11 +18,14 @@ def trustregion_newton_cg(x0, gradient, hessian=None, hessian_product=None,
     m = CGSteihaugSubproblem(x, fun=lambda a: 0, jac=gradient, hess=hessian, hessp=hessian_product, )
     n_hits_boundary = 0
     nit = 1
+
     while nit <=maxiter:
         #print(f"####### it {nit}")
-
+        if trust_radius_from_x is not None:
+            # this allows to choose the trust radius
+            # according to nonadmissible values of x
+            trust_radius = trust_radius_from_x(x)
         # quadratic subproblem that uses the gradient = residual and the hessian at a
-
         p, hits_boundary  = m.solve(trust_radius=trust_radius) # solve with CG-Steihaug (Nocedal Algorithm 7.2.)
         # we choose trust_radis based on our knowledge of the nonlinear part of the function
 
