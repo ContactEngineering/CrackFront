@@ -2,6 +2,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 from muFFT.NetCDF import NCStructuredGrid
 
@@ -34,39 +35,40 @@ class RadiusTooLowError(Exception):
 
 def kc(radius, angle):
     """
-    the origin of the system is at the top of the siewave
+    the origin of the system is at the sphere tip
     """
     if np.max(radius) < smallest_puloff_radius:
         raise RadiusTooLowError
     x, y = pol2cart(radius, angle)
-    return  (1 + 2 * dK * np.cos(2 * np.pi * x / fluctuation_length) * np.cos(2 * np.pi * y / fluctuation_length) )  * mean_Kc
+    return  (1 + dK * np.cos(2 * np.pi * x / fluctuation_length)
+             * np.cos(2 * np.pi * y / fluctuation_length))  * mean_Kc
 
 def dkc(radius, angle):
     x, y = pol2cart(radius, angle)
     dx = - 2 * np.pi * np.sin(2 * np.pi * x / fluctuation_length) * \
          np.cos(2 * np.pi * y / fluctuation_length) \
-         * 2 * dK * mean_Kc  / fluctuation_length
+         * dK * mean_Kc  / fluctuation_length
 
     dy = - 2 * np.pi * np.cos(2 * np.pi * x / fluctuation_length) * \
              np.sin(2 * np.pi * y / fluctuation_length) \
-             * 2 * dK * mean_Kc  / fluctuation_length
+             * dK * mean_Kc  / fluctuation_length
 
     return dx * np.cos(angle) + dy * np.sin(angle)
 
 
-def simulate_crack_front(n = 512):
+def simulate_crack_front(n=512, filename=FILENAME):
 
     cf = SphereCrackFrontPenetration(npx=n, kc=kc, dkc=dkc)
 
-    nc_CF = NCStructuredGrid(FILENAME, "w", (n,))
+    nc_CF = NCStructuredGrid(filename, "w", (n,))
 
     penetration = 0
 
     area = 0
 
-    penetrations= np.concatenate((
-        np.linspace(0, 1., 100, endpoint=False),
-        np.linspace(1., -2., 300)
+    penetrations = np.concatenate((
+        np.linspace(0, 1., 200, endpoint=False),
+        np.linspace(1., -2., 600)
         ))
 
     # initial guess
@@ -104,6 +106,11 @@ def simulate_crack_front(n = 512):
             nc_CF[j].penetration = penetration
             nc_CF[j].radius = a
             nc_CF[j].mean_radius = np.mean(a)
+
+            # infos on convergence
+            nc_CF[j].nit = sol.nit
+            nc_CF[j].n_hits_boundary = sol.n_hits_boundary
+
             j = j + 1
     finally:
         nc_CF.close()
@@ -112,9 +119,6 @@ def simulate_crack_front(n = 512):
 class ContactFrame():
     def __init__(self, kc, physical_size=4, npx=500,):
         """
-
-
-
         Parameters:
         -----------
         kc: function giving the
@@ -234,10 +238,18 @@ def animate_CF(filename=FILENAME, index = 10):
     figure.fig.savefig(f"contact_pen{penetration:.2e}.pdf")
 
 if __name__ == "__main__":
-    #simulate_crack_front()
+    ns = [
+    128, 256, #512, 1024,
+    #2048
+    ]
+    overwrite = False
+    for n in ns:
+        fn = f"circular_cartesian_eggbox_CF_n{n}.nc"
+        if not os.path.isfile(fn) or overwrite:
+            simulate_crack_front(n, fn)
     
     #plot_CF(index=10)
-    #animate_CF()
+    animate_CF("circular_cartesian_eggbox_CF_n2048.nc")
 
     import matplotlib.pyplot as plt
 
@@ -247,8 +259,18 @@ if __name__ == "__main__":
     min_w = (1 - dK)**2 * w
     max_w = (1 + dK)**2 * w
 
+    npx = 2000
+    s = sx = sy = 4
+    x, y = (np.mgrid[:npx, :npx] / npx - 1/2) * s
+    mean_w = np.mean(kc(*cart2pol(x, y)) ** 2 / (2*Es))
+    min_w = np.min(kc(*cart2pol(x, y)) ** 2 / (2*Es) )
+    max_w = np.max(kc(*cart2pol(x, y)) **2/ (2*Es))
+
     fig, ax = plt.subplots()
-    ax.plot(nc_CF.penetration, nc_CF.mean_radius)
+    for n in ns:
+        nc_CF = NCStructuredGrid(f"circular_cartesian_eggbox_CF_n{n}.nc")
+        ax.plot(nc_CF.penetration, nc_CF.mean_radius, label=f"n={n}")
+        nc_CF.close()
 
     ax.plot(JKR.penetration(contact_radius=a, work_of_adhesion=min_w),
             a,
@@ -265,10 +287,12 @@ if __name__ == "__main__":
                   r' ($(\pi w_m R^2 / K)^{1/3}$)')
 
     fig, ax = plt.subplots()
-    ax.plot(nc_CF.penetration, JKR.force(contact_radius=nc_CF.mean_radius[:],
-                                         penetration=nc_CF.penetration[:]))
-
-
+    for n in ns:
+        nc_CF = NCStructuredGrid(f"circular_cartesian_eggbox_CF_n{n}.nc")
+        ax.plot(nc_CF.penetration, JKR.force(contact_radius=nc_CF.mean_radius[:],
+                                             penetration=nc_CF.penetration[:]),
+                label=f"n={n}")
+        nc_CF.close()
 
     ax.plot(JKR.penetration(contact_radius=a, work_of_adhesion=min_w),
             JKR.force(contact_radius=a, work_of_adhesion=min_w),
