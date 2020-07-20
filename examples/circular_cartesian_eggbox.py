@@ -240,31 +240,51 @@ if __name__ == "__main__":
     #animate_CF()
 
     import matplotlib.pyplot as plt
+
     nc_CF = NCStructuredGrid(FILENAME)
+    max_contact_radius = np.max(nc_CF.mean_radius[:])
+    a = np.linspace(0, max_contact_radius)
+    min_w = (1 - dK)**2 * w
+    max_w = (1 + dK)**2 * w
+
     fig, ax = plt.subplots()
     ax.plot(nc_CF.penetration, nc_CF.mean_radius)
 
+    ax.plot(JKR.penetration(contact_radius=a, work_of_adhesion=min_w),
+            a,
+            "--b", label=f"JKR, min w = {min_w:.2f}")
+    ax.plot(JKR.penetration(contact_radius=a,),
+            a,
+            "--k", label=f"JKR, mean w, {w:.2f}")
+    ax.plot(JKR.penetration(contact_radius=a, work_of_adhesion=max_w),
+            a,
+            "--r", label=f"JKR, max w={max_w:.2f}")
+
+    ax.set_xlabel(r'Displacement $(\pi^2 w_m^2 R / K^2)^{1/3}$')
+    ax.set_ylabel(r'$mean contact radius$' +"\n"+
+                  r' ($(\pi w_m R^2 / K)^{1/3}$)')
 
     fig, ax = plt.subplots()
     ax.plot(nc_CF.penetration, JKR.force(contact_radius=nc_CF.mean_radius[:],
                                          penetration=nc_CF.penetration[:]))
 
-    max_contact_radius = np.max(nc_CF.mean_radius[:])
-    min_w = (1 - dK)**2 * w
-    max_w = (1 + dK)**2 * w
 
-    a = np.linspace(0, max_contact_radius)
+
     ax.plot(JKR.penetration(contact_radius=a, work_of_adhesion=min_w),
             JKR.force(contact_radius=a, work_of_adhesion=min_w),
-            "--b", label="JKR, min w")
+            "--b", label=f"JKR, min w = {min_w:.2f}")
     ax.plot(JKR.penetration(contact_radius=a,),
             JKR.force(contact_radius=a,),
-            "--k", label="JKR, mean w")
+            "--k", label=f"JKR, mean w, {w:.2f}")
     ax.plot(JKR.penetration(contact_radius=a, work_of_adhesion=max_w),
             JKR.force(contact_radius=a, work_of_adhesion=max_w),
-            "--r", label="JKR, max w")
+            "--r", label=f"JKR, max w={max_w:.2f}")
+    ax.legend()
 
-    # TODO: Axes Labels !!!
+
+    ax.set_ylabel('Force \n'+r'($\pi w_m R$)')
+    ax.set_xlabel(r'Displacement $(\pi^2 w_m^2 R / K^2)^{1/3}$')
+
     plt.show()
 
     nc_CF.close()
