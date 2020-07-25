@@ -1,12 +1,16 @@
 from Adhesion.ReferenceSolutions import JKR
 from CrackFront.Optimization import trustregion_newton_cg
-from CrackFront.Circular import SphereCrackFrontPenetration
+from CrackFront.Circular import (
+    SphereCrackFrontPenetration,
+    SphereCrackFrontPenetrationLin
+    )
 import numpy as np
 import pytest
 
 
-@pytest.mark.parametrize("lin", [True, False])
-def test_circular_front_vs_jkr(lin):
+@pytest.mark.parametrize("cfclass", [SphereCrackFrontPenetration,
+                                     SphereCrackFrontPenetrationLin])
+def test_circular_front_vs_jkr(cfclass):
     """
     assert we recover the JKR solution for an uniform distribution of
     work adhesion
@@ -16,10 +20,9 @@ def test_circular_front_vs_jkr(lin):
     w = 1 / np.pi
     Es = 3. / 4
     Kc = np.sqrt(2 * Es * w)
-    cf = SphereCrackFrontPenetration(n,
-                                     kc=lambda a, theta: np.ones_like(a) * Kc,
-                                     dkc=lambda a, theta: np.zeros_like(a),
-                                     lin=lin)
+    cf = cfclass(n,
+                 kc=lambda a, theta: np.ones_like(a) * Kc,
+                 dkc=lambda a, theta: np.zeros_like(a), )
 
     # initial guess
     penetrations = np.concatenate((np.linspace(0.001, 1, endpoint=False),
@@ -108,10 +111,9 @@ def test_single_sinewave(penetration, n_rays, npx):
     def dkc(radius, angle):
         return np.zeros_like(radius)
 
-    cf = SphereCrackFrontPenetration(npx,
-                                     kc=kc,
-                                     dkc=dkc,
-                                     lin=True)
+    cf = SphereCrackFrontPenetrationLin(npx,
+                                        kc=kc,
+                                        dkc=dkc)
     # initial guess: 
     a = np.ones(npx) * JKR.contact_radius(penetration=penetration)
     sol = trustregion_newton_cg(
@@ -147,6 +149,7 @@ def test_elastic_hessp_vs_brute_force_elastic_hessian():
     np.testing.assert_allclose(cf.elastic_hessp(a_test),
                                cf.elastic_jacobian @ a_test)
 
+
 @pytest.mark.parametrize("penetration", [-0.4, 1.])
 def test_converges_to_linear(penetration):
     r"""
@@ -171,17 +174,15 @@ def test_converges_to_linear(penetration):
         def dkc(radius, angle):
             return np.zeros_like(radius)
 
-        cf_lin = SphereCrackFrontPenetration(
+        cf_lin = SphereCrackFrontPenetrationLin(
             npx,
             kc=kc,
-            dkc=dkc,
-            lin=True)
+            dkc=dkc)
 
         cf = SphereCrackFrontPenetration(
             npx,
             kc=kc,
-            dkc=dkc,
-            lin=False)
+            dkc=dkc, )
 
         a = np.ones(npx) * JKR.contact_radius(penetration=penetration)
         sol = trustregion_newton_cg(
@@ -206,7 +207,7 @@ def test_converges_to_linear(penetration):
 
         mean_error = np.mean(radii_cf - radii_cf_lin)
         fluct_error = radii_cf - radii_cf_lin - mean_error
-        errors.append(np.sqrt(np.sum((radii_cf - radii_cf_lin)**2)))
+        errors.append(np.sqrt(np.sum((radii_cf - radii_cf_lin) ** 2)))
     errors = np.array(errors)
     dKs = np.array(dKs)
     rel_errors = errors / dKs  # since the amplitude of the radius
