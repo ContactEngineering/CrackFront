@@ -147,10 +147,88 @@ def test_elastic_hessp_vs_brute_force_elastic_hessian():
     np.testing.assert_allclose(cf.elastic_hessp(a_test),
                                cf.elastic_jacobian @ a_test)
 
-
-def test_converges_to_linear():
+@pytest.mark.parametrize("penetration", [-0.4, 1.])
+def test_converges_to_linear(penetration):
     r"""
     asserts the less linearized model converges to the linearized one as the
     amplitude of sif fluctuations decrease.
     """
-    pass
+
+    n_rays = 1
+    npx = 16
+
+    w = 1 / np.pi
+    Es = 3. / 4
+    mean_Kc = np.sqrt(2 * Es * w)
+
+    dKs = [0.8, 0.4, 0.2, 0.1, 0.05, 0.025, 0.0125, 0.001, 0.0005]
+    errors = []
+    for dK in dKs:
+
+        def kc(radius, angle):
+            return (1 + dK * np.cos(angle * n_rays)) * mean_Kc
+
+        def dkc(radius, angle):
+            return np.zeros_like(radius)
+
+        cf_lin = SphereCrackFrontPenetration(
+            npx,
+            kc=kc,
+            dkc=dkc,
+            lin=True)
+
+        cf = SphereCrackFrontPenetration(
+            npx,
+            kc=kc,
+            dkc=dkc,
+            lin=False)
+
+        a = np.ones(npx) * JKR.contact_radius(penetration=penetration)
+        sol = trustregion_newton_cg(
+            x0=a, gradient=lambda a: cf_lin.gradient(a, penetration),
+            hessian=lambda a: cf_lin.hessian(a, penetration),
+            trust_radius=0.25 * np.min(a),
+            maxiter=3000,
+            gtol=1e-11)
+        assert sol.success
+        assert (abs(cf_lin.gradient(sol.x, penetration)) < 1e-11).all()  #
+        radii_cf_lin = sol.x
+
+        sol = trustregion_newton_cg(
+            x0=a, gradient=lambda a: cf.gradient(a, penetration),
+            hessian=lambda a: cf.hessian(a, penetration),
+            trust_radius=0.25 * np.min(a),
+            maxiter=3000,
+            gtol=1e-11)
+        assert sol.success
+        assert (abs(cf.gradient(sol.x, penetration)) < 1e-11).all()  #
+        radii_cf = sol.x
+
+        mean_error = np.mean(radii_cf - radii_cf_lin)
+        fluct_error = radii_cf - radii_cf_lin - mean_error
+        errors.append(np.sqrt(np.sum((radii_cf - radii_cf_lin)**2)))
+    errors = np.array(errors)
+    dKs = np.array(dKs)
+    rel_errors = errors / dKs  # since the amplitude of the radius
+    # flucutation is proportional to dK
+    # assert it gets better for smaller dK
+    assert ((rel_errors[1:] - rel_errors[:-1]) < 0).all()
+    # verify error has approximately linearity in dK
+    assert rel_errors[-1] / rel_errors[0] < 10 * dKs[-1] / dKs[0]
+
+    if False:
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots()
+        ax.plot(dKs, np.array(errors) / np.array(dKs))
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        ax.set_xlim(1e-4, 1)
+        ax.set_ylim(1e-4, 1)
+        ax.set_aspect(1)
+        ax.grid()
+        plt.show()
+
+        # the linear approximation has errors in the absolute value of order
+        # da**2
+        # the K / dK has hence errors scaling linearly with dK
+        # this is what we see in this plot
