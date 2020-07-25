@@ -54,9 +54,10 @@ def test_circular_front_vs_jkr(lin):
 
         a = sol.x
 
-@pytest.mark.parametrize("penetration",  [-0.4, 1.])
-@pytest.mark.parametrize("n_rays",  [1, 8])
-@pytest.mark.parametrize("npx",  [2, 3, 128])
+
+@pytest.mark.parametrize("penetration", [-0.4, 1.])
+@pytest.mark.parametrize("n_rays", [1, 8])
+@pytest.mark.parametrize("npx", [2, 3, 128])
 def test_single_sinewave(penetration, n_rays, npx):
     r"""
     For a sinusoidal stress intensity factor fluctuation,
@@ -109,23 +110,31 @@ def test_single_sinewave(penetration, n_rays, npx):
     # initial guess: 
     a = np.ones(npx) * JKR.contact_radius(penetration=penetration)
     sol = trustregion_newton_cg(
-                x0=a, gradient=lambda a: cf.gradient(a, penetration),
-                hessian=lambda a: cf.hessian(a, penetration),
-                trust_radius=0.25 * np.min(a),
-                maxiter=3000,
-                gtol=1e-11)
+        x0=a, gradient=lambda a: cf.gradient(a, penetration),
+        hessian=lambda a: cf.hessian(a, penetration),
+        trust_radius=0.25 * np.min(a),
+        maxiter=3000,
+        gtol=1e-11)
     assert sol.success
-    assert (abs(cf.gradient(sol.x, penetration)) < 1e-11).all() #
+    assert (abs(cf.gradient(sol.x, penetration)) < 1e-11).all()  #
     radii_cf = sol.x
-    
+
     # Reference
     a0 = JKR.contact_radius(penetration=penetration)
     radii_lin_by_hand = dK * mean_Kc / (
-        JKR.stress_intensity_factor(a0, penetration, der="1_a")
-        + JKR.stress_intensity_factor(a0, penetration) / (2*a0)
-        ) * np.cos(cf.angles) + a0
+            JKR.stress_intensity_factor(a0, penetration, der="1_a")
+            + JKR.stress_intensity_factor(a0, penetration) / (2 * a0)
+    ) * np.cos(cf.angles) + a0
+
+    np.testing.assert_allclose(radii_cf, radii_lin_by_hand)
 
 
+def test_elastic_hessp_vs_brute_force_elastic_hessian():
+    npx = 32
+    cf = SphereCrackFrontPenetration(npx, lambda x: None, lambda x: None)
+    a_test = np.random.normal(size=npx)
+    np.testing.assert_allclose(cf.elastic_hessp(a_test),
+                               cf.elastic_jacobian @ a_test)
 
 
 def test_converges_to_linear():
