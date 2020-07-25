@@ -56,8 +56,13 @@ def test_circular_front_vs_jkr(lin):
 
 
 @pytest.mark.parametrize("penetration", [-0.4, 1.])
-@pytest.mark.parametrize("n_rays", [1, 8])
-@pytest.mark.parametrize("npx", [2, 3, 128])
+@pytest.mark.parametrize("npx, n_rays", [(2, 1),
+                                         (3, 1),
+                                         (17, 8),
+                                         (16, 8),  # smallest possible
+                                         #  discretisation !
+                                         (128, 1),
+                                         (128, 8)])
 def test_single_sinewave(penetration, n_rays, npx):
     r"""
     For a sinusoidal stress intensity factor fluctuation,
@@ -123,9 +128,15 @@ def test_single_sinewave(penetration, n_rays, npx):
     a0 = JKR.contact_radius(penetration=penetration)
     radii_lin_by_hand = dK * mean_Kc / (
             JKR.stress_intensity_factor(a0, penetration, der="1_a")
-            + JKR.stress_intensity_factor(a0, penetration) / (2 * a0)
-    ) * np.cos(cf.angles) + a0
+            + JKR.stress_intensity_factor(a0, penetration) * n_rays / (2 * a0)
+    ) * np.cos(n_rays * cf.angles) + a0
 
+    if False:
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots()
+        ax.plot(radii_lin_by_hand, "o", label="by hand")
+        ax.plot(radii_cf, "+", label="general model")
+        plt.show()
     np.testing.assert_allclose(radii_cf, radii_lin_by_hand)
 
 
