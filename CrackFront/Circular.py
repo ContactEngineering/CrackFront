@@ -78,7 +78,6 @@ class SphereCrackFrontPenetration():
         a0 = np.mean(radius)
         K = JKR.stress_intensity_factor(contact_radius=a0,
                                         penetration=penetration, **_jkrkwargs)
-        print("test")
         return (
                 K / a0 * self.elastic_hessp(p)
                 + (self.elastic_hessp(radius) / self.npx *
