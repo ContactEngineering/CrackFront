@@ -153,5 +153,3 @@ class Interpolator():
             x + self.center[0], y + self.center[1], derivative=1)
 
         return interp_derx * np.cos(angle) + interp_dery * np.sin(angle)
-
-# TODO: assert that the full linear and the less linear converge to the same deflection of the crack front.
