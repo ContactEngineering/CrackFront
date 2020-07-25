@@ -131,6 +131,6 @@ def test_single_sinewave(penetration, n_rays, npx):
 def test_converges_to_linear():
     r"""
     asserts the less linearized model converges to the linearized one as the
-    radius decreases.
+    amplitude of sif fluctuations decrease.
     """
     pass
