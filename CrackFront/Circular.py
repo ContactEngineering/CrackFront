@@ -21,8 +21,9 @@ class NegativeRadiusError(Exception):
 Es = 3 / 4
 w = 1 / np.pi
 R = 1.
+
+_jkrkwargs = dict(contact_modulus=Es, radius=R)
 # TODO:
-#  - split fully linearized and less linearised in two classes
 #  - implement hessian product as well.(maybe leave the matrix construction as
 #    an option)
 class SphereCrackFrontPenetration():
@@ -45,6 +46,7 @@ class SphereCrackFrontPenetration():
 
         self.kc = kc
         self.dkc = dkc
+
     def gradient(self, radius, penetration):
         if (radius <= 0).any():
             raise NegativeRadiusError
@@ -54,11 +56,45 @@ class SphereCrackFrontPenetration():
 
     def hessian(self, radius, penetration):
         a0 = np.mean(radius)
-        K = JKR.stress_intensity_factor(contact_radius=a0, penetration=penetration, radius=R, contact_modulus=Es,)
+        K = JKR.stress_intensity_factor(contact_radius=a0, penetration=penetration, **_jkrkwargs)
         return self.elastic_jacobian * K / a0 \
-            + np.diag((- K / a0 **2  + JKR.stress_intensity_factor(contact_radius=a0, penetration=penetration, radius=R, contact_modulus=Es, der="1_a")  / a0) / self.npx  * self.elastic_jacobian @ radius  \
-            + JKR.stress_intensity_factor(contact_radius=radius, penetration=penetration, radius=R, contact_modulus=Es, der="1_a") \
-            - self.dkc(radius, self.angles))
+            + np.diag(self.elastic_jacobian @ radius / self.npx *
+                      (- K / a0 ** 2
+                        + JKR.stress_intensity_factor(contact_radius=a0,
+                                                      penetration=penetration,
+                                                      **_jkrkwargs, der="1_a")
+                           / a0
+                      )
+                      + JKR.stress_intensity_factor(contact_radius=radius,
+                                                    penetration=penetration,
+                                                    **_jkrkwargs, der="1_a")
+                      - self.dkc(radius, self.angles)
+                      )
+
+    def hessian_product(self, p, radius, penetration):
+        """
+        computes efficiently the hessian product :math:`H(radius, penetration) p`
+        """
+        a0 = np.mean(radius)
+        K = JKR.stress_intensity_factor(contact_radius=a0,
+                                        penetration=penetration, **_jkrkwargs)
+        print("test")
+        return (
+                K / a0 * self.elastic_hessp(p)
+                + (self.elastic_hessp(radius) / self.npx *
+                   (- K / a0 ** 2
+                    + JKR.stress_intensity_factor(contact_radius=a0,
+                                                  penetration=penetration,
+                                                  **_jkrkwargs, der="1_a")
+                    / a0
+                    )
+                   + JKR.stress_intensity_factor(contact_radius=radius,
+                                                 penetration=penetration,
+                                                 **_jkrkwargs, der="1_a")
+                   - self.dkc(radius, self.angles)
+                   ) * p
+        )
+
 
     @property
     def elastic_jacobian(self):
