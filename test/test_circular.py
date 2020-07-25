@@ -233,3 +233,35 @@ def test_converges_to_linear(penetration):
         # da**2
         # the K / dK has hence errors scaling linearly with dK
         # this is what we see in this plot
+
+
+@pytest.mark.parametrize("cfclass", [SphereCrackFrontPenetration,
+                                     SphereCrackFrontPenetrationLin])
+def test_hessp_and_hessian_equivalent(cfclass):
+    n_rays = 1
+    npx = 16
+
+    w = 1 / np.pi
+    Es = 3. / 4
+    mean_Kc = np.sqrt(2 * Es * w)
+
+    dK = 0.4
+    penetration=0
+
+    def kc(radius, angle):
+        return (1 + dK * np.cos(angle * n_rays)) * mean_Kc
+
+    def dkc(radius, angle):
+        return np.zeros_like(radius)
+
+    cf = cfclass(
+        npx,
+        kc=kc,
+        dkc=dkc, )
+
+    a = 1 + np.random.uniform(-0.5, 0.5, size=npx)
+    p = np.random.uniform(-0.5, 0.5, size=npx)
+    bruteforce = cf.hessian(radius=a, penetration=penetration) @ p
+    hessp = cf.hessian_product(p, radius=a, penetration=penetration)
+
+    np.testing.assert_allclose(hessp, bruteforce)
