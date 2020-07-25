@@ -437,7 +437,7 @@ if __name__ == "__main__":
     #simulate_CM()
     #simulate_CF()
     #simulate_CF_following_CM()
-    make_animation_both()
+    #make_animation_both()
     import matplotlib.pyplot as plt
     nc_CM = NCStructuredGrid("CM.nc")
     nc_CF = NCStructuredGrid("CF.nc")
