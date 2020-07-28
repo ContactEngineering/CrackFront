@@ -23,9 +23,7 @@ w = 1 / np.pi
 R = 1.
 
 _jkrkwargs = dict(contact_modulus=Es, radius=R)
-# TODO:
-#  - implement hessian product as well.(maybe leave the matrix construction as
-#    an option)
+
 class SphereCrackFrontPenetration():
 
     def __init__(self, npx, kc, dkc):
@@ -132,7 +130,7 @@ class SphereCrackFrontPenetration():
         ncFrame.penetration = penetration
         ncFrame.radius = a
         ncFrame.mean_radius = mean_radius = np.mean(a)
-
+        ncFrame.contact_area = np.pi * np.mean(a**2)
         # Just for convenience:
         ncFrame.force = JKR.force(contact_radius=mean_radius,
                                   penetration=penetration)
