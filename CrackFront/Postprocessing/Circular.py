@@ -5,6 +5,8 @@ from CrackFront.Circular import cart2pol, pol2cart
 from muFFT.NetCDF import NCStructuredGrid
 from SurfaceTopography import Topography
 from matplotlib.animation import FuncAnimation
+from CrackFront.Tools.Hysteresis import direction_change_index
+
 
 class ContactFrame():
     def __init__(self, kc, physical_size=4, npx=500,):
@@ -90,12 +92,8 @@ class ContactFrame():
 
 
 
-import numpy as np
-import matplotlib.pyplot as plt
-from muFFT.NetCDF import NCStructuredGrid
-from Tools.hysteresis import direction_change_index
 
-plt.style.use("presentation")
+
 
 
 def plot_contact_area_increment(dataset_directories, labels=None, save=False):
