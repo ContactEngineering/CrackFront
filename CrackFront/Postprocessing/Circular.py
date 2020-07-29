@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from CrackFront.Circular import cart2pol, pol2cart
 from muFFT.NetCDF import NCStructuredGrid
-
+from SurfaceTopography import Topography
 from matplotlib.animation import FuncAnimation
 
 class ContactFrame():
@@ -24,15 +24,21 @@ class ContactFrame():
         """
 
         self.fig, self.ax = plt.subplots()
-        self.physical_size = physical_size
-        self.npx_plot = npx
-
         self.ax.set_aspect(1)
-        s = sx = sy = physical_size
-        x, y = (np.mgrid[:npx, :npx] / npx - 1/2) * s
-        rho, phi = cart2pol(x, y)
         workcmap = plt.get_cmap("coolwarm")
-        self.ax.imshow(kc(rho, phi).T, cmap=workcmap)
+        if isinstance(kc, Topography):
+            self.physical_size = kc.physical_sizes[0]
+            self.npx_plot = npx = kc.nb_grid_pts[0]
+            s = sx = sy = self.physical_size
+            self.ax.imshow(kc.heights().T, cmap=workcmap)
+        else:
+            self.physical_size = physical_size
+            self.npx_plot = npx
+            s = sx = sy = physical_size
+            x, y = (np.mgrid[:npx, :npx] / npx - 1/2) * s
+            rho, phi = cart2pol(x, y)
+
+            self.ax.imshow(kc(rho, phi).T, cmap=workcmap)
 
         self.ax.invert_yaxis()
 
@@ -81,3 +87,57 @@ class ContactFrame():
         #    contacting_points = pressures = nc.contacting_points[index]
 
         nc_CF.close()
+
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+from muFFT.NetCDF import NCStructuredGrid
+from Tools.hysteresis import direction_change_index
+
+plt.style.use("presentation")
+
+
+def plot_contact_area_increment(dataset_directories, labels=None, save=False):
+    w = 1 / np.pi
+
+    fig_forward, ax_forward = plt.subplots(figsize=(12, 6))
+    fig_backward, ax_backward = plt.subplots(figsize=(12, 6))
+
+    max_contact_radius = 0
+    for i, directory in enumerate(dataset_directories):
+        nc_CF = NCStructuredGrid(directory+"/data/data.nc")
+        i_dirchange = direction_change_index(nc_CF.penetration)
+
+        ax_forward.plot(nc_CF.penetration[1:i_dirchange],
+                        nc_CF.contact_area[1:i_dirchange]
+                        - nc_CF.contact_area[:i_dirchange-1],
+                        label=directory if labels is None else labels[i])
+
+        ax_backward.plot(nc_CF.penetration[i_dirchange+1:],
+                         - (nc_CF.contact_area[i_dirchange+1:]
+                         - nc_CF.contact_area[i_dirchange:-1]),
+                         label=directory if labels is None else labels[i])
+        nc_CF.close()
+
+    ax_forward.set_title("forward")
+    ax_forward.set_xlabel(r'Displacement $(\pi^2 w_m^2 R / K^2)^{1/3}$')
+    ax_forward.set_ylabel(r'contact area increment' + "\n" +
+                          r' ($(\pi w_m R^2 / K)^{2/3}$)')
+    ax_forward.set_yscale("log")
+    ax_forward.legend(bbox_to_anchor=(0, 1.05), loc="lower left")
+
+    ax_backward.set_title("backward")
+    ax_backward.set_xlabel(r'Displacement $(\pi^2 w_m^2 R / K^2)^{1/3}$')
+    ax_backward.set_ylabel(r'- contact area increment' + "\n" +
+                           r' ($(\pi w_m R^2 / K)^{2/3}$)')
+    ax_backward.set_yscale("log")
+    ax_backward.legend(bbox_to_anchor=(0, 1.05), loc="lower left")
+
+    plt.show()
+    if save:
+        fig_backward.save_fig("mean_contact_radius_increment_backward.pdf")
+        fig_forward.save_fig("mean_contact_radius_increment_forward.pdf")
+
+    return fig_forward, fig_backward
+

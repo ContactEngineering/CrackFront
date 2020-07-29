@@ -214,6 +214,7 @@ class Interpolator():
         field:
             SurfaceTopography.topography instance
         """
+        self.field = field
         self.interpolator = field.interpolate_bicubic()
 
         if center is not None:
@@ -222,7 +223,7 @@ class Interpolator():
             sx, sy = field.physical_sizes
             self.center = (sx / 2, sy / 2)
 
-    def kc(self, radius, angle):
+    def kc_polar(self, radius, angle):
         """
         the origin of the system is at the sphere tip
         """
@@ -231,7 +232,7 @@ class Interpolator():
                                  y + self.center[1],
                                  derivative=0)
 
-    def dkc(self, radius, angle):
+    def dkc_polar(self, radius, angle):
         x, y = pol2cart(radius, angle)
         interp_field, interp_derx, interp_dery = self.interpolator(
             x + self.center[0], y + self.center[1], derivative=1)
