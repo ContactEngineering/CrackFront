@@ -7,7 +7,13 @@ import os
 from muFFT.NetCDF import NCStructuredGrid
 from SurfaceTopography import Topography
 
-from CrackFront.Circular import  SphereCrackFrontPenetration, pol2cart, cart2pol
+from CrackFront.Circular import (
+    SphereCrackFrontPenetration, pol2cart,
+    cart2pol, Interpolator
+    )
+from CrackFront.Postprocessing.Circular import ContactFrame
+
+
 from Adhesion.ReferenceSolutions import JKR
 from CrackFront.Optimization import trustregion_newton_cg
 
@@ -23,11 +29,11 @@ w = 1 / np.pi
 R = 1.
 mean_Kc = np.sqrt(2 * Es * w)
 
-dK = 0.2# $dw # rms stress intensity factor fluctuation
+dk = 0.2# $dw # rms stress intensity factor fluctuation
 lcor = .1 #$lcor # correlation length: length of the highcut
 seed = 1#$seed
 
-smallest_puloff_radius = (np.pi * w * (1- 3 * dK)**2 * R**2 / 6 * maugis_K)**(1/3)
+smallest_puloff_radius = (np.pi * w * (1- 3 * dk)**2 * R**2 / 6 * maugis_K)**(1/3)
 
 sx, sy = 4., 4.
 nx = ny = 4096
@@ -39,33 +45,36 @@ k_fluct_topo = Topography(
     np.random.uniform(size=(nx, ny)), physical_sizes=(sx, sy), periodic=True
     ).highcut(cutoff_wavelength=lcor).detrend()
 
-k_topo = Topography((k_fluct_topo.scale(dK / k_fluct_topo.rms_height()
+k_topo = Topography((k_fluct_topo.scale(dk / k_fluct_topo.rms_height()
                                         ).heights()
                      + 1) * mean_Kc,
                     k_fluct_topo.physical_sizes, periodic=True)
-k_topo_interp = k_topo.interpolate_bicubic()
+k_topo_interpolator = Interpolator(k_topo)
 
 class RadiusTooLowError(Exception):
     pass
 
-def kc(radius, angle):
+def simulate_crack_front(
+        kc,
+        dkc,
+        n=512,
+        penetrations=np.concatenate((
+        np.linspace(0, 1., 200, endpoint=False),
+        np.linspace(1., -2., 600)
+        )),
+        filename="CF.nc",
+        pulloff_radius=0.01,
+        initial_radius=None,
+        trust_radius=0.05
+        ):
     """
-    the origin of the system is at the sphere tip
+
+    Parameters:
+    -----------
+    pulloff_radius: radius at which  the pulloff certainly happend and hence
+    the iterations stop
+
     """
-    if np.max(radius) < smallest_puloff_radius:
-        raise RadiusTooLowError
-    x, y = pol2cart(radius, angle)
-    return k_topo_interp(x + 0.5 * sx, y + 0.5 * sy, derivative=0)
-
-def dkc(radius, angle):
-    x, y = pol2cart(radius, angle)
-    interp_field, interp_derx, interp_dery = k_topo_interp(
-        x+0.5 * sx, y + 0.5 * sy, derivative=1)
-
-    return interp_derx * np.cos(angle) + interp_dery * np.sin(angle)
-
-
-def simulate_crack_front(n=512, filename=FILENAME):
 
     cf = SphereCrackFrontPenetration(npx=n, kc=kc, dkc=dkc)
 
@@ -73,109 +82,46 @@ def simulate_crack_front(n=512, filename=FILENAME):
 
     penetration = 0
 
-    area = 0
-
-    penetrations = np.concatenate((
-        np.linspace(0, 1., 200, endpoint=False),
-        np.linspace(1., -2., 600)
-        ))
-
     # initial guess
-    a = np.ones( n) * smallest_puloff_radius
-    #JKR.contact_radius(penetration=penetrations[0])
+    if initial_radius is None:
+        a = np.ones(n) * pulloff_radius
+    elif not hasattr(initial_radius, "len"):
+        a = np.ones(n) * initial_radius
+    else:
+        a = initial_radius
 
     j = 0
+
+    def trust_radius_from_x(radius):
+        if np.max(radius) < smallest_puloff_radius:
+                raise RadiusTooLowError
+        return np.min((trust_radius, 0.9 * np.min(radius)))
 
     try:
         for penetration in penetrations:
             print(f"penetration: {penetration}")
             try:
                 sol = trustregion_newton_cg(
-                    x0=a, gradient=lambda a: cf.gradient(a, penetration),
-                    hessian=lambda a: cf.hessian(a, penetration),
-                    #trust_radius=0.25 * np.min((np.min(a), fluctuation_length)),
-                    trust_radius_from_x=
-                        lambda x: np.min((0.25 * lcor, 0.9 * np.min(x))),
-                    maxiter=10000,
+                    x0=a, gradient=lambda radius: cf.gradient(radius, penetration),
+                    #hessian=lambda a: cf.hessian(a, penetration),
+                    hessian_product=lambda a, p: cf.hessian_product(p,
+                                                                    radius=a,
+                                                                    penetration=penetration),
+                    trust_radius_from_x=trust_radius_from_x,
+                    maxiter=50000,
                     gtol=1e-6  # he has issues to reach the gtol at small values of a
                     )
             except RadiusTooLowError:
                 print("lost contact")
-                a = np.zeros(n)
-                # nc_CF[j].cm_sim_index = i
-                nc_CF[j].penetration = penetration
-                nc_CF[j].radius = a
-                nc_CF[j].mean_radius = np.mean(a)
                 break
             print(sol.message)
             assert sol.success
             print("nit: {}".format(sol.nit))
             a = sol.x
-            # nc_CF[j].cm_sim_index = i
-            nc_CF[j].penetration = penetration
-            nc_CF[j].radius = a
-            nc_CF[j].mean_radius = np.mean(a)
-
-            # infos on convergence
-            nc_CF[j].nit = sol.nit
-            nc_CF[j].n_hits_boundary = sol.n_hits_boundary
-
+            cf.dump(nc_CF[j], penetration, sol)
             j = j + 1
     finally:
         nc_CF.close()
-
-
-class ContactFrame():
-    def __init__(self, kc, physical_size=4, npx=500,):
-        """
-        Parameters:
-        -----------
-        kc: function giving the
-
-        # TODO: allow for array. Then physical sizes and npx get superflous
-
-        physical_size:
-            width of the region to be plotted, centered in 0
-
-        npx: int
-            number of pixels for the meshgrid along each direction
-
-        """
-
-        self.fig, self.ax = plt.subplots()
-        self.physical_size = physical_size
-        self.npx_plot = npx
-
-        self.ax.set_aspect(1)
-        s = sx = sy = physical_size
-        x, y = (np.mgrid[:npx, :npx] / npx - 1/2) * s
-        rho, phi = cart2pol(x, y)
-        workcmap = plt.get_cmap("coolwarm")
-        self.ax.imshow(kc(rho, phi).T, cmap=workcmap)
-
-        self.ax.invert_yaxis()
-
-        ticks = np.linspace(-sx/2, (sx/2), 5)
-
-        self.ax.set_xticks(ticks / sx * npx + npx * 0.5)
-        self.ax.set_xticklabels([f"{v:.2f}" for v in ticks])
-
-        ticks = np.linspace(-sy/2, sy/2, 5)
-        self.ax.set_yticks(ticks / sy * npx + npx * 0.5)
-        self.ax.set_yticklabels([f"{v:.2f}" for v in ticks])
-
-        self.ax.set_xlabel(r'$y$ ($(\pi w_m R^2 / E^m)^{1/3}$)')
-        self.ax.set_ylabel(r'$y$ ($(\pi w_m R^2 / E^m)^{1/3}$)')
-
-    def cart2pixels(self, x, y):
-        """
-        converts physical coordinates into pixel coordinates
-        """
-        return (x + self.physical_size / 2) / self.physical_size * self.npx_plot, \
-               (y + self.physical_size / 2) / self.physical_size * self.npx_plot
-
-    def pol2pixels(self, radius, angle):
-        return self.cart2pixels(*pol2cart(radius, angle))
 
 
 
@@ -192,9 +138,7 @@ def plot_CF(filename=FILENAME, index = 10):
 
     sx = sy = s = 2.2 * np.max(nc_CF.mean_radius[...])
 
-    npx_plot = 500
-
-    figure = ContactFrame(kc, s, npx=npx_plot)
+    figure = ContactFrame(k_topo)
     ax = figure.ax
     ax.plot(*figure.pol2pixels(nc_CF.radius[index,...], angle),
             ".-k", ms=1,  label="CF")
@@ -224,7 +168,7 @@ def animate_CF(filename=FILENAME, index = 10):
 
     npx_plot = 500
 
-    figure = ContactFrame(kc, s, npx=npx_plot)
+    figure = ContactFrame(k_topo)
     ax = figure.ax
     l, = ax.plot(*figure.pol2pixels(nc_CF.radius[0,...], angle),
             ".-k", ms=1,  label="CF")
@@ -252,11 +196,35 @@ if __name__ == "__main__":
     1024,
     #2048
     ]
-    overwrite = False
+    overwrite = True
+
+    def penetrations(dpen, max_pen):
+        i = 0 # integer penetration value
+        pen = dpen * i
+        yield pen
+        while pen < max_pen:
+            i += 1
+            pen = dpen * i
+            yield pen
+        while True:
+            i -= 1
+            pen = dpen * i
+            yield pen
+
     for n in ns:
         fn = f"circular_random_CF_n{n}.nc"
         if not os.path.isfile(fn) or overwrite:
-            simulate_crack_front(n, fn)
+            simulate_crack_front(
+            k_topo_interpolator.kc_polar,
+            k_topo_interpolator.dkc_polar,
+            n=n,
+            penetrations=penetrations(dpen=lcor/100, max_pen=1.),
+            filename=fn,
+            pulloff_radius= (np.pi * w * (1 - 3 * dk)**2 * R**2 / 6 * maugis_K)**(1/3),
+            initial_radius=JKR.contact_radius(penetration=0,
+                                            work_of_adhesion=w*(1-3 * dk)**2),
+            trust_radius=0.25 * lcor
+            )
 
     #plot_CF(index=10)
     #animate_CF("circular_random_CF_n1024.nc")
@@ -272,8 +240,8 @@ if __name__ == "__main__":
     x, y = (np.mgrid[:npx, :npx] / npx - 1/2) * s
 
     mean_w = np.mean(k_topo.heights())
-    min_w = (1 - dK) **2 * w
-    max_w = (1 + dK) **2 * w
+    min_w = (1 - dk) **2 * w
+    max_w = (1 + dk) **2 * w
 
     fig, ax = plt.subplots()
     for n in ns:
