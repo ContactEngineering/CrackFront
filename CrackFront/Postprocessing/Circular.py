@@ -110,11 +110,13 @@ def plot_contact_area_increment(dataset_directories, labels=None, save=False):
         ax_forward.plot(nc_CF.penetration[1:i_dirchange],
                         nc_CF.contact_area[1:i_dirchange]
                         - nc_CF.contact_area[:i_dirchange-1],
+                        ".-", lw=0.5,
                         label=directory if labels is None else labels[i])
 
         ax_backward.plot(nc_CF.penetration[i_dirchange+1:],
                          - (nc_CF.contact_area[i_dirchange+1:]
-                         - nc_CF.contact_area[i_dirchange:-1]),
+                         - nc_CF.contact_area[i_dirchange:-1]), ".-",
+                         ".-", lw=0.5,
                          label=directory if labels is None else labels[i])
         nc_CF.close()
 
@@ -136,6 +138,7 @@ def plot_contact_area_increment(dataset_directories, labels=None, save=False):
     if save:
         fig_backward.save_fig("mean_contact_radius_increment_backward.pdf")
         fig_forward.save_fig("mean_contact_radius_increment_forward.pdf")
-
+    ax_backward.grid()
+    ax_forward.grid()
     return fig_forward, fig_backward
 
