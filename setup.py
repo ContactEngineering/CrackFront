@@ -28,6 +28,7 @@ from setuptools import setup, find_packages
 
 
 scripts = [
+"commandline/plot_nits.py"
    ]
 
 setup(
