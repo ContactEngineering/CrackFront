@@ -142,6 +142,8 @@ class SphereCrackFrontPenetration():
         # infos on convergence
         ncFrame.nit = sol.nit
         ncFrame.n_hits_boundary = sol.n_hits_boundary
+        ncFrame.njev = sol.njev
+        ncFrame.nhev = sol.nhev
 
 class SphereCrackFrontPenetrationLin(SphereCrackFrontPenetration):
     def gradient(self, radius, penetration):

@@ -15,7 +15,31 @@ def trustregion_newton_cg(x0, gradient, hessian=None, hessian_product=None,
     The step-length is limitted by trust-radius
     """
     x = x0
-    m = CGSteihaugSubproblem(x, fun=lambda a: 0, jac=gradient, hess=hessian, hessp=hessian_product, )
+
+
+
+    nfev = 0
+    njev = 0
+    nhev = 0
+
+    def wrapped_gradient(*args):
+        nonlocal njev
+        njev +=1
+        return gradient(*args)
+
+    def wrapped_hessian(*args):
+        nonlocal nhev
+        nhev +=1
+        return hessian(*args)
+
+    def wrapped_hessian_product(*args):
+        nonlocal nhev
+        nhev +=1
+        return hessian_product(*args)
+
+    m = CGSteihaugSubproblem(x, fun=lambda a: 0, jac=wrapped_gradient,
+                             hess=wrapped_hessian if hessian is not None else None ,
+                             hessp=wrapped_hessian_product if hessian_product is not None else None )
     n_hits_boundary = 0
     nit = 1
 
@@ -34,8 +58,10 @@ def trustregion_newton_cg(x0, gradient, hessian=None, hessian_product=None,
         if hits_boundary:
             n_hits_boundary = n_hits_boundary + 1
 
-        m = CGSteihaugSubproblem(x, fun=lambda x: 0, jac=gradient, hess=hessian, hessp=hessian_product)
-
+        m = CGSteihaugSubproblem(x, fun=lambda x: 0,
+             jac=wrapped_gradient,
+             hess=wrapped_hessian if hessian is not None else None ,
+             hessp=wrapped_hessian_product if hessian_product is not None else None )
         max_r = np.max(abs(m.jac))
         #print(f"max(|r|)= {max_r}")
         if max_r < gtol:
@@ -43,16 +69,22 @@ def trustregion_newton_cg(x0, gradient, hessian=None, hessian_product=None,
                                      'x': x,
                                      'jac': m.jac,
                                      'nit': nit,
+                                     'nfev': 0,
+                                     'njev': njev,
+                                     'nhev': nhev,
                                      'n_hits_boundary': n_hits_boundary,
                                      'message': 'CONVERGENCE: CONVERGENCE: NORM_OF_GRADIENT_<=_GTOL',
                                      })
             return result
-        nit+=1
+        nit += 1
 
     result = OptimizeResult({'success': False,
                                      'x': x,
                                      'jac': m.jac,
                                      'nit': nit,
+                                     'nfev': 0,
+                                     'njev': njev,
+                                     'nhev': nhev,
                                      'n_hits_boundary': n_hits_boundary,
                                      'message': 'MAXITER REACHED',
                                      })

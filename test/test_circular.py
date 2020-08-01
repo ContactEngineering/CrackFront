@@ -1,4 +1,6 @@
 from Adhesion.ReferenceSolutions import JKR
+from muFFT.NetCDF import NCStructuredGrid
+
 from CrackFront.Optimization import trustregion_newton_cg
 from CrackFront.Circular import (
     SphereCrackFrontPenetration,
@@ -234,6 +236,45 @@ def test_converges_to_linear(penetration):
         # the K / dK has hence errors scaling linearly with dK
         # this is what we see in this plot
 
+@pytest.mark.parametrize("cfclass", [SphereCrackFrontPenetration,
+                                 SphereCrackFrontPenetrationLin])
+def test_dump(cfclass):
+    penetration = 0.
+    n_rays = 2
+    npx = 64
+
+    w = 1 / np.pi
+    Es = 3. / 4
+    mean_Kc = np.sqrt(2 * Es * w)
+
+    dK = 0.5
+    lcor = 0.1
+    errors = []
+
+    def kc(radius, angle):
+        return (1 + dK * np.cos(angle * n_rays) * np.cos(radius / lcor) ) * mean_Kc
+
+    def dkc(radius, angle):
+        return (1 - dK / lcor * np.cos(angle * n_rays) * np.sin(radius / lcor) ) * mean_Kc
+
+
+    cf = cfclass(
+        npx,
+        kc=kc,
+        dkc=dkc, )
+    i = 0
+    nc = NCStructuredGrid("test_dump.nc", "w", (npx,))
+    a = np.ones(npx) * JKR.contact_radius(penetration=penetration) * 0.25
+    sol = trustregion_newton_cg(
+        x0=a, gradient=lambda a: cf.gradient(a, penetration),
+        hessian_product=lambda a, p:
+        cf.hessian_product(p, radius=a, penetration=penetration),
+        trust_radius=0.25 * min(lcor, np.min(a)),
+        maxiter=3000,
+        gtol=1e-11)
+    assert sol.success
+    print(sol.nit)
+    cf.dump(nc[i], penetration, sol)
 
 @pytest.mark.parametrize("cfclass", [SphereCrackFrontPenetration,
                                      SphereCrackFrontPenetrationLin])
