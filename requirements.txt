@@ -8,6 +8,6 @@ pytest>=4
 pytest-flake8
 flake8
 importlib
-SurfaceTopography
+SurfaceTopography>=0.91.2
 ContactMechanics
 git+https://github.com/ComputationalMechanics/Adhesion.git@feat/20_ref_solutions
