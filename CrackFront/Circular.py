@@ -40,12 +40,14 @@ def pol2cart(radius, angle):
 class NegativeRadiusError(Exception):
     pass
 
+
 # nondimensional units following Maugis Book:
 Es = 3 / 4
 w = 1 / np.pi
 R = 1.
 
 _jkrkwargs = dict(contact_modulus=Es, radius=R)
+
 
 class SphereCrackFrontPenetration():
 
@@ -60,7 +62,7 @@ class SphereCrackFrontPenetration():
         """
 
         self.npx = npx
-        self.angles = angle = np.arange(npx) * 2 * np.pi / npx
+        self.angles = np.arange(npx) * 2 * np.pi / npx
         self.nq = np.fft.rfftfreq(npx, 1 / npx)
 
         self._elastic_jacobian = None
@@ -72,20 +74,29 @@ class SphereCrackFrontPenetration():
         if (radius <= 0).any():
             raise NegativeRadiusError
         a0 = np.mean(radius)
-        return 1 / a0 * self.elastic_jacobian @ radius * JKR.stress_intensity_factor(contact_radius=a0, penetration=penetration, radius=R, contact_modulus=Es) \
-        + JKR.stress_intensity_factor(contact_radius=radius, penetration=penetration, radius=R, contact_modulus=Es) - self.kc(radius, self.angles)
+        return 1 / a0 * self.elastic_hessp(radius) \
+            * JKR.stress_intensity_factor(contact_radius=a0,
+                                          penetration=penetration,
+                                          **_jkrkwargs) \
+            + JKR.stress_intensity_factor(contact_radius=radius,
+                                          penetration=penetration,
+                                          **_jkrkwargs) \
+            - self.kc(radius, self.angles)
 
     def hessian(self, radius, penetration):
         a0 = np.mean(radius)
-        K = JKR.stress_intensity_factor(contact_radius=a0, penetration=penetration, **_jkrkwargs)
+        K = JKR.stress_intensity_factor(contact_radius=a0,
+                                        penetration=penetration,
+                                        **_jkrkwargs)
+
         return self.elastic_jacobian * K / a0 \
             + np.diag(self.elastic_jacobian @ radius / self.npx *
                       (- K / a0 ** 2
-                        + JKR.stress_intensity_factor(contact_radius=a0,
-                                                      penetration=penetration,
-                                                      **_jkrkwargs, der="1_a")
-                           / a0
-                      )
+                       + JKR.stress_intensity_factor(contact_radius=a0,
+                                                     penetration=penetration,
+                                                     **_jkrkwargs, der="1_a")
+                       / a0
+                       )
                       + JKR.stress_intensity_factor(contact_radius=radius,
                                                     penetration=penetration,
                                                     **_jkrkwargs, der="1_a")
@@ -94,7 +105,8 @@ class SphereCrackFrontPenetration():
 
     def hessian_product(self, p, radius, penetration):
         """
-        computes efficiently the hessian product :math:`H(radius, penetration) p`
+        computes efficiently the hessian product
+        :math:`H(radius, penetration) p`
         """
         a0 = np.mean(radius)
         K = JKR.stress_intensity_factor(contact_radius=a0,
@@ -115,16 +127,15 @@ class SphereCrackFrontPenetration():
                    ) * p
         )
 
-
     @property
     def elastic_jacobian(self):
         if self._elastic_jacobian is None:
             npx = self.npx
-            elastic_jac = np.zeros((npx,npx))
-            v = np.fft.irfft(self.nq/2, n=npx)
+            elastic_jac = np.zeros((npx, npx))
+            v = np.fft.irfft(self.nq / 2, n=npx)
             for i in range(npx):
                 for j in range(npx):
-                    elastic_jac[i, j] = v[i-j]
+                    elastic_jac[i, j] = v[i - j]
             self._elastic_jacobian = elastic_jac
         return self._elastic_jacobian
 
@@ -168,17 +179,25 @@ class SphereCrackFrontPenetration():
         ncFrame.njev = sol.njev
         ncFrame.nhev = sol.nhev
 
+
 class SphereCrackFrontPenetrationLin(SphereCrackFrontPenetration):
     def gradient(self, radius, penetration):
         if (radius <= 0).any():
             raise NegativeRadiusError
         a0 = np.mean(radius)
-        return 1 / a0 * self.elastic_jacobian @ radius \
-            * JKR.stress_intensity_factor(contact_radius=a0, penetration=penetration, radius=R, contact_modulus=Es,) \
-            + JKR.stress_intensity_factor(contact_radius=a0, penetration=penetration, radius=R, contact_modulus=Es,) \
-            + JKR.stress_intensity_factor(contact_radius=a0, penetration=penetration, der="1_a") \
+        return 1 / a0 * self.elastic_hessp(radius) \
+            * JKR.stress_intensity_factor(contact_radius=a0,
+                                          penetration=penetration,
+                                          **_jkrkwargs) \
+            + JKR.stress_intensity_factor(contact_radius=a0,
+                                          penetration=penetration,
+                                          **_jkrkwargs) \
+            + JKR.stress_intensity_factor(contact_radius=a0,
+                                          penetration=penetration,
+                                          **_jkrkwargs,
+                                          der="1_a") \
             * (radius - a0) \
-               - self.kc(radius, self.angles)
+            - self.kc(radius, self.angles)
 
     def hessian(self, radius, penetration):
         a0 = np.mean(radius)
@@ -187,22 +206,22 @@ class SphereCrackFrontPenetrationLin(SphereCrackFrontPenetration):
             penetration=penetration, **_jkrkwargs)
 
         return self.elastic_jacobian * K / a0 \
-            + np.diag((- K / a0 **2
+            + np.diag((- K / a0 ** 2
                        + JKR.stress_intensity_factor(contact_radius=a0,
                                                      penetration=penetration,
                                                      **_jkrkwargs,
                                                      der="1_a")
                        / a0
                        ) / self.npx * self.elastic_jacobian @ radius
-                       + JKR.stress_intensity_factor(contact_radius=a0,
-                                                     penetration=penetration,
-                                                     **_jkrkwargs, der="1_a")
-                       + JKR.stress_intensity_factor(contact_radius=a0,
-                                                     penetration=penetration,
-                                                     **_jkrkwargs, der="2_a")
-                          / self.npx * (radius - a0)
-                       - self.dkc(radius, self.angles)
-            )
+                      + JKR.stress_intensity_factor(contact_radius=a0,
+                                                    penetration=penetration,
+                                                    **_jkrkwargs, der="1_a")
+                      + JKR.stress_intensity_factor(contact_radius=a0,
+                                                    penetration=penetration,
+                                                    **_jkrkwargs, der="2_a")
+                      / self.npx * (radius - a0)
+                      - self.dkc(radius, self.angles)
+                      )
 
     def hessian_product(self, p, radius, penetration):
         a0 = np.mean(radius)
@@ -211,22 +230,22 @@ class SphereCrackFrontPenetrationLin(SphereCrackFrontPenetration):
             penetration=penetration, **_jkrkwargs)
 
         return K / a0 * self.elastic_hessp(p) \
-               + ((- K / a0 ** 2
-                   + JKR.stress_intensity_factor(contact_radius=a0,
-                                                 penetration=penetration,
-                                                 **_jkrkwargs,
-                                                 der="1_a")
-                   / a0
-                   ) / self.npx * self.elastic_hessp(radius)
-                  + JKR.stress_intensity_factor(contact_radius=a0,
-                                                penetration=penetration,
-                                                **_jkrkwargs, der="1_a")
-                  + JKR.stress_intensity_factor(contact_radius=a0,
-                                                penetration=penetration,
-                                                **_jkrkwargs, der="2_a")
-                  / self.npx * (radius - a0)
-                  - self.dkc(radius, self.angles)
-                  ) * p
+            + ((- K / a0 ** 2
+                + JKR.stress_intensity_factor(contact_radius=a0,
+                                              penetration=penetration,
+                                              **_jkrkwargs,
+                                              der="1_a")
+                / a0
+                ) / self.npx * self.elastic_hessp(radius)
+               + JKR.stress_intensity_factor(contact_radius=a0,
+                                             penetration=penetration,
+                                             **_jkrkwargs, der="1_a")
+               + JKR.stress_intensity_factor(contact_radius=a0,
+                                             penetration=penetration,
+                                             **_jkrkwargs, der="2_a")
+               / self.npx * (radius - a0)
+               - self.dkc(radius, self.angles)
+               ) * p
 
 
 class Interpolator():
