@@ -1,3 +1,26 @@
+#
+# Copyright 2020 Antoine Sanner
+#
+# ### MIT license
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
 
 
 import numpy as np
@@ -38,15 +61,15 @@ work_of_adhesion = w = alpha**2  * np.pi / 2
 length_parameter = 0.1#$rho
 
 # discretisation
-nx = 256#$npx # number of pixels in the x direction
-ny = 256#$npy
+nx = 1024#$npx # number of pixels in the x direction
+ny = 1024#$npy
 
 dx= sx / nx
 dy = dx
 sy = dy * ny
 
 # fluctuating work of adhesion
-dw = 0.5# $dw # maximum work of adhesion fluctuation
+dw = 0.7# $dw # maximum work of adhesion fluctuation
 lcor = 0.3#$lcor # correlation length: length of the highcut
 seed = 1#$seed
 fluctuation_length = sy
@@ -54,7 +77,7 @@ fluctuation_length = sy
 ## simulation parameters
 max_rel_area = maxarea = 0.5# $maxarea
 starting_displacement = -.25
-delta_d = 0.005
+delta_d = 0.05
 
 
 np.random.seed(seed)
@@ -271,7 +294,13 @@ def dkc(x, y):
     interp_field, interp_derx, interp_dery = k_topo_interp(x+0.5 * sx, y, derivative=1)
     return interp_derx
 
-def simulate_CF_following_CM(pausetime=0.00001):
+class RadiusTooLowError(Exception):
+    pass
+
+class NegativeRadiusError(Exception):
+    pass
+
+def simulate_CF_following_CM(pausetime=0.00001, pulloff_a=1e-10, ):
 
     n = 128
     cf = SinewaveCrackFrontLoad(n=n, sy=sy, kc=kc, dkc=dkc)
@@ -295,13 +324,13 @@ def simulate_CF_following_CM(pausetime=0.00001):
         a = None # take care not to take a too small initial guess
         for i in np.concatenate(make_monotonic_load_indexes(nc_CM.displacement, nc_CM.mean_pressure))[1:]:
             print("CM frac contact area: {}".format(nc_CM[i].contact_area / (sx * sy)))
-            if nc_CM[i].contact_area == 0:
+            #if nc_CM[i].contact_area == 0:
+            #    continue
+            #if nc_CM[i].mean_pressure <= 0:
+            #    if nc_CM[i].mean_pressure >=  nc_CM[i-1].mean_pressure:
+            #        continue
+            if nc_CM[i].displacement <= 0 and nc_CM[i].displacement >=  nc_CM[i-1].displacement:
                 continue
-            if nc_CM[i].mean_pressure <= 0:
-                if nc_CM[i].mean_pressure >=  nc_CM[i-1].mean_pressure:
-                    continue
-
-
 
             a_left = np.max( ( 1/2 - x ) * nc_CM[i].contacting_points, axis=0)
             a_right = np.max( ( x - 1/2 ) * nc_CM[i].contacting_points, axis=0)
@@ -313,13 +342,28 @@ def simulate_CF_following_CM(pausetime=0.00001):
 
             if a is None:
                 a = np.ones(2 * n) * JKR.contact_radius(P, alpha)
-            sol = trustregion_newton_cg(x0=a, gradient=lambda a : cf.gradient(a, P),
-                                    hessian=lambda a : cf.hessian(a, P),
-                                    trust_radius=0.25 * np.min((np.min(a), fluctuation_length)),
-                                    maxiter=3000,
-                                    gtol=1e-6 # he has issues to reach the gtol at small values of a
-                                    )
-
+            try:
+                def gradient(radius):
+                    # TODO: this could be integrated directly in the crack
+                    #  front class
+                    if np.min(radius) < 0:
+                        raise NegativeRadiusError
+                    if np.max(radius) < pulloff_a:
+                        raise RadiusTooLowError
+                    return cf.gradient(radius, P)
+                sol = trustregion_newton_cg(x0=a, gradient=gradient,
+                                        hessian=lambda a : cf.hessian(a, P),
+                                        trust_radius=np.min((np.min(a) * 0.9, 0.25 * fluctuation_length)),
+                                        maxiter=3000,
+                                        gtol=1e-6 # he has issues to reach the gtol at small values of a
+                                        )
+            except RadiusTooLowError:
+                if nc_CM[i].displacement >=  nc_CM[i-1].displacement:
+                    print("CF still unstable")
+                    continue
+                else:
+                    print("lost contact")
+                    break
             assert sol.success
             print("nit: {}".format(sol.nit))
             a = sol.x
@@ -434,22 +478,24 @@ def make_animation_both():
 
 
 if __name__ == "__main__":
+
+    a_min, a_infl, a_max = JKR._find_min_max_a(alpha = np.sqrt(np.min(w_topo.heights()) * 2 / np.pi))
+
     #simulate_CM()
-    #simulate_CF()
-    #simulate_CF_following_CM()
+    #simulate_CF_following_CM(pulloff_a=a_min)
     #make_animation_both()
+
     import matplotlib.pyplot as plt
     nc_CM = NCStructuredGrid("CM.nc")
     nc_CF = NCStructuredGrid("CF.nc")
 
-    cx, cy = [s / 2 -  s /n /2 for s, n in zip((sx, sy), (nx, ny))]
+    cx, cy = [s / 2 - s /n /2 for s, n in zip((sx, sy), (nx, ny))]
     x, y = topography.positions()
 
-    a_left = np.max( (1/2 - x) * nc_CM.contacting_points, axis=1)
-    a_right = np.max( ( x - 1/2 ) * nc_CM.contacting_points, axis=1)
+    a_left = np.max((1/2 - x) * nc_CM.contacting_points, axis=1)
+    a_right = np.max(( x - 1/2 ) * nc_CM.contacting_points, axis=1)
 
     #indexes = np.concatenate(make_monotonic_load_indexes(nc_CM.displacement, nc_CM.mean_pressure))
-
     indexes = slice(None)
 
     fig, ax = plt.subplots()
