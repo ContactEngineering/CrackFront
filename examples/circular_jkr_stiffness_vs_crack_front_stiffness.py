@@ -84,7 +84,7 @@ for dK in 0.1, 0.4, 0.8:
     radii_jkr_only = [JKR.contact_radius(penetration=penetration, 
                       work_of_adhesion= kc(1, theta)**2 / (2 * Es) ) for theta in angles]
     ax.plot(radii_jkr_only, label="independent JKR contacts")
-    ax.set_xlabel("pixel")
+    ax.set_xlabel("arclength along the perimeter (pixel)")
     ax.set_ylabel("radius")
     ax.set_title("penetration={}, dK={}".format(penetration,dK))
     ax.legend()
@@ -114,8 +114,8 @@ for penetration in -0.4, 1.:
 
         radii_jkr_only = [JKR.contact_radius(penetration=penetration, work_of_adhesion= kc(1, theta)**2 / (2 * Es) ) for theta in angles]
         ax.plot(*pol2cart(radii_jkr_only, angles), ".",label="q=0 term only only")
-        ax.set_xlabel("pixel")
-        ax.set_ylabel("radius")
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
         ax.set_title("penetration={}, dK={}".format(penetration,dK))
         ax.legend(bbox_to_anchor=(1.,1.05))
         ax.set_aspect(1)
@@ -218,5 +218,36 @@ fig
 #
 # We see that the $\partial K^0 / \partial a$ contribution is only negligible at penetrations very close to the pulloffs.
 #
+
+#
+# # Appendix
+#
+# ## Cosinusoidal variations of the radius
+#
+# The shape of the contact area can look a bit strange sometimes, with this reentrent feature. But this is normal. 
+# the SIF landscape depends only on the angle, and is cosinusoidal in the angle. Hence, using the purely linear model linking SIF fluctuations to radius fluctuations, the radius fluctuations are cosinusoidal as well. 
+#
+# Let's look how cosinusoidal perturbations of the radius affect the shape of the circle.
+#
+# $$
+# r(\theta) = 1 + da \cos(\theta)
+# $$
+#
+
+# +
+fig, ax = plt.subplots()
+ax.set_aspect(1)
+
+angle = np.linspace(0, 2 * np.pi)
+
+for da in [0, 0.1, 0.5, 0.7, 0.9, 1]:
+    radius = 1 + da * np.cos(angle)
+    ax.plot(*pol2cart(radius, angle), label=f"da = {da}")
+    
+ax.legend(bbox_to_anchor=(1.,1.05))
+
+ax.set_xlabel("x")
+ax.set_ylabel("y")
+# -
 
 
