@@ -1,4 +1,4 @@
-
+setuptools
 matplotlib>=1.0.0
 numpy>=1.16.3
 pylint>0.25
