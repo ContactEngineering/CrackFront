@@ -7,6 +7,7 @@ scipy>=1.2.0
 pytest>=4
 pytest-flake8
 flake8
+h5py
 SurfaceTopography>=0.91.2
 ContactMechanics
 git+ssh://git@github.com/ComputationalMechanics/Adhesion.git
