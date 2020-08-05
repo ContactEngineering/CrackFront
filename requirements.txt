@@ -10,4 +10,4 @@ flake8
 importlib
 SurfaceTopography>=0.91.2
 ContactMechanics
-git+https://github.com/ComputationalMechanics/Adhesion.git@feat/20_ref_solutions
+git@github.com/ComputationalMechanics/Adhesion.git@feat/20_ref_solutions
