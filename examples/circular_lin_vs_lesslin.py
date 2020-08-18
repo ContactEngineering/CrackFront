@@ -1,3 +1,19 @@
+# ---
+# jupyter:
+#   jupytext:
+#     formats: ipynb,py:percent
+#     text_representation:
+#       extension: .py
+#       format_name: percent
+#       format_version: '1.3'
+#       jupytext_version: 1.5.1
+#   kernelspec:
+#     display_name: CrackFront_dev
+#     language: python
+#     name: crackfront_dev
+# ---
+
+# %%
 #
 # Copyright 2020 Antoine Sanner
 #
@@ -32,13 +48,15 @@ import matplotlib.pyplot as plt
 # %%
 from Adhesion.ReferenceSolutions import JKR
 
-from CrackFront.Circular import cart2pol, pol2cart, SphereCrackFrontPenetration
+from CrackFront.Circular import cart2pol, pol2cart, SphereCrackFrontPenetration, SphereCrackFrontPenetrationLin, SphereCrackFrontPenetrationMe
 from CrackFront.Optimization import trustregion_newton_cg
 
 # %%
 w = 1 / np.pi
 Es = 3. / 4
 mean_Kc = np.sqrt(2 * Es * w)
+
+# %%
 
 # %%
 penetration = -0.4
@@ -53,17 +71,40 @@ for n_rays in [1, 2, 8]:
 
         n = 256 # discretisation
 
+        cf = SphereCrackFrontPenetrationMe(n,
+                         kc=kc,
+                         dkc=dkc)
 
         a = np.ones(cf.npx) * JKR.contact_radius(penetration=penetration)
 
-        cf = SphereCrackFrontPenetration(n,
-                                         kc=kc,
-                                         dkc=dkc,
-                                         lin=False)
+
 
         sol = trustregion_newton_cg(
                     x0=a, gradient=lambda a: cf.gradient(a, penetration),
-                    hessian=lambda a: cf.hessian(a, penetration),
+                    hessian_product=lambda a, p: cf.hessian_product(p,
+                                                                    radius=a,
+                                                                    penetration=penetration),
+                    trust_radius=0.25 * np.min(a),
+                    maxiter=3000,
+                    gtol=1e-11)
+        assert sol.success
+
+        radii_me = sol.x
+        
+        
+        cf = SphereCrackFrontPenetration(n,
+                                 kc=kc,
+                                 dkc=dkc)
+
+        a = np.ones(cf.npx) * JKR.contact_radius(penetration=penetration)
+
+
+
+        sol = trustregion_newton_cg(
+                    x0=a, gradient=lambda a: cf.gradient(a, penetration),
+                    hessian_product=lambda a, p: cf.hessian_product(p,
+                                                                    radius=a,
+                                                                    penetration=penetration),
                     trust_radius=0.25 * np.min(a),
                     maxiter=3000,
                     gtol=1e-11)
@@ -73,14 +114,15 @@ for n_rays in [1, 2, 8]:
 
 
 
-        cf = SphereCrackFrontPenetration(n,
+        cf = SphereCrackFrontPenetrationLin(n,
                                          kc=kc,
-                                         dkc=dkc,
-                                         lin=True)
+                                         dkc=dkc)
 
         sol = trustregion_newton_cg(
                     x0=a, gradient=lambda a: cf.gradient(a, penetration),
-                    hessian=lambda a: cf.hessian(a, penetration),
+                    hessian_product=lambda a, p: cf.hessian_product(p,
+                                                                    radius=a,
+                                                                    penetration=penetration),
                     trust_radius=0.25 * np.min(a),
                     maxiter=3000,
                     gtol=1e-11)
@@ -92,6 +134,8 @@ for n_rays in [1, 2, 8]:
 
         ax.plot(radii_lin, label="linearised")
         ax.plot(radii_nonlin, label="normal")
+        ax.plot(radii_me, label="me")
+
         ax.set_xlabel("pixel")
         ax.set_ylabel("radius")
         ax.set_title("penetration={}, dK={}".format(penetration,dK))

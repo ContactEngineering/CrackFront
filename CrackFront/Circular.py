@@ -180,6 +180,37 @@ class SphereCrackFrontPenetration():
         ncFrame.nhev = sol.nhev
 
 
+class SphereCrackFrontPenetrationMe(SphereCrackFrontPenetration):
+    def gradient(self, radius, penetration):
+        if (radius <= 0).any():
+            raise NegativeRadiusError
+        return ( 1 / radius * self.elastic_hessp(radius) + 1) \
+           * JKR.stress_intensity_factor(contact_radius=radius,
+                                          penetration=penetration,
+                                          **_jkrkwargs) \
+            - self.kc(radius, self.angles)
+
+    def hessian(self, radius, penetration):
+        raise NotImplementedError
+
+    def hessian_product(self, p, radius, penetration):
+        """
+        computes efficiently the hessian product
+        :math:`H(radius, penetration) p`
+        """
+        K = JKR.stress_intensity_factor(contact_radius=radius,
+                                        penetration=penetration, **_jkrkwargs)
+        hesspr = self.elastic_hessp(radius)
+        return (
+                K * (- hesspr / radius ** 2 * p
+                     + self.elastic_hessp(p) / radius)
+                + JKR.stress_intensity_factor(contact_radius=radius,
+                                              penetration=penetration,
+                                              **_jkrkwargs, der="1_a")
+                * (1 + hesspr / radius) * p
+                - self.dkc(radius, self.angles)
+        )
+
 class SphereCrackFrontPenetrationLin(SphereCrackFrontPenetration):
     def gradient(self, radius, penetration):
         if (radius <= 0).any():
