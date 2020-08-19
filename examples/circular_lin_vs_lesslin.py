@@ -48,7 +48,7 @@ import matplotlib.pyplot as plt
 # %%
 from Adhesion.ReferenceSolutions import JKR
 
-from CrackFront.Circular import cart2pol, pol2cart, SphereCrackFrontPenetration, SphereCrackFrontPenetrationLin, SphereCrackFrontPenetrationMe
+from CrackFront.Circular import cart2pol, pol2cart, SphereCrackFrontPenetrationIntermediate, SphereCrackFrontPenetrationLin, SphereCrackFrontPenetrationFull
 from CrackFront.Optimization import trustregion_newton_cg
 
 # %%
@@ -71,9 +71,9 @@ for n_rays in [1, 2, 8]:
 
         n = 256 # discretisation
 
-        cf = SphereCrackFrontPenetrationMe(n,
-                         kc=kc,
-                         dkc=dkc)
+        cf = SphereCrackFrontPenetrationFull(n,
+                                             kc=kc,
+                                             dkc=dkc)
 
         a = np.ones(cf.npx) * JKR.contact_radius(penetration=penetration)
 
@@ -92,9 +92,9 @@ for n_rays in [1, 2, 8]:
         radii_me = sol.x
         
         
-        cf = SphereCrackFrontPenetration(n,
-                                 kc=kc,
-                                 dkc=dkc)
+        cf = SphereCrackFrontPenetrationIntermediate(n,
+                                                     kc=kc,
+                                                     dkc=dkc)
 
         a = np.ones(cf.npx) * JKR.contact_radius(penetration=penetration)
 

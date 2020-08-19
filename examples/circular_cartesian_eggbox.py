@@ -29,7 +29,7 @@ import os
 
 from muFFT.NetCDF import NCStructuredGrid
 
-from CrackFront.Circular import  SphereCrackFrontPenetration, pol2cart, cart2pol
+from CrackFront.Circular import  SphereCrackFrontPenetrationIntermediate, pol2cart, cart2pol
 from Adhesion.ReferenceSolutions import JKR
 from CrackFront.Optimization import trustregion_newton_cg
 
@@ -81,7 +81,7 @@ def dkc(radius, angle):
 
 def simulate_crack_front(n=512, filename=FILENAME):
 
-    cf = SphereCrackFrontPenetration(npx=n, kc=kc, dkc=dkc)
+    cf = SphereCrackFrontPenetrationIntermediate(npx=n, kc=kc, dkc=dkc)
 
     nc_CF = NCStructuredGrid(filename, "w", (n,))
 

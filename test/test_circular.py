@@ -26,14 +26,17 @@ from muFFT.NetCDF import NCStructuredGrid
 
 from CrackFront.Optimization import trustregion_newton_cg
 from CrackFront.Circular import (
-    SphereCrackFrontPenetration,
+    SphereCrackFrontPenetrationFull,
+    SphereCrackFrontPenetrationIntermediate,
     SphereCrackFrontPenetrationLin
     )
 import numpy as np
 import pytest
 
 
-@pytest.mark.parametrize("cfclass", [SphereCrackFrontPenetration,
+@pytest.mark.parametrize("cfclass", [
+                                     SphereCrackFrontPenetrationFull,
+                                     SphereCrackFrontPenetrationIntermediate,
                                      SphereCrackFrontPenetrationLin])
 def test_circular_front_vs_jkr(cfclass):
     """
@@ -66,7 +69,7 @@ def test_circular_front_vs_jkr(cfclass):
     for penetration in penetrations:
         sol = trustregion_newton_cg(
             x0=a, gradient=lambda a: cf.gradient(a, penetration),
-            hessian=lambda a: cf.hessian(a, penetration),
+            hessian_product=lambda a, p: cf.hessian_product(p, a, penetration),
             trust_radius=0.1 * np.min(a),
             maxiter=3000,
             gtol=1e-11)
@@ -169,7 +172,7 @@ def test_single_sinewave(penetration, n_rays, npx):
 
 def test_elastic_hessp_vs_brute_force_elastic_hessian():
     npx = 32
-    cf = SphereCrackFrontPenetration(npx, lambda x: None, lambda x: None)
+    cf = SphereCrackFrontPenetrationIntermediate(npx, lambda x: None, lambda x: None)
     a_test = np.random.normal(size=npx)
     np.testing.assert_allclose(cf.elastic_hessp(a_test),
                                cf.elastic_jacobian @ a_test)
@@ -204,7 +207,7 @@ def test_converges_to_linear(penetration):
             kc=kc,
             dkc=dkc)
 
-        cf = SphereCrackFrontPenetration(
+        cf = SphereCrackFrontPenetrationIntermediate(
             npx,
             kc=kc,
             dkc=dkc, )
@@ -259,8 +262,9 @@ def test_converges_to_linear(penetration):
         # the K / dK has hence errors scaling linearly with dK
         # this is what we see in this plot
 
-@pytest.mark.parametrize("cfclass", [SphereCrackFrontPenetration,
-                                 SphereCrackFrontPenetrationLin])
+@pytest.mark.parametrize("cfclass", [SphereCrackFrontPenetrationIntermediate,
+                                     SphereCrackFrontPenetrationLin,
+                                     SphereCrackFrontPenetrationFull,])
 def test_dump(cfclass):
     penetration = 0.
     n_rays = 2
@@ -280,7 +284,6 @@ def test_dump(cfclass):
     def dkc(radius, angle):
         return (1 - dK / lcor * np.cos(angle * n_rays) * np.sin(radius / lcor) ) * mean_Kc
 
-
     cf = cfclass(
         npx,
         kc=kc,
@@ -299,7 +302,7 @@ def test_dump(cfclass):
     print(sol.nit)
     cf.dump(nc[i], penetration, sol)
 
-@pytest.mark.parametrize("cfclass", [SphereCrackFrontPenetration,
+@pytest.mark.parametrize("cfclass", [SphereCrackFrontPenetrationIntermediate,
                                      SphereCrackFrontPenetrationLin])
 def test_hessp_and_hessian_equivalent(cfclass):
     n_rays = 1

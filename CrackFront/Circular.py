@@ -49,8 +49,7 @@ R = 1.
 _jkrkwargs = dict(contact_modulus=Es, radius=R)
 
 
-class SphereCrackFrontPenetration():
-
+class SphereCrackFrontPenetrationBase():
     def __init__(self, npx, kc, dkc):
         """
 
@@ -70,6 +69,66 @@ class SphereCrackFrontPenetration():
         self.kc = kc
         self.dkc = dkc
 
+    def gradient(self, radius, penetration):
+        raise NotImplementedError
+
+    def hessian_product(self, p, radius, penetration):
+        raise NotImplementedError
+
+    @property
+    def elastic_jacobian(self):
+        if self._elastic_jacobian is None:
+            npx = self.npx
+            elastic_jac = np.zeros((npx, npx))
+            v = np.fft.irfft(self.nq / 2, n=npx)
+            for i in range(npx):
+                for j in range(npx):
+                    elastic_jac[i, j] = v[i - j]
+            self._elastic_jacobian = elastic_jac
+        return self._elastic_jacobian
+
+    def elastic_hessp(self, a):
+        return np.fft.irfft(self.nq / 2 * np.fft.rfft(a), n=self.npx)
+
+    def dump(self, ncFrame, penetration, sol):
+        """
+        Writes the results of the current solution into the ncFrame
+
+        this assumes the trust-region-newton-cg has been used.
+
+        Parameters
+        ----------
+        ncFrame:
+            frame to the NCStructuredGrid
+        penetration:
+            current penetration value
+        sol:
+            output of the minimizer
+            `CrackFront.Optimization.trustregion_newton_cg``
+        """
+
+        a = sol.x
+
+        ncFrame.penetration = penetration
+        ncFrame.radius = a
+        ncFrame.mean_radius = mean_radius = np.mean(a)
+        ncFrame.contact_area = np.pi * np.mean(a**2)
+        # Just for convenience:
+        ncFrame.force = JKR.force(contact_radius=mean_radius,
+                                  penetration=penetration)
+
+        ncFrame.rms_radius = np.sqrt(np.mean((a - mean_radius)**2))
+        ncFrame.min_radius = np.min(a)
+        ncFrame.max_radius = np.max(a)
+
+        # infos on convergence
+        ncFrame.nit = sol.nit
+        ncFrame.n_hits_boundary = sol.n_hits_boundary
+        ncFrame.njev = sol.njev
+        ncFrame.nhev = sol.nhev
+
+
+class SphereCrackFrontPenetrationIntermediate(SphereCrackFrontPenetrationBase):
     def gradient(self, radius, penetration):
         if (radius <= 0).any():
             raise NegativeRadiusError
@@ -127,60 +186,8 @@ class SphereCrackFrontPenetration():
                    ) * p
         )
 
-    @property
-    def elastic_jacobian(self):
-        if self._elastic_jacobian is None:
-            npx = self.npx
-            elastic_jac = np.zeros((npx, npx))
-            v = np.fft.irfft(self.nq / 2, n=npx)
-            for i in range(npx):
-                for j in range(npx):
-                    elastic_jac[i, j] = v[i - j]
-            self._elastic_jacobian = elastic_jac
-        return self._elastic_jacobian
 
-    def elastic_hessp(self, a):
-        return np.fft.irfft(self.nq / 2 * np.fft.rfft(a), n=self.npx)
-
-    def dump(self, ncFrame, penetration, sol):
-        """
-        Writes the results of the current solution into the ncFrame
-
-        this assumes the trust-region-newton-cg has been used.
-
-        Parameters
-        ----------
-        ncFrame:
-            frame to the NCStructuredGrid
-        penetration:
-            current penetration value
-        sol:
-            output of the minimizer
-            `CrackFront.Optimization.trustregion_newton_cg``
-        """
-
-        a = sol.x
-
-        ncFrame.penetration = penetration
-        ncFrame.radius = a
-        ncFrame.mean_radius = mean_radius = np.mean(a)
-        ncFrame.contact_area = np.pi * np.mean(a**2)
-        # Just for convenience:
-        ncFrame.force = JKR.force(contact_radius=mean_radius,
-                                  penetration=penetration)
-
-        ncFrame.rms_radius = np.sqrt(np.mean((a - mean_radius)**2))
-        ncFrame.min_radius = np.min(a)
-        ncFrame.max_radius = np.max(a)
-
-        # infos on convergence
-        ncFrame.nit = sol.nit
-        ncFrame.n_hits_boundary = sol.n_hits_boundary
-        ncFrame.njev = sol.njev
-        ncFrame.nhev = sol.nhev
-
-
-class SphereCrackFrontPenetrationMe(SphereCrackFrontPenetration):
+class SphereCrackFrontPenetrationFull(SphereCrackFrontPenetrationBase):
     def gradient(self, radius, penetration):
         if (radius <= 0).any():
             raise NegativeRadiusError
@@ -208,11 +215,11 @@ class SphereCrackFrontPenetrationMe(SphereCrackFrontPenetration):
                                               penetration=penetration,
                                               **_jkrkwargs, der="1_a")
                 * (1 + hesspr / radius) * p
-                - self.dkc(radius, self.angles)
+                - self.dkc(radius, self.angles) * p
         )
 
 
-class SphereCrackFrontPenetrationLin(SphereCrackFrontPenetration):
+class SphereCrackFrontPenetrationLin(SphereCrackFrontPenetrationBase):
     def gradient(self, radius, penetration):
         if (radius <= 0).any():
             raise NegativeRadiusError

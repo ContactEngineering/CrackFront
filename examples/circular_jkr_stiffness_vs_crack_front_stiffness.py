@@ -28,7 +28,7 @@ plt.style.use("presentation")
 # +
 from Adhesion.ReferenceSolutions import JKR
 
-from CrackFront.Circular import cart2pol, pol2cart, SphereCrackFrontPenetration
+from CrackFront.Circular import cart2pol, pol2cart, SphereCrackFrontPenetrationIntermediate
 from CrackFront.Optimization import trustregion_newton_cg
 
 # +

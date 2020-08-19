@@ -31,7 +31,7 @@ from muFFT.NetCDF import NCStructuredGrid
 from SurfaceTopography import Topography
 
 from CrackFront.Circular import (
-    SphereCrackFrontPenetration, pol2cart,
+    SphereCrackFrontPenetrationIntermediate, pol2cart,
     cart2pol, Interpolator
     )
 from CrackFront.Postprocessing.Circular import ContactFrame
@@ -99,7 +99,7 @@ def simulate_crack_front(
 
     """
 
-    cf = SphereCrackFrontPenetration(npx=n, kc=kc, dkc=dkc)
+    cf = SphereCrackFrontPenetrationIntermediate(npx=n, kc=kc, dkc=dkc)
 
     nc_CF = NCStructuredGrid(filename, "w", (n,))
 
