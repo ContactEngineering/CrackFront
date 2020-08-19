@@ -22,4 +22,4 @@
 # SOFTWARE.
 #
 
-from .fixed_radius_trustregion_newton_cg import trustregion_newton_cg
+from .fixed_radius_trustregion_newton_cg import trustregion_newton_cg # noqa F401

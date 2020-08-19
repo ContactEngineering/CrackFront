@@ -26,55 +26,60 @@ from scipy.optimize import OptimizeResult
 from scipy.optimize._trustregion_ncg import CGSteihaugSubproblem
 import numpy as np
 
+
 def trustregion_newton_cg(x0, gradient, hessian=None, hessian_product=None,
-                                 trust_radius=0.5, gtol=1e-6, maxiter=1000,
-                                 trust_radius_from_x=None):
+                          trust_radius=0.5, gtol=1e-6, maxiter=1000,
+                          trust_radius_from_x=None):
     r"""
     minimizes the function having the given gradient and hessian
-    In other words it finds only roots of gradient where the hessian is positive semi-definite
+    In other words it finds only roots of gradient where the hessian
+    is positive semi-definite
 
-    This is the Newton algorithm using the Steihaug-CG (Nocedal algorithm 7.2) to
-    determine the step.
+    This is the Newton algorithm using the Steihaug-CG (Nocedal algorithm 7.2)
+    to determine the step.
     The step-length is limitted by trust-radius
     """
     x = x0
 
-
-
-    nfev = 0
+    # nfev = 0
     njev = 0
     nhev = 0
 
     def wrapped_gradient(*args):
         nonlocal njev
-        njev +=1
+        njev += 1
         return gradient(*args)
 
     def wrapped_hessian(*args):
         nonlocal nhev
-        nhev +=1
+        nhev += 1
         return hessian(*args)
 
     def wrapped_hessian_product(*args):
         nonlocal nhev
-        nhev +=1
+        nhev += 1
         return hessian_product(*args)
 
     m = CGSteihaugSubproblem(x, fun=lambda a: 0, jac=wrapped_gradient,
-                             hess=wrapped_hessian if hessian is not None else None ,
-                             hessp=wrapped_hessian_product if hessian_product is not None else None )
+                             hess=wrapped_hessian if hessian is not None
+                             else None,
+                             hessp=wrapped_hessian_product
+                             if hessian_product is not None else None)
     n_hits_boundary = 0
     nit = 1
 
-    while nit <=maxiter:
-        #print(f"####### it {nit}")
+    while nit <= maxiter:
+        # print(f"####### it {nit}")
         if trust_radius_from_x is not None:
             # this allows to choose the trust radius
             # according to nonadmissible values of x
             trust_radius = trust_radius_from_x(x)
-        # quadratic subproblem that uses the gradient = residual and the hessian at a
-        p, hits_boundary  = m.solve(trust_radius=trust_radius) # solve with CG-Steihaug (Nocedal Algorithm 7.2.)
-        # we choose trust_radis based on our knowledge of the nonlinear part of the function
+        # quadratic subproblem that uses the gradient = residual
+        # and the hessian at a
+        p, hits_boundary = m.solve(trust_radius=trust_radius)
+        # solve with CG-Steihaug (Nocedal Algorithm 7.2.)
+        # we choose trust_radis based on our knowledge of the nonlinear
+        # part of the function
 
         x = x + p
 
@@ -82,36 +87,42 @@ def trustregion_newton_cg(x0, gradient, hessian=None, hessian_product=None,
             n_hits_boundary = n_hits_boundary + 1
 
         m = CGSteihaugSubproblem(x, fun=lambda x: 0,
-             jac=wrapped_gradient,
-             hess=wrapped_hessian if hessian is not None else None ,
-             hessp=wrapped_hessian_product if hessian_product is not None else None )
+                                 jac=wrapped_gradient,
+                                 hess=wrapped_hessian
+                                 if hessian is not None else None,
+                                 hessp=wrapped_hessian_product
+                                 if hessian_product is not None else None)
         max_r = np.max(abs(m.jac))
-        #print(f"max(|r|)= {max_r}")
+        # print(f"max(|r|)= {max_r}")
         if max_r < gtol:
-            result = OptimizeResult({'success': True,
-                                     'x': x,
-                                     'jac': m.jac,
-                                     'nit': nit,
-                                     'nfev': 0,
-                                     'njev': njev,
-                                     'nhev': nhev,
-                                     'n_hits_boundary': n_hits_boundary,
-                                     'message': 'CONVERGENCE: CONVERGENCE: NORM_OF_GRADIENT_<=_GTOL',
-                                     })
+            result = OptimizeResult(
+                {
+                    'success': True,
+                    'x': x,
+                    'jac': m.jac,
+                    'nit': nit,
+                    'nfev': 0,
+                    'njev': njev,
+                    'nhev': nhev,
+                    'n_hits_boundary': n_hits_boundary,
+                    'message': 'CONVERGENCE: CONVERGENCE: NORM_OF_GRADIENT_<=_GTOL', # noqa E501
+                    })
             return result
         nit += 1
 
-    result = OptimizeResult({'success': False,
-                                     'x': x,
-                                     'jac': m.jac,
-                                     'nit': nit,
-                                     'nfev': 0,
-                                     'njev': njev,
-                                     'nhev': nhev,
-                                     'n_hits_boundary': n_hits_boundary,
-                                     'message': 'MAXITER REACHED',
-                                     })
+    result = OptimizeResult({
+        'success': False,
+        'x': x,
+        'jac': m.jac,
+        'nit': nit,
+        'nfev': 0,
+        'njev': njev,
+        'nhev': nhev,
+        'n_hits_boundary': n_hits_boundary,
+        'message': 'MAXITER REACHED',
+        })
     return result
+
 
 # A little demo
 if __name__ == "__main__":
@@ -132,42 +143,49 @@ if __name__ == "__main__":
 
         fig, ax = plt.subplots()
         x = np.arange(2 * n) * dy
-        ax.imshow(dK  *  np.cos(np.pi * x.reshape(1,-1)) * np.cos(np.pi * y.reshape(-1, 1)))
+        ax.imshow(dK * np.cos(np.pi * x.reshape(1, -1))
+                  * np.cos(np.pi * y.reshape(-1, 1)))
 
         # Defining residual and jacobian
-        elastic_jac = np.zeros((n,n))
-        v = np.fft.irfft(q/2, n=n)
+        elastic_jac = np.zeros((n, n))
+        v = np.fft.irfft(q / 2, n=n)
         for i in range(n):
             for j in range(n):
-                elastic_jac[i, j] = v[i-j]
-        elastic_jac *=C
+                elastic_jac[i, j] = v[i - j]
+        elastic_jac *= C
         # check elastic jacobian
-        a = np.random.normal(size = n)
-        np.testing.assert_allclose(elastic_jac @ a, C * np.fft.irfft(q / 2 * np.fft.rfft(a), n=n))
+        a = np.random.normal(size=n)
+        np.testing.assert_allclose(
+            elastic_jac @ a,
+            C * np.fft.irfft(q / 2 * np.fft.rfft(a), n=n))
 
         J_drive = kappa * np.eye(n)
 
         a0 = []
         K0 = []
         a = np.zeros(n)
+
         def hessian(a):
-            J_dis = np.diag(- dK  *  np.pi * np.sin(np.pi * a) * np.cos(np.pi * y))
+            J_dis = np.diag(
+                - dK * np.pi * np.sin(np.pi * a) * np.cos(np.pi * y))
             J = elastic_jac + J_drive + J_dis
             return J
 
         for driving_a in np.concatenate((np.linspace(-7, 5, 50),
-                                          np.linspace(5, -5, 50))):
+                                         np.linspace(5, -5, 50))):
             def gradient(a):
-                return dK  *  np.cos(np.pi * a) * np.cos(np.pi * y) + (elastic_jac) @ a + kappa * (a - driving_a)
+                return dK * np.cos(np.pi * a) * np.cos(np.pi * y) \
+                       + (elastic_jac) @ a + kappa * (a - driving_a)
 
             sol = trustregion_newton_cg(a, gradient, hessian,
-                                 trust_radius=0.5, gtol=1e-8, maxiter=1000)
+                                        trust_radius=0.5, gtol=1e-8,
+                                        maxiter=1000)
             assert sol.success
             a = sol.x
             ax.plot(a / dy, y / dy)
-            K0.append(np.mean(dK  *  np.cos(np.pi * a) * np.cos(np.pi * y)))
+            K0.append(np.mean(dK * np.cos(np.pi * a) * np.cos(np.pi * y)))
             a0.append(np.mean(a))
 
             plt.pause(0.0001)
-        axall.plot(a0, K0, marker,label=f"n = {n}")
+        axall.plot(a0, K0, marker, label=f"n = {n}")
     axall.legend()
