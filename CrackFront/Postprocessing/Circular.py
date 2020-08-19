@@ -114,11 +114,6 @@ class ContactFrame():
         nc_CF.close()
 
 
-
-
-
-
-
 def plot_contact_area_increment(dataset_directories, labels=None, save=False):
     w = 1 / np.pi
 

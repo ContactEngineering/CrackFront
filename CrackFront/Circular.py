@@ -184,8 +184,8 @@ class SphereCrackFrontPenetrationMe(SphereCrackFrontPenetration):
     def gradient(self, radius, penetration):
         if (radius <= 0).any():
             raise NegativeRadiusError
-        return ( 1 / radius * self.elastic_hessp(radius) + 1) \
-           * JKR.stress_intensity_factor(contact_radius=radius,
+        return (1 / radius * self.elastic_hessp(radius) + 1) \
+            * JKR.stress_intensity_factor(contact_radius=radius,
                                           penetration=penetration,
                                           **_jkrkwargs) \
             - self.kc(radius, self.angles)
@@ -210,6 +210,7 @@ class SphereCrackFrontPenetrationMe(SphereCrackFrontPenetration):
                 * (1 + hesspr / radius) * p
                 - self.dkc(radius, self.angles)
         )
+
 
 class SphereCrackFrontPenetrationLin(SphereCrackFrontPenetration):
     def gradient(self, radius, penetration):
