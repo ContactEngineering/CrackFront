@@ -10,4 +10,4 @@ flake8
 netCDF4==1.5.3 # See SurfaceTopography #33
 SurfaceTopography>=0.91.2
 ContactMechanics
-git+ssh://git@github.com/ComputationalMechanics/Adhesion.git
+git+ssh://git@github.com/ComputationalMechanics/Adhesion.git@20_ref_solutions
