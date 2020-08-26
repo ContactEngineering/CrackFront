@@ -112,6 +112,9 @@ class SphereCrackFrontPenetrationBase():
         ncFrame.penetration = penetration
         ncFrame.radius = a
         ncFrame.mean_radius = mean_radius = np.mean(a)
+
+        ncFrame.mean_Kc = np.mean(self.kc(a, self.angles))
+
         ncFrame.contact_area = np.pi * np.mean(a**2)
         # Just for convenience:
         ncFrame.force = JKR.force(contact_radius=mean_radius,
