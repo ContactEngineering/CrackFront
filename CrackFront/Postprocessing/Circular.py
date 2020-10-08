@@ -76,8 +76,8 @@ class ContactFrame():
         self.ax.set_yticks(ticks / sy * npx + npx * 0.5)
         self.ax.set_yticklabels([f"{v:.2f}" for v in ticks])
 
-        self.ax.set_xlabel(r'$y$ ($(\pi w_m R^2 / E^m)^{1/3}$)')
-        self.ax.set_ylabel(r'$y$ ($(\pi w_m R^2 / E^m)^{1/3}$)')
+        self.ax.set_xlabel(r'$y$ ($(\pi w_m R^2 / K)^{1/3}$)')
+        self.ax.set_ylabel(r'$y$ ($(\pi w_m R^2 / K)^{1/3}$)')
 
     def cart2pixels(self, x, y):
         """
