@@ -27,8 +27,8 @@ import numpy as np
 from Adhesion.System import BoundedSmoothContactSystem
 from Adhesion.Interactions import PowerLaw
 from ContactMechanics import PeriodicFFTElasticHalfSpace
-from ContactMechanics.Tools.Logger import screen, Logger
-from SurfaceTopography import make_sphere, Topography
+from ContactMechanics.Tools.Logger import Logger
+from SurfaceTopography import Topography
 
 from PythonBib.TopographyGeneration import make_topography_from_function
 
