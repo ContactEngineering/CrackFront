@@ -90,7 +90,7 @@ class SphereCrackFrontPenetrationBase():
     def elastic_hessp(self, a):
         return np.fft.irfft(self.nq / 2 * np.fft.rfft(a), n=self.npx)
 
-    def dump(self, ncFrame, penetration, sol):
+    def dump(self, ncFrame, penetration, sol, dump_fields=True):
         """
         Writes the results of the current solution into the ncFrame
 
@@ -110,7 +110,8 @@ class SphereCrackFrontPenetrationBase():
         a = sol.x
 
         ncFrame.penetration = penetration
-        ncFrame.radius = a
+        if dump_fields:
+            ncFrame.radius = a
         ncFrame.mean_radius = mean_radius = np.mean(a)
 
         ncFrame.mean_Kc = np.mean(self.kc(a, self.angles))
