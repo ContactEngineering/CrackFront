@@ -89,6 +89,16 @@ class ContactFrame():
     def pol2pixels(self, radius, angle):
         return self.cart2pixels(*pol2cart(radius, angle))
 
+    def plot_CF(self, radii):
+        npx_CF = len(radii)
+        angle = np.arange(npx_CF) / npx_CF * 2 * np.pi
+
+        ax = self.ax
+        l, = ax.plot(*self.pol2pixels(radii, angle),
+                ".-k", ms=1,  label="CF")
+
+        return l
+
     def animate_CF(self, nc_filename, output_filename):
         nc_CF = NCStructuredGrid(nc_filename)
 
