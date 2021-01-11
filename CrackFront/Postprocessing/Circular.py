@@ -55,7 +55,7 @@ class ContactFrame():
             self.physical_size = kc.physical_sizes[0]
             self.npx_plot = npx = kc.nb_grid_pts[0]
             s = sx = sy = self.physical_size
-            self.ax.imshow(kc.heights().T, cmap=workcmap)
+            self.ax.imshow(kc.heights().T, cmap=workcmap, rasterized=True)
         else:
             self.physical_size = physical_size
             self.npx_plot = npx
@@ -63,7 +63,7 @@ class ContactFrame():
             x, y = (np.mgrid[:npx, :npx] / npx - 1/2) * s
             rho, phi = cart2pol(x, y)
 
-            self.ax.imshow(kc(rho, phi).T, cmap=workcmap)
+            self.ax.imshow(kc(rho, phi).T, cmap=workcmap, rasterized=True)
 
         self.ax.invert_yaxis()
 
