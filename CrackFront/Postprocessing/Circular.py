@@ -32,7 +32,7 @@ from CrackFront.Tools.Hysteresis import direction_change_index
 
 
 class ContactFrame():
-    def __init__(self, kc, physical_size=4, npx=500,):
+    def __init__(self, kc, physical_size=4, npx=500, ax = None):
         """
         Parameters:
         -----------
@@ -48,8 +48,12 @@ class ContactFrame():
 
         """
 
-        self.fig, self.ax = plt.subplots()
-        self.ax.set_aspect(1)
+        if ax is None:
+            self.fig, self.ax = plt.subplots()
+            self.ax.set_aspect(1)
+        else:
+            self.ax = ax
+
         workcmap = plt.get_cmap("coolwarm")
         if isinstance(kc, Topography):
             self.physical_size = kc.physical_sizes[0]
