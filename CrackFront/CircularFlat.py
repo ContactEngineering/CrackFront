@@ -1,21 +1,48 @@
-from CrackFront.Circular import SphereCrackFrontPenetrationBase, \
-    NegativeRadiusError
 
+"""
+
+penetration = -1.
+Es = 1.
+
+
+"""
 import numpy as np
+
+from CrackFront.Circular import SphereCrackFrontPenetrationBase, NegativeRadiusError
 
 
 def stress_intensity_factor(contact_radius, Es=1., penetration=-1., der="0"):
+    """
+
+    Parameters
+    ----------
+    contact_radius : array_like of floats
+    Es : array_like of floats, optional
+        (Default 1.)
+    penetration : array_like of floats, optional
+        (Default -1.)
+    der : {"0", "1_a"}
+        order of the derivative
+    Returns
+    -------
+    stress_intensity_factor : array_like of floats
+        stress intensity factor
+
+        if Es and penetration are not provided, it is in units of
+
+    """
     if der == "0":
         return - penetration * Es / np.sqrt(np.pi * contact_radius)
     elif der == "1_a":
-        return penetration / (2 * np.sqrt(np.pi)) * contact_radius ** (-3 / 2)
+        return penetration * Es / (2 * np.sqrt(np.pi)) * contact_radius ** (- 3 / 2)
     elif der == "2_a":
-        return - 3 * penetration / (4 * np.sqrt(np.pi)) \
-            * contact_radius ** (-5 / 2)
+        return - penetration * 3 * Es / (4 * np.sqrt(np.pi)) * contact_radius ** (- 5 / 2)
+    else:
+        raise ValueError(f"Derivative {der} not implemented")
 
 
-class FlatCrackFrontPenetrationLin(SphereCrackFrontPenetrationBase):
-    def gradient(self, radius, penetration=-1.):
+class CircularFlatCrackFrontPenetrationLin(SphereCrackFrontPenetrationBase):
+    def gradient(self, radius, penetration):
         if (radius <= 0).any():
             raise NegativeRadiusError
         a0 = np.mean(radius)
