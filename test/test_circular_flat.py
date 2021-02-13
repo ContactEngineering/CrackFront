@@ -2,7 +2,7 @@
 import numpy as np
 
 
-from CrackFront.CircularFlat import CircularFlatCrackFrontPenetrationLin
+from CrackFront.CircularFlat import FlatCircularExternalCrackPenetrationLin
 from CrackFront.Optimization import trustregion_newton_cg
 
 
@@ -20,9 +20,9 @@ def test_rays():
         n_rays=32)
 
 
-    cf = CircularFlatCrackFrontPenetrationLin(512,
-                                         lambda radius, angle: kc(radius, angle, **params),
-                                         lambda radius, angle: dkc(radius, angle, **params))
+    cf = FlatCircularExternalCrackPenetrationLin(512,
+                                                 lambda radius, angle: kc(radius, angle, **params),
+                                                 lambda radius, angle: dkc(radius, angle, **params))
 
 
 
