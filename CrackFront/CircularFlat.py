@@ -41,7 +41,7 @@ def stress_intensity_factor(contact_radius, Es=1., penetration=-1., der="0"):
         raise ValueError(f"Derivative {der} not implemented")
 
 
-class CircularFlatCrackFrontPenetrationLin(SphereCrackFrontPenetrationBase):
+class FlatCircularExternalCrackPenetrationLin(SphereCrackFrontPenetrationBase):
     def gradient(self, radius, penetration):
         if (radius <= 0).any():
             raise NegativeRadiusError
