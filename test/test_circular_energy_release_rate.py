@@ -1,0 +1,139 @@
+
+
+import pytest
+import numpy as np
+from Adhesion.ReferenceSolutions import JKR
+from CrackFront.CircularEnergyReleaseRate import SphereCrackFrontERRPenetrationLin
+from CrackFront.Optimization import trustregion_newton_cg
+
+@pytest.mark.parametrize("cfclass", [
+                                     SphereCrackFrontERRPenetrationLin])
+def test_circular_front_vs_jkr(cfclass):
+    """
+    assert we recover the JKR solution for an uniform distribution of
+    work adhesion
+    """
+    _plot = False
+    n = 8
+    w = 1 / np.pi
+    Es = 3. / 4
+
+    cf = cfclass(n,
+                 w=lambda a, theta: np.ones_like(a) * w,
+                 dw=lambda a, theta: np.zeros_like(a), )
+
+    # initial guess
+    penetrations = np.concatenate((np.linspace(0.001, 1, endpoint=False),
+                                   np.linspace(1, -0.9)))
+    radii = []
+    a = np.ones(cf.npx) * JKR.contact_radius(penetration=penetrations[0])
+
+    if _plot:
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots()
+        _a = np.linspace(0, 4)
+        ax.plot(JKR.penetration(_a), _a)
+        ax.axvline(penetrations[-1])
+        plt.pause(0.001)
+
+    for penetration in penetrations:
+        sol = trustregion_newton_cg(
+            x0=a, gradient=lambda a: cf.gradient(a, penetration),
+            hessian_product=lambda a, p: cf.hessian_product(p, a, penetration),
+            trust_radius=0.1 * np.min(a),
+            maxiter=3000,
+            gtol=1e-11)
+        assert sol.success
+        contact_radius = np.mean(sol.x)
+        radii.append(contact_radius)
+        assert abs(np.max(sol.x) - contact_radius) < 1e-10
+        assert abs(np.min(sol.x) - contact_radius) < 1e-10
+        if _plot:
+            ax.plot(penetration, contact_radius, "+")
+            plt.pause(0.0011)
+        assert abs(penetration - JKR.penetration(contact_radius, )) < 1e-10
+
+        a = sol.x
+
+
+
+@pytest.mark.parametrize("penetration", [-0.4, 1.])
+@pytest.mark.parametrize("npx, n_rays", [(2, 1),
+                                         (3, 1),
+                                         (17, 8),
+                                         (16, 8),  # smallest possible
+                                         #  discretisation !
+                                         (128, 1),
+                                         (128, 8)])
+def test_single_sinewave(penetration, n_rays, npx):
+    r"""
+    For a sinusoidal work of adhesion distribution,
+    the shape of the crack front can be solved by hand (using the fully
+    linearized version of the equaiton)
+
+    For the work of adhesion distribution
+    .. math ::
+
+        w(\theta) = \left<w\right> (1 + dw \cos(n \theta))
+
+    The contact radius takes the form
+
+    .. math ::
+
+        a(\theta) = a_0 + da \cos(\theta)
+
+    with
+
+    .. math ::
+
+        da =  \frac{a_0 dw}{n\left<w\right>}
+
+    and :math:`a_0` the solution of
+
+    .. math ::
+
+        \bar w = G(a_0, \Delta)
+
+    """
+    w = 1 / np.pi
+    Es = 3. / 4
+
+    w_amplitude = 0.4
+
+    def w_landscape(radius, angle):
+        return (1 + w_amplitude * np.cos(angle * n_rays)) * w
+
+    def dw_landscape(radius, angle):
+        return np.zeros_like(radius)
+
+    cf = SphereCrackFrontERRPenetrationLin(npx,
+                                        w=w_landscape,
+                                        dw=dw_landscape)
+    # initial guess:
+    a = np.ones(npx) * JKR.contact_radius(penetration=penetration)
+    sol = trustregion_newton_cg(
+        x0=a, gradient=lambda a: cf.gradient(a, penetration),
+        hessian_product=lambda a, p: cf.hessian_product(p, a, penetration),
+        trust_radius=0.25 * np.min(a),
+        maxiter=3000,
+        gtol=1e-11)
+    assert sol.success
+    assert (abs(cf.gradient(sol.x, penetration)) < 1e-11).all()  #
+    radii_cf = sol.x
+
+    # Reference
+    a0 = JKR.contact_radius(penetration=penetration)
+    K = JKR.stress_intensity_factor(penetration=penetration, contact_radius=a0)
+    dK = JKR.stress_intensity_factor(penetration=penetration, contact_radius=a0, der="1_a")
+
+    da = w_amplitude * w / (K * dK / Es + n_rays * w / a0)
+
+    radii_lin_by_hand = da * np.cos(n_rays * cf.angles) + a0
+
+    if False:
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots()
+        ax.plot(radii_lin_by_hand, "o", label="by hand")
+        ax.plot(radii_cf, "+", label="general model")
+        plt.show()
+    np.testing.assert_allclose(radii_cf, radii_lin_by_hand)

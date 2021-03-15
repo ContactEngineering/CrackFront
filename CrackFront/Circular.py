@@ -289,7 +289,7 @@ class SphereCrackFrontPenetrationLin(SphereCrackFrontPenetrationBase):
                / self.npx * (radius - a0)
                - self.dkc(radius, self.angles)
                ) * p
-
+    # TODO: I have doubts on the correctness of this. See the ERR version.
 
 class Interpolator():
     """
