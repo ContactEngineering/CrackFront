@@ -93,13 +93,12 @@ class ContactFrame():
     def pol2pixels(self, radius, angle):
         return self.cart2pixels(*pol2cart(radius, angle))
 
-    def plot_CF(self, radii):
+    def plot_CF(self, radii, plot_kwargs=dict(marker=".", linestyle="-", color="k",  ms=1,  label="CF")):
         npx_CF = len(radii)
         angle = np.arange(npx_CF) / npx_CF * 2 * np.pi
 
         ax = self.ax
-        l, = ax.plot(*self.pol2pixels(radii, angle),
-                ".-k", ms=1,  label="CF")
+        l, = ax.plot(*self.pol2pixels(radii, angle), **plot_kwargs)
 
         return l
 
