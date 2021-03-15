@@ -22,7 +22,7 @@
 # SOFTWARE.
 #
 from Adhesion.ReferenceSolutions import JKR
-from muFFT.NetCDF import NCStructuredGrid
+from NuMPI.IO.NetCDF import NCStructuredGrid
 
 from CrackFront.Optimization import trustregion_newton_cg
 from CrackFront.Circular import (
@@ -332,3 +332,70 @@ def test_hessp_and_hessian_equivalent(cfclass):
     hessp = cf.hessian_product(p, radius=a, penetration=penetration)
 
     np.testing.assert_allclose(hessp, bruteforce)
+
+
+def test_hessian_product():
+
+    penetration = 0
+
+    w = 1 / np.pi
+    Es = 3. / 4
+    mean_Kc = np.sqrt(w * 2 * Es)
+    kc_amplitude = 0.4
+
+    n_rays = 8
+    npx = 32
+
+    def kc_landscape(radius, angle):
+        return (1 + kc_amplitude * np.cos(angle * n_rays)) * mean_Kc
+
+    def dkc_landscape(radius, angle):
+        return np.zeros_like(radius)
+
+    cf = SphereCrackFrontPenetrationLin(npx,
+                                        kc=kc_landscape,
+                                        dkc=dkc_landscape)
+
+    a = np.ones(npx) * JKR.contact_radius(penetration=penetration)
+    da = np.random.normal(size=npx) * np.mean(a) / 10
+
+    grad = cf.gradient(a, penetration)
+    if True:
+        hs = np.array([1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5,
+                       1e-6, 1e-7])
+        rms_errors = []
+        for h in hs:
+            grad_d = cf.gradient(a + h * da, penetration)
+            dgrad = grad_d - grad
+            dgrad_from_hess = cf.hessian_product(h * da, a, penetration)
+            rms_errors.append(np.sqrt(np.mean((dgrad_from_hess - dgrad) ** 2)))
+
+        # Visualize the quadratic convergence of the taylor expansion
+        # What to expect:
+        # Taylor expansion: g(x + h ∆x) - g(x) = Hessian * h * ∆x + O(h^2)
+        # We should see quadratic convergence as long as h^2 > g epsmach,
+        # the precision with which we are able to determine ∆g.
+        # What is the precision with which the hessian product is made ?
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots()
+        ax.plot(hs, rms_errors / hs ** 2
+            , "+-")
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        ax.grid(True)
+        plt.show()
+
+        hs = np.array([1e-2, 1e-3, 1e-4])
+    rms_errors = []
+    for h in hs:
+        grad_d = cf.gradient(a + h * da, penetration)
+        dgrad = grad_d - grad
+        dgrad_from_hess = cf.hessian_product(h * da, a, penetration)
+        rms_errors.append(np.sqrt(np.mean((dgrad_from_hess - dgrad) ** 2)))
+        rms_errors.append(
+            np.sqrt(
+                np.mean(
+                    (dgrad_from_hess.reshape(-1) - dgrad.reshape(-1)) ** 2)))
+
+    rms_errors = np.array(rms_errors)
+    assert rms_errors[-1] / rms_errors[0] < 1.5 * (hs[-1] / hs[0]) ** 2

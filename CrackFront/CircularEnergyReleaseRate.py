@@ -149,7 +149,7 @@ class SphereCrackFrontERRPenetrationLin(SphereCrackFrontPenetrationBase):
 
         return 1/ Es * ( K ** 2 / 2 / a0 * self.elastic_hessp(p)
                + (
-                       K / Es * dK * mp
+                       K * dK * mp
                        + (dK ** 2 + K * d2K) * mp * (radius - a0)
                        + K * dK * (p - mp)
                ) \
