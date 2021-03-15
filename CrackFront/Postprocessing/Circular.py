@@ -25,7 +25,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from CrackFront.Circular import cart2pol, pol2cart
-from muFFT.NetCDF import NCStructuredGrid
+from NuMPI.IO.NetCDF import NCStructuredGrid
 from SurfaceTopography import Topography
 from matplotlib.animation import FuncAnimation
 from CrackFront.Tools.Hysteresis import direction_change_index

@@ -32,7 +32,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
-from muFFT.NetCDF import NCStructuredGrid
+from NuMPI.IO.NetCDF import NCStructuredGrid
 from SurfaceTopography import Topography
 
 from CrackFront.Circular import (
