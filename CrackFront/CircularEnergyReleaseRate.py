@@ -96,7 +96,7 @@ class SphereCrackFrontERRPenetrationLin(SphereCrackFrontPenetrationBase):
 
         ncFrame.contact_area = np.pi * np.mean(a ** 2)
         # Just for convenience:
-        ncFrame.naive_force = self._evaluate_first_order_normal_force(contact_radius=a, penetration=penetration)
+        ncFrame.force_first_order = self._evaluate_first_order_normal_force(contact_radius=a, penetration=penetration)
         ncFrame.force = self.evaluate_normal_force(contact_radius=a, penetration=penetration)
 
         ncFrame.rms_radius = np.sqrt(np.mean((a - mean_radius) ** 2))
