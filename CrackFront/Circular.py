@@ -90,6 +90,19 @@ class SphereCrackFrontPenetrationBase():
     def elastic_hessp(self, a):
         return np.fft.irfft(self.nq / 2 * np.fft.rfft(a), n=self.npx)
 
+    @staticmethod
+    def evaluate_normal_force(contact_radius, penetration):
+        return SphereCrackFrontPenetrationBase._evaluate_first_order_normal_force(contact_radius, penetration) \
+            + SphereCrackFrontPenetrationBase._evaluate_normal_force_correction(
+            contact_radius, penetration)
+
+    @staticmethod
+    def _evaluate_first_order_normal_force(contact_radius, penetration):
+        """
+        This is just JKR applied to the mean contact radius
+        """
+        return JKR.force(contact_radius = np.mean(contact_radius), penetration=penetration)
+
     def dump(self, ncFrame, penetration, sol, dump_fields=True):
         """
         Writes the results of the current solution into the ncFrame
