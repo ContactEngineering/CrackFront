@@ -35,7 +35,7 @@ class SphereCrackFrontERRPenetrationLin(SphereCrackFrontPenetrationBase):
         if w is None and dw is None:
             if dkc is not None and kc is not None:
                 def w(radius, angle):
-                    return kc(radius, angle) ** 2 / (2 * Es),
+                    return kc(radius, angle) ** 2 / (2 * Es)
 
                 def dw(radius, angle):
                     return dkc(radius, angle) * kc(radius, angle) / Es
@@ -46,12 +46,6 @@ class SphereCrackFrontERRPenetrationLin(SphereCrackFrontPenetrationBase):
 
         self.w = w
         self.dw = dw
-
-    def gradient(self, radius, penetration):
-        raise NotImplementedError
-
-    def hessian_product(self, p, radius, penetration):
-        raise NotImplementedError
 
     @property
     def elastic_jacobian(self):
