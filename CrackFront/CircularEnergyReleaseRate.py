@@ -129,6 +129,7 @@ class SphereCrackFrontERRPenetrationLin(SphereCrackFrontPenetrationBase):
             rigid body penetration of the spherical indenter
         """
         # see notes of the 210315
+        # see notes of the 210401
 
         a0 = np.mean(contact_radius)
         da = contact_radius - a0
