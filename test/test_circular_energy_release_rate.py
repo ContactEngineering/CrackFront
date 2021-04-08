@@ -3,11 +3,12 @@
 import pytest
 import numpy as np
 from Adhesion.ReferenceSolutions import JKR
-from CrackFront.CircularEnergyReleaseRate import SphereCrackFrontERRPenetrationLin
+from CrackFront.CircularEnergyReleaseRate import SphereCrackFrontERRPenetrationLin, SphereCrackFrontERRPenetrationLinEnergy
 from CrackFront.Optimization import trustregion_newton_cg
 
 @pytest.mark.parametrize("cfclass", [
-                                     SphereCrackFrontERRPenetrationLin])
+                                     SphereCrackFrontERRPenetrationLin,
+                                     SphereCrackFrontERRPenetrationLinEnergy])
 def test_circular_front_vs_jkr(cfclass):
     """
     assert we recover the JKR solution for an uniform distribution of
@@ -56,7 +57,9 @@ def test_circular_front_vs_jkr(cfclass):
         a = sol.x
 
 
-
+@pytest.mark.parametrize("cfclass", [
+                                     SphereCrackFrontERRPenetrationLin,
+                                     SphereCrackFrontERRPenetrationLinEnergy])
 @pytest.mark.parametrize("penetration", [-0.4, 1.])
 @pytest.mark.parametrize("npx, n_rays", [(2, 1),
                                          (3, 1),
@@ -65,7 +68,7 @@ def test_circular_front_vs_jkr(cfclass):
                                          #  discretisation !
                                          (128, 1),
                                          (128, 8)])
-def test_single_sinewave(penetration, n_rays, npx):
+def test_single_sinewave(cfclass, penetration, n_rays, npx):
     r"""
     For a sinusoidal work of adhesion distribution,
     the shape of the crack front can be solved by hand (using the fully
@@ -106,9 +109,9 @@ def test_single_sinewave(penetration, n_rays, npx):
     def dw_landscape(radius, angle):
         return np.zeros_like(radius)
 
-    cf = SphereCrackFrontERRPenetrationLin(npx,
-                                        w=w_landscape,
-                                        dw=dw_landscape)
+    cf = cfclass(npx,
+                 w=w_landscape,
+                 dw=dw_landscape)
     # initial guess:
     a = np.ones(npx) * JKR.contact_radius(penetration=penetration)
     sol = trustregion_newton_cg(
@@ -130,7 +133,7 @@ def test_single_sinewave(penetration, n_rays, npx):
 
     radii_lin_by_hand = da * np.cos(n_rays * cf.angles) + a0
 
-    if False:
+    if True:
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
         ax.plot(radii_lin_by_hand, "o", label="by hand")
@@ -138,8 +141,10 @@ def test_single_sinewave(penetration, n_rays, npx):
         plt.show()
     np.testing.assert_allclose(radii_cf, radii_lin_by_hand)
 
-
-def test_hessian_product():
+@pytest.mark.parametrize("cfclass", [
+                                     SphereCrackFrontERRPenetrationLin,
+                                     SphereCrackFrontERRPenetrationLinEnergy])
+def test_hessian_product(cfclass):
 
     penetration = 0
 
@@ -157,15 +162,15 @@ def test_hessian_product():
     def dw_landscape(radius, angle):
         return np.zeros_like(radius)
 
-    cf = SphereCrackFrontERRPenetrationLin(npx,
-                                        w=w_landscape,
-                                        dw=dw_landscape)
+    cf = cfclass(npx,
+                 w=w_landscape,
+                 dw=dw_landscape)
 
     a = np.ones(npx) * JKR.contact_radius(penetration=penetration)
     da = np.random.normal(size=npx) * np.mean(a) / 10
 
     grad = cf.gradient(a, penetration)
-    if True:
+    if False:
         hs = np.array([1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5,
                        1e-6, 1e-7])
         rms_errors = []
@@ -190,7 +195,7 @@ def test_hessian_product():
         ax.grid(True)
         plt.show()
 
-        hs = np.array([1e-2, 1e-3, 1e-4])
+    hs = np.array([1e-2, 1e-3, 1e-4])
     rms_errors = []
     for h in hs:
         grad_d = cf.gradient(a + h * da, penetration)
