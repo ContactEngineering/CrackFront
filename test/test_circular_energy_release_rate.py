@@ -57,9 +57,7 @@ def test_circular_front_vs_jkr(cfclass):
         a = sol.x
 
 
-@pytest.mark.parametrize("cfclass", [
-                                     SphereCrackFrontERRPenetrationLin,
-                                     SphereCrackFrontERRPenetrationLinEnergy])
+
 @pytest.mark.parametrize("penetration", [-0.4, 1.])
 @pytest.mark.parametrize("npx, n_rays", [(2, 1),
                                          (3, 1),
@@ -68,7 +66,7 @@ def test_circular_front_vs_jkr(cfclass):
                                          #  discretisation !
                                          (128, 1),
                                          (128, 8)])
-def test_single_sinewave(cfclass, penetration, n_rays, npx):
+def test_single_sinewave(penetration, n_rays, npx):
     r"""
     For a sinusoidal work of adhesion distribution,
     the shape of the crack front can be solved by hand (using the fully
@@ -109,7 +107,7 @@ def test_single_sinewave(cfclass, penetration, n_rays, npx):
     def dw_landscape(radius, angle):
         return np.zeros_like(radius)
 
-    cf = cfclass(npx,
+    cf = SphereCrackFrontERRPenetrationLin(npx,
                  w=w_landscape,
                  dw=dw_landscape)
     # initial guess:
@@ -133,7 +131,7 @@ def test_single_sinewave(cfclass, penetration, n_rays, npx):
 
     radii_lin_by_hand = da * np.cos(n_rays * cf.angles) + a0
 
-    if True:
+    if False:
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
         ax.plot(radii_lin_by_hand, "o", label="by hand")
@@ -160,7 +158,7 @@ def test_hessian_product(cfclass):
         return (1 + w_amplitude * np.cos(angle * n_rays)) * w
 
     def dw_landscape(radius, angle):
-        return np.zeros_like(radius)
+        return np.zeros_like(radius)  # TODO: also make a case where dw is not 0
 
     cf = cfclass(npx,
                  w=w_landscape,
@@ -209,3 +207,6 @@ def test_hessian_product(cfclass):
 
     rms_errors = np.array(rms_errors)
     assert rms_errors[-1] / rms_errors[0] < 1.5 * (hs[-1] / hs[0]) ** 2
+
+def test_energy_vs_gradient():
+    pass # TODO
