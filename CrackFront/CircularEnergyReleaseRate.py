@@ -60,6 +60,7 @@ class SphereCrackFrontERRPenetrationLin(SphereCrackFrontPenetrationBase):
         return self._elastic_jacobian
 
     def elastic_hessp(self, a):
+        # In the rfft nq is positive only
         return np.fft.irfft(self.nq * np.fft.rfft(a), n=self.npx)
 
     def dump(self, ncFrame, penetration, sol, dump_fields=True):
@@ -141,6 +142,7 @@ class SphereCrackFrontERRPenetrationLin(SphereCrackFrontPenetrationBase):
         nq = np.fft.rfftfreq(npx, 1 / npx)
         q = nq / a0
         aQa = np.sum(da * np.fft.irfft(q * np.fft.rfft(da)))
+        # TODO: This might be wrong: shouldn't I weight part of this doubly because of the lack of the symmetrics in the rfft ?
 
         return 0.5 * pixel_size * (
                     JKR.nonequilibrium_elastic_energy_release_rate(contact_radius=a0, penetration=penetration,
@@ -258,13 +260,16 @@ class SphereCrackFrontERRPenetrationLinEnergy(SphereCrackFrontPenetrationBase):
         self.w = w
         self.dw = dw
 
-    def _n_an_2(self, contact_radius):
-        fourier_scalar_prod_factors = np.ones(self.npx // 2 + 1) * 2
+    @staticmethod
+    def _n_an_2(contact_radius):
+        npx = len(contact_radius)
+        nq = np.fft.rfftfreq(npx, 1 / npx)
+        fourier_scalar_prod_factors = np.ones(npx // 2 + 1) * 2
         fourier_scalar_prod_factors[0] = 1
-        if self.npx % 2 == 0:
+        if npx % 2 == 0:
             fourier_scalar_prod_factors[-1] == 1
         a_fourier = np.fft.rfft(contact_radius, norm="forward")
-        return np.vdot(a_fourier * self.nq * fourier_scalar_prod_factors, a_fourier).real
+        return np.vdot(a_fourier * nq * fourier_scalar_prod_factors, a_fourier).real
 
     def elastic_energy(self, contact_radius, penetration):
         # factors for the fourier space scalar product with rfft
@@ -334,14 +339,14 @@ class SphereCrackFrontERRPenetrationLinEnergy(SphereCrackFrontPenetrationBase):
     @staticmethod
     def evaluate_normal_force(contact_radius, penetration):
         """
-        This is valid up to TODO order in the contact radius flucutations
-
-        I think this is not completely Order ∆a^3 because of the additional linearizations from moving from K to G
-
         """
-        return SphereCrackFrontPenetrationBase._evaluate_first_order_normal_force(contact_radius, penetration) \
-               + SphereCrackFrontERRPenetrationLin._evaluate_normal_force_correction(
-            contact_radius, penetration)
+        return SphereCrackFrontERRPenetrationLinEnergy._evaluate_normal_force_naive(contact_radius, penetration)\
+               + SphereCrackFrontERRPenetrationLinEnergy._evaluate_normal_force_correction(contact_radius, penetration)
+
+
+    @staticmethod
+    def _evaluate_normal_force_naive(contact_radius, penetration):
+        return np.mean(JKR.force(contact_radius=contact_radius, penetration=penetration))
 
     @staticmethod
     def _evaluate_normal_force_correction(contact_radius, penetration):
@@ -356,27 +361,12 @@ class SphereCrackFrontERRPenetrationLinEnergy(SphereCrackFrontPenetrationBase):
         penetration: float
             rigid body penetration of the spherical indenter
         """
-        # see notes of the 210315
-        # see notes of the 210401
-        # TODO: I think this needs to be updated
+        # see notes of the 210408
         a0 = np.mean(contact_radius)
-        da = contact_radius - a0
-        a2 = np.sum(da ** 2)
-        npx = len(contact_radius)
+        return np.pi * JKR.nonequilibrium_elastic_energy_release_rate(penetration=penetration,
+            contact_radius=a0, der="1_d") * SphereCrackFrontERRPenetrationLinEnergy._n_an_2(contact_radius)
 
-        pixel_size = 2 * np.pi * a0 / npx
 
-        nq = np.fft.rfftfreq(npx, 1 / npx)
-        q = nq / a0
-        aQa = np.sum(da * np.fft.irfft(q * np.fft.rfft(da)))
-
-        return 0.5 * pixel_size * (
-                    JKR.nonequilibrium_elastic_energy_release_rate(contact_radius=a0, penetration=penetration,
-                                                                   der="2_da") * a2
-                    + JKR.nonequilibrium_elastic_energy_release_rate(contact_radius=a0, penetration=penetration,
-                                                                     der="1_d") * aQa) \
-               / np.pi  # because the ERR is in unit of w, the expression above is in unit of w R.
-        # We divide it by pi so that it is in unit of pi w R , i.e. the JKR units
 
     def gradient(self, radius, penetration):
         if (radius <= 0).any():
