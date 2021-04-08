@@ -264,7 +264,7 @@ class SphereCrackFrontERRPenetrationLinEnergy(SphereCrackFrontPenetrationBase):
         if self.npx % 2 == 0:
             fourier_scalar_prod_factors[-1] == 1
         a_fourier = np.fft.rfft(contact_radius, norm="forward")
-        return np.vdot(a_fourier * self.nq * fourier_scalar_prod_factors, a_fourier)
+        return np.vdot(a_fourier * self.nq * fourier_scalar_prod_factors, a_fourier).real
 
     def elastic_energy(self, contact_radius, penetration):
         # factors for the fourier space scalar product with rfft
