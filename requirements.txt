@@ -1,6 +1,6 @@
 setuptools
 matplotlib>=1.0.0
-numpy>=1.16.3
+numpy>=1.20.0
 pep8>=0.6
 scipy>=1.2.0
 pytest>=4
