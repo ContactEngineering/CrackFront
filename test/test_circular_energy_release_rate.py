@@ -154,11 +154,14 @@ def test_hessian_product(cfclass):
     n_rays = 8
     npx = 32
 
+    #l_waviness = 0.1
+    q_waviness = 2 * np.pi / 0.1
+
     def w_landscape(radius, angle):
-        return (1 + w_amplitude * np.cos(angle * n_rays)) * w
+        return (1 + w_amplitude * np.cos(radius * q_waviness) * np.cos(angle * n_rays)) * w
 
     def dw_landscape(radius, angle):
-        return np.zeros_like(radius)  # TODO: also make a case where dw is not 0
+        return - w * w_amplitude * q_waviness * np.sin(radius * q_waviness) * np.cos(angle * n_rays)
 
     cf = cfclass(npx,
                  w=w_landscape,
@@ -209,4 +212,4 @@ def test_hessian_product(cfclass):
     assert rms_errors[-1] / rms_errors[0] < 1.5 * (hs[-1] / hs[0]) ** 2
 
 def test_energy_vs_gradient():
-    pass # TODO
+    pass # TODO: need to implement the surface energy term before.
