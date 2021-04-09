@@ -219,7 +219,7 @@ class SphereCrackFrontERRPenetrationLin(SphereCrackFrontPenetrationBase):
 
 
 
-class SphereCrackFrontERRPenetrationLinEnergy(SphereCrackFrontPenetrationBase):
+class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
     def __init__(self, npx, w=None, dw=None, kc=None, dkc=None):
         r"""
         Here we guessed an expression for the energy that has the correct first derivative of the energy release rate.
@@ -340,8 +340,8 @@ class SphereCrackFrontERRPenetrationLinEnergy(SphereCrackFrontPenetrationBase):
     def evaluate_normal_force(contact_radius, penetration):
         """
         """
-        return SphereCrackFrontERRPenetrationLinEnergy._evaluate_normal_force_naive(contact_radius, penetration)\
-               + SphereCrackFrontERRPenetrationLinEnergy._evaluate_normal_force_correction(contact_radius, penetration)
+        return SphereCrackFrontERRPenetrationEnergy._evaluate_normal_force_naive(contact_radius, penetration) \
+               + SphereCrackFrontERRPenetrationEnergy._evaluate_normal_force_correction(contact_radius, penetration)
 
 
     @staticmethod
@@ -364,7 +364,7 @@ class SphereCrackFrontERRPenetrationLinEnergy(SphereCrackFrontPenetrationBase):
         # see notes of the 210408
         a0 = np.mean(contact_radius)
         return np.pi * JKR.nonequilibrium_elastic_energy_release_rate(penetration=penetration,
-            contact_radius=a0, der="1_d") * SphereCrackFrontERRPenetrationLinEnergy._n_an_2(contact_radius)
+            contact_radius=a0, der="1_d") * SphereCrackFrontERRPenetrationEnergy._n_an_2(contact_radius)
 
 
 

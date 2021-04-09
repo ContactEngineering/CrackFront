@@ -3,12 +3,12 @@
 import pytest
 import numpy as np
 from Adhesion.ReferenceSolutions import JKR
-from CrackFront.CircularEnergyReleaseRate import SphereCrackFrontERRPenetrationLin, SphereCrackFrontERRPenetrationLinEnergy
+from CrackFront.CircularEnergyReleaseRate import SphereCrackFrontERRPenetrationLin, SphereCrackFrontERRPenetrationEnergy
 from CrackFront.Optimization import trustregion_newton_cg
 
 @pytest.mark.parametrize("cfclass", [
                                      SphereCrackFrontERRPenetrationLin,
-                                     SphereCrackFrontERRPenetrationLinEnergy])
+                                     SphereCrackFrontERRPenetrationEnergy])
 def test_circular_front_vs_jkr(cfclass):
     """
     assert we recover the JKR solution for an uniform distribution of
@@ -141,7 +141,7 @@ def test_single_sinewave(penetration, n_rays, npx):
 
 @pytest.mark.parametrize("cfclass", [
                                      SphereCrackFrontERRPenetrationLin,
-                                     SphereCrackFrontERRPenetrationLinEnergy])
+                                     SphereCrackFrontERRPenetrationEnergy])
 def test_hessian_product(cfclass):
 
     penetration = 0
