@@ -1,5 +1,3 @@
-
-
 import pytest
 import numpy as np
 from Adhesion.ReferenceSolutions import JKR
@@ -9,12 +7,12 @@ from CrackFront.StraightForRoughness import SinewaveCrackFrontLoadEnergyConstK
 from CrackFront.Straight import SinewaveCrackFrontLoad
 from CrackFront.Optimization import trustregion_newton_cg
 
-
 # nondimensional units
 Es = 1 / np.pi
-h = 1. # amplitude (half peak to valley) of the sinewave
+h = 1.  # amplitude (half peak to valley) of the sinewave
 sinewave_lambda = 1.
 sx = 1.
+
 
 def test_against_whet():
     """
@@ -64,7 +62,7 @@ def test_against_whet():
     sol = trustregion_newton_cg(
         x0=a,
         gradient=lambda a: cf_k.gradient(a, load),
-        hessian=lambda a : cf_k.hessian(a, load),
+        hessian=lambda a: cf_k.hessian(a, load),
         trust_radius=0.25 * np.min(a),
         maxiter=3000,
         gtol=1e-11)
@@ -76,14 +74,13 @@ def test_against_whet():
     al = a_R[:n]
     ar = a_R[n:]
 
-    ax.plot( .5 + ar, cf_R.y)
-    ax.plot( 0.5 - al, cf_R.y)
+    ax.plot(.5 + ar, cf_R.y)
+    ax.plot(0.5 - al, cf_R.y)
 
     al = a_k[:n]
     ar = a_k[n:]
 
-    ax.plot( .5 + ar, cf_k.y)
-    ax.plot( 0.5 - al, cf_k.y)
-
+    ax.plot(.5 + ar, cf_k.y)
+    ax.plot(0.5 - al, cf_k.y)
 
     plt.show()
