@@ -42,6 +42,7 @@ class SinewaveCrackFrontLoadEnergyConstK:
         self.kr_left = kr_left
 
         self.w = w
+        self.npx = n
 
     def elastic_hessp(self, a):
         r"""
@@ -64,7 +65,7 @@ class SinewaveCrackFrontLoadEnergyConstK:
         KJr = K_J(a_s=ar, a_o=al, P=load)
 
         K0l = KJl + self.kr_left(al, self.y)
-        K0r = KJr + self.kr_right(al, self.y)
+        K0r = KJr + self.kr_right(ar, self.y)
 
         G0l = K0l ** 2 / (2 * Es)
         G0r = K0r ** 2 / (2 * Es)
