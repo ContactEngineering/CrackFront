@@ -1,14 +1,19 @@
-
-
 import pytest
 import numpy as np
 from Adhesion.ReferenceSolutions import JKR
-from CrackFront.CircularEnergyReleaseRate import SphereCrackFrontERRPenetrationLin, SphereCrackFrontERRPenetrationEnergy
+from CrackFront.CircularEnergyReleaseRate import (
+    SphereCrackFrontERRPenetrationLin,
+    SphereCrackFrontERRPenetrationEnergy,
+    SphereCrackFrontERRPenetrationEnergyConstGc
+    )
 from CrackFront.Optimization import trustregion_newton_cg
 
+
 @pytest.mark.parametrize("cfclass", [
-                                     SphereCrackFrontERRPenetrationLin,
-                                     SphereCrackFrontERRPenetrationEnergy])
+    SphereCrackFrontERRPenetrationLin,
+    SphereCrackFrontERRPenetrationEnergy,
+    SphereCrackFrontERRPenetrationEnergyConstGc
+    ])
 def test_circular_front_vs_jkr(cfclass):
     """
     assert we recover the JKR solution for an uniform distribution of
@@ -55,7 +60,6 @@ def test_circular_front_vs_jkr(cfclass):
         assert abs(penetration - JKR.penetration(contact_radius, )) < 1e-10
 
         a = sol.x
-
 
 
 @pytest.mark.parametrize("penetration", [-0.4, 1.])
@@ -108,8 +112,8 @@ def test_single_sinewave(penetration, n_rays, npx):
         return np.zeros_like(radius)
 
     cf = SphereCrackFrontERRPenetrationLin(npx,
-                 w=w_landscape,
-                 dw=dw_landscape)
+                                           w=w_landscape,
+                                           dw=dw_landscape)
     # initial guess:
     a = np.ones(npx) * JKR.contact_radius(penetration=penetration)
     sol = trustregion_newton_cg(
@@ -139,11 +143,13 @@ def test_single_sinewave(penetration, n_rays, npx):
         plt.show()
     np.testing.assert_allclose(radii_cf, radii_lin_by_hand)
 
-@pytest.mark.parametrize("cfclass", [
-                                     SphereCrackFrontERRPenetrationLin,
-                                     SphereCrackFrontERRPenetrationEnergy])
-def test_hessian_product(cfclass):
+# TODO: Test that all three models converge together in the small delta w limit
 
+@pytest.mark.parametrize("cfclass", [
+    SphereCrackFrontERRPenetrationLin,
+    SphereCrackFrontERRPenetrationEnergy,
+    SphereCrackFrontERRPenetrationEnergyConstGc])
+def test_hessian_product(cfclass):
     penetration = 0
 
     w = 1 / np.pi
@@ -154,7 +160,7 @@ def test_hessian_product(cfclass):
     n_rays = 8
     npx = 32
 
-    #l_waviness = 0.1
+    # l_waviness = 0.1
     q_waviness = 2 * np.pi / 0.1
 
     def w_landscape(radius, angle):
@@ -190,7 +196,7 @@ def test_hessian_product(cfclass):
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
         ax.plot(hs, rms_errors / hs ** 2
-            , "+-")
+                , "+-")
         ax.set_xscale("log")
         ax.set_yscale("log")
         ax.grid(True)
@@ -211,5 +217,6 @@ def test_hessian_product(cfclass):
     rms_errors = np.array(rms_errors)
     assert rms_errors[-1] / rms_errors[0] < 1.5 * (hs[-1] / hs[0]) ** 2
 
+
 def test_energy_vs_gradient():
-    pass # TODO: need to implement the surface energy term before.
+    pass  # TODO: need to implement the surface energy term before.
