@@ -427,11 +427,62 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
         )
 
 
+class SphereCrackFrontERRPenetrationEnergyConstGc(SphereCrackFrontERRPenetrationEnergy):
+    def __init__(self, npx, wm, w=None, dw=None, kc=None, dkc=None):
+        r"""
 
+        Simplification where the prefactor of the deformation energy term is approximated constant
 
+        This is especially convenient appropriate when simulating the effect of roughness, where we approximately know
+        that the final position has a constant work of adhesion.
 
+        Parameters:
+        -----------
+        npx: number of pixels
+        wm: average or nominal work of adhesion. This determines the stiffness of the contact line
+        """
 
+        # TODO: enable to provide the integral of the work of adhesion field
+        self.wm = wm
+        super().__init__(npx, w, dw, kc, dkc)
 
+    def elastic_energy(self, contact_radius, penetration):
+        # factors for the fourier space scalar product with rfft
 
+        return np.mean(JKR.nonequilibrium_elastic_energy(contact_radius=contact_radius, penetration=penetration)) \
+            + np.pi * self.wm * self._n_an_2(contact_radius)
 
+    @staticmethod
+    def evaluate_normal_force(contact_radius, penetration):
+        """
+        """
+        return SphereCrackFrontERRPenetrationEnergy._evaluate_normal_force_naive(contact_radius, penetration)
 
+    def gradient(self, radius, penetration):
+        if (radius <= 0).any():
+            raise NegativeRadiusError
+        eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
+            contact_radius=radius,
+            penetration=penetration,
+            **_jkrkwargs)
+
+        return 2 * np.pi / self.npx * (
+                radius * eerr_j
+                + self.wm * self.elastic_hessp(radius)
+                - self.w(radius, self.angles) * radius)
+
+    def hessian_product(self, p, radius, penetration):
+        eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
+            contact_radius=radius,
+            penetration=penetration,
+            **_jkrkwargs)
+        deerr_da_j = JKR.nonequilibrium_elastic_energy_release_rate(
+            contact_radius=radius,
+            penetration=penetration,
+            **_jkrkwargs, der="1_a")
+
+        return 2 * np.pi / self.npx * (
+            (eerr_j + deerr_da_j * radius) * p
+            + self.wm * self.elastic_hessp(p)
+            - (self.w(radius, self.angles) + radius * self.dw(radius, self.angles)) * p
+        )
