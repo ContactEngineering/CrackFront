@@ -428,7 +428,7 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
 
 
 class SphereCrackFrontERRPenetrationEnergyConstGc(SphereCrackFrontERRPenetrationEnergy):
-    def __init__(self, npx, wm, w=None, dw=None, kc=None, dkc=None):
+    def __init__(self, npx, w=None, dw=None, kc=None, dkc=None, wm=1/np.pi):
         r"""
 
         Simplification where the prefactor of the deformation energy term is approximated constant
