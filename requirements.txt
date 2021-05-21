@@ -11,4 +11,5 @@ SurfaceTopography>=0.91.2
 muFFT>=0.11.1
 ContactMechanics
 git+ssh://git@github.com/ComputationalMechanics/Adhesion.git
-
+sphinx>=1.8.2
+sphinx_rtd_theme

@@ -144,7 +144,7 @@ class SphereCrackFrontERRPenetrationLin(SphereCrackFrontPenetrationBase):
         aQa = np.sum(da * np.fft.irfft(q * np.fft.rfft(da)))
         # TODO: This might be wrong:
         #  shouldn't I weight part of this doubly because of the lack of the symmetrics in the rfft ?
-
+        # Ah no it's ok since I do the sum in real space
         return 0.5 * pixel_size * (
                     JKR.nonequilibrium_elastic_energy_release_rate(contact_radius=a0, penetration=penetration,
                                                                    der="2_da") * a2
