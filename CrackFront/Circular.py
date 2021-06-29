@@ -237,6 +237,19 @@ class SphereCrackFrontPenetrationFull(SphereCrackFrontPenetrationBase):
 
 
 class SphereCrackFrontPenetrationLin(SphereCrackFrontPenetrationBase):
+    r"""
+    Complete linearisation of the stress intensity factor.
+
+    This is the closest to Gao and Rice's expressions
+
+    .. math ::
+
+        K(a, \theta) = K_\mathrm{J}(\tilde a_0)
+        + \frac{\partial K_\mathrm{J}}{\partial a}(\tilde a_0) \left(a(\theta) - \tilde a_0\right)
+        + \frac{K_\mathrm{J}(\tilde a_0)}{\tilde a_0}
+        \sum \limits_{n \in \mathbb{Z}^{\backslash \{0\}}}  \frac{n}{2} \ \tilde a_n \ e^{i n \theta}
+
+    """
     def gradient(self, radius, penetration):
         if (radius <= 0).any():
             raise NegativeRadiusError

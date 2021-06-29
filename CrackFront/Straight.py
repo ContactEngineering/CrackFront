@@ -31,6 +31,7 @@ K_P = JKR.stress_intensity_factor_asymmetric
 class SinewaveCrackFrontLoad():
     def __init__(self, n, sy, kc, dkc):
 
+
         dy = sy / n
         self.y = np.arange(n) * dy
 

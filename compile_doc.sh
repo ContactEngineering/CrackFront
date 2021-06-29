@@ -6,4 +6,4 @@ cd docs/
 rm -rf source/
 sphinx-apidoc -o source/ ../CrackFront
 make html
-open docs/_build/html/index.html
+open _build/html/index.html

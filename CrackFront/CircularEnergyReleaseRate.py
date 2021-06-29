@@ -11,6 +11,15 @@ _jkrkwargs = dict(contact_modulus=Es, radius=R)
 
 
 class SphereCrackFrontERRPenetrationLin(SphereCrackFrontPenetrationBase):
+    r"""
+
+    .. math ::
+
+        G(\theta) = G_\mathrm{J}(\tilde a_0)
+        + \frac{\partial G_\mathrm{J}(\tilde a_0)}{\partial a} (a(\theta) - \tilde a_0)
+        + \frac{G_\mathrm{J}(\tilde a_0)}{\tilde a_0} \sum_{n \in \mathbf{Z}} |n| e^{i n \theta} \tilde a_n
+
+    """
     def __init__(self, npx, w=None, dw=None, kc=None, dkc=None):
         """
 
