@@ -42,12 +42,12 @@ sinewave_lambda = 1.
 sx = 1.
 
 # discretisation
-nx = 4096
-ny = 1024
+nx = 16384
+ny = 256
 dx = sx / nx
 sy = dx * ny
 
-amplitude_roughness = 0.05
+amplitude_roughness = 0.00625
 
 Kc = 0.1
 work_of_adhesion = Kc ** 2 / (2 * Es)
