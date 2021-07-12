@@ -146,6 +146,18 @@ class SphereCrackFrontPenetrationBase():
 
 
 class SphereCrackFrontPenetrationIntermediate(SphereCrackFrontPenetrationBase):
+    r"""
+
+    Gao and Rices first order perturbation of the stress intensity
+    without linearizing the circular reference but linearizing the nonlocal elasticity term
+
+    .. math ::
+
+        K(a, \theta) = K_\mathrm{J}(a(\theta))
+        + \frac{1}{\tilde a_0} K_\mathrm{J}(\tilde a_0)
+        \sum \limits_{n \in \mathbb{Z}^{\backslash \{0\}}}  \frac{n}{2} \ \tilde a_n \ e^{i n \theta}
+
+    """
     def gradient(self, radius, penetration):
         if (radius <= 0).any():
             raise NegativeRadiusError
@@ -205,6 +217,19 @@ class SphereCrackFrontPenetrationIntermediate(SphereCrackFrontPenetrationBase):
 
 
 class SphereCrackFrontPenetrationFull(SphereCrackFrontPenetrationBase):
+    r"""
+
+    Gao and Rices first order perturbation of the stress intensity factor without introducing any
+    additional linearization.
+
+    .. math ::
+
+        K(a, \theta) = K_\mathrm{J}(a(\theta))
+        \left( 1 + \frac{1}{a(\theta)}
+        \sum \limits_{n \in \mathbb{Z}^{\backslash \{0\}}}  \frac{n}{2} \ \tilde a_n \ e^{i n \theta}
+        \right)
+
+    """
     def gradient(self, radius, penetration):
         if (radius <= 0).any():
             raise NegativeRadiusError
