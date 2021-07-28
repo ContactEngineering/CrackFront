@@ -70,9 +70,9 @@ nx = ny = 4096
 
 k_fluct_topo = Topography(
     np.random.uniform(size=(nx, ny)), physical_sizes=(sx, sy), periodic=True
-    ).highcut(cutoff_wavelength=lcor).detrend()
+    ).shortcut(cutoff_wavelength=lcor).detrend()
 
-k_topo = Topography((k_fluct_topo.scale(dk / k_fluct_topo.rms_height()
+k_topo = Topography((k_fluct_topo.scale(dk / k_fluct_topo.rms_height_from_area()
                                         ).heights()
                      + 1) * mean_Kc,
                     k_fluct_topo.physical_sizes, periodic=True)
