@@ -238,8 +238,8 @@ if __name__ == "__main__":
         fn = f"circular_random_CF_n{n}.nc"
         if not os.path.isfile(fn) or overwrite:
             simulate_crack_front(
-            k_topo_interpolator.kc_polar,
-            k_topo_interpolator.dkc_polar,
+            k_topo_interpolator.field_polar,
+            k_topo_interpolator.dfield_dr_polar,
             n=n,
             penetrations=penetrations(dpen=lcor/100, max_pen=1.),
             filename=fn,
