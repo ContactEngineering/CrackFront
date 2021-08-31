@@ -15,7 +15,6 @@ Welcome to CrackFront's documentation!
 
    installation
    testing
-   contributing
 
 .. toctree::
    :maxdepth: 1
