@@ -14,6 +14,9 @@ sx = 1.
 
 class SinewaveCrackFrontLoadEnergyConstK:
     r"""
+
+        Crack front equation for the contact of a periodic sinusoidal indenter against a rough surface
+
         For each the left and right crack front
 
         .. math::

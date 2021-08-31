@@ -4,13 +4,14 @@ from Adhesion.ReferenceSolutions import JKR
 from CrackFront.CircularEnergyReleaseRate import (
     SphereCrackFrontERRPenetrationLin,
     SphereCrackFrontERRPenetrationEnergy,
-    SphereCrackFrontERRPenetrationEnergyConstGc
+    SphereCrackFrontERRPenetrationEnergyConstGc, SphereCrackFrontERRPenetrationFull
     )
 from CrackFront.Optimization import trustregion_newton_cg
 
 
 @pytest.mark.parametrize("cfclass", [
     SphereCrackFrontERRPenetrationLin,
+    SphereCrackFrontERRPenetrationFull,
     SphereCrackFrontERRPenetrationEnergy,
     SphereCrackFrontERRPenetrationEnergyConstGc
     ])
@@ -147,6 +148,7 @@ def test_single_sinewave(penetration, n_rays, npx):
 
 @pytest.mark.parametrize("cfclass", [
     SphereCrackFrontERRPenetrationLin,
+    SphereCrackFrontERRPenetrationFull,
     SphereCrackFrontERRPenetrationEnergy,
     SphereCrackFrontERRPenetrationEnergyConstGc])
 def test_hessian_product(cfclass):
