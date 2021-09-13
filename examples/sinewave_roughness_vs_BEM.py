@@ -219,7 +219,7 @@ ax.set_yticks(ticks / sy * ny + ny * 0.5)
 ax.set_yticklabels([f"{v:.2f}" for v in ticks])
 
 y_cf = np.arange(len(al)) * sy / len(al)
-ax.plot((0.5 - al) / sx * nx, y_cf  / sy * ny, "--k")
+ax.plot((0.5 - al) / sx * nx, y_cf / sy * ny, "--k")
 ax.plot((0.5 + ar) / sx * nx, y_cf / sy * ny, "--k")
 
 ax.set_xlim((0.5 - 1.2 * np.max(al)) / sx * nx, (0.5 + 1.2 * np.max(ar)) / sx * nx)
