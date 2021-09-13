@@ -6,6 +6,39 @@ import pytest
 
 class ElasticLine():
     def __init__(self, L, Lk, pinning_field):
+        r"""
+        Generic equation
+
+        .. math::
+
+            0 = \frac{1}{c} \delta_a \Pi(a, w, z) = q_\kappa (a(z) - w)  + \sum_n |q| \tilde a_n e^{iq_n z}  +  V^{(1)}(z, a(z)) / c
+
+        For a crack front
+            - :math: `c` is the mean work of adhesion
+            - :math:`V^{(1)}(z, a(z))` is the deviation of the local work of adhesion from the mean.
+            - :math:`q_\kappa=\frac{2\pi}{L_\kappa}` describes how fast the energy release rate changes with position
+            for a straight crack:  :math:`q_\kappa=\partial_a G_0 / G_0`. Note that we used that :math:`G_0 \simeq c`.
+
+        The pixel size is 0
+
+        Parameters:
+        -----------
+        L: integer
+            length of the line in pixels.
+        Lk: float
+            structural length
+            :math:`q_k = 2 \pi L_k` is the prefactor of the quadratic driving potential
+        pinning_field: callable
+
+            parameters:
+                - ``position`` : array of length `L`
+                        index of the position along the crack front
+                - ``derivative``: order of derivative (0 or 1)
+
+            returns:
+                - array of length `L` gradient or curvature of the pinning potential
+
+        """
 
         self.L = self.npx = n = L
 
