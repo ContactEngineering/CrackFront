@@ -98,7 +98,8 @@ print(f"expected amplitude of SIF: {Es *  roughness_amplitude * np.sqrt(np.pi / 
 # Compute the effective work of adhesion from the stress intensity factor
 
 # %%
-w_field = (Kc + SIF) ** 2 / (2 * Es)
+# Leading order expression for the effective work of adhesion
+w_field = w - SIF * np.sqrt(2 * w / Es)
 
 # interpolate. 
 # one 1D-spline for each angle
@@ -115,7 +116,7 @@ def interpolated_dw(radius, angle):
 
 cf = SphereCrackFrontERRPenetrationEnergyConstGc(npx=n_angles,
                                                  w=interpolated_w,
-                                                 dw=interpolated_dw)
+                                                 dw=interpolated_dw, wm=w)
 
 # %% [markdown]
 # ## Comparison of contact shapes
@@ -160,7 +161,7 @@ nx = 512
 interaction_range = 0.16
 
 sphere = make_sphere(R, (nx, nx), (sx, sy),
-        centre=(sx / 2, sy / 2), kind="paraboloid")
+        centre=(sx / 2, sy / 2), kind="paraboloid", )
 
 x, y = sphere.positions()
 
