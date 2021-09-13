@@ -58,11 +58,53 @@ def test_straight_crack_sif_from_roughness_perpendicular(s):
 
     np.testing.assert_allclose(K, K_simple_analytical, atol=1e-13)
 
-# %%
-#
-# TODO
-# at 0 and 90° the amplitudes and phases of the sinewaves should match the corresponding straight crack front calculation
 
-@pytest.mark.skip("Not Implemented")
 def test_circular_waviness_amplitude():
-    pass
+    Es = 0.75
+    R = 1
+    w = 1 / np.pi
+
+    # cartesian grid on which we define the waviness
+    nx = ny = 128
+
+    sx = sy = 5
+
+    x = np.arange(nx) * sx / nx
+    y = np.arange(ny) * sy / ny
+
+    x -= sx / 2
+    y -= sy / 2
+
+    y, x = np.meshgrid(y, x)
+
+    sinewave_period = 1.
+    roughness_amplitude = 0.1 * sinewave_period
+
+    roughness = Topography(roughness_amplitude * np.cos(2 * np.pi * x / sinewave_period), physical_sizes=(sx, sy))
+
+    n_radii = 32
+    cf_angles = np.array((0,), ).reshape((-1, 1))
+    cf_radii = np.linspace(0.2, 2.5, n_radii).reshape(1, -1)
+
+    sif = circular_crack_sif_from_roughness(roughness, cf_radii, cf_angles, Es=Es)
+
+    sif_expected = Es * roughness_amplitude * np.sqrt(np.pi / sinewave_period) \
+                   * np.cos(2 * np.pi * cf_radii / sinewave_period - 3 * np.pi / 4)
+
+    if False:
+        fig, ax = plt.subplots()
+        ax.plot(cf_radii.reshape(-1), sif.reshape(-1), label="actual")
+        ax.plot(cf_radii.reshape(-1), sif_expected.reshape(-1), label="expected")
+        ax.legend()
+        plt.show()
+
+    np.testing.assert_allclose(sif, sif_expected, rtol=1e-12, atol=1e-15)
+
+    # Other orientation
+
+    cf_angles = np.array((np.pi / 2,), ).reshape((-1, 1))
+
+    sif = circular_crack_sif_from_roughness(roughness, cf_radii, cf_angles, Es=Es)
+    sif_expected = - Es * roughness_amplitude * np.sqrt(np.pi / sinewave_period)
+
+    np.testing.assert_allclose(sif, sif_expected, rtol=1e-12, atol=1e-15)
