@@ -48,7 +48,8 @@ e^{i \vec q \cdot \vec x} \frac{E^*}{\sqrt{2}} \sqrt{|q_z \cos\theta - q_x \sin 
     angle: float or array of floats
         angle wher to evaluate the stresss intensity factor
     roughness: Topography
-        positive means peaks and negative means valleys
+        positive means peaks and negative means valleys.
+        We place the center of the polar coordinate system in the center of the topography
     Es: float, optional
         Johnson's contact modulus default 1
 
@@ -70,7 +71,10 @@ e^{i \vec q \cdot \vec x} \frac{E^*}{\sqrt{2}} \sqrt{|q_z \cos\theta - q_x \sin 
 
     kernel = Es / np.sqrt(2) * np.sqrt(abs(q_front) + 1j * q_propagation)
     kernel[0, 0] = 0
-    SIF = 1 / (nx * ny) * np.sum(np.fft.fft2(roughness.heights())[:, :, np.newaxis, np.newaxis] * kernel * np.exp(
+    # place the center of the coordinate system in the center of the topography
+    heights = np.roll(roughness.heights(), [n // 2 for n in roughness.nb_grid_pts], axis=(0, 1))
+
+    SIF = - 1 / (nx * ny) * np.sum(np.fft.fft2(heights)[:, :, np.newaxis, np.newaxis] * kernel * np.exp(
         1j * (q_propagation * radius.reshape(1, 1, 1, -1))), axis=(0, 1))
 
     return SIF
