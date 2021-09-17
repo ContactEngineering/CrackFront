@@ -25,12 +25,9 @@ import numpy as np
 from Adhesion.ReferenceSolutions import JKR
 
 
-def cart2pol(x1, x2):
-    r = np.sqrt(x1 ** 2 + x2 ** 2)
-    mask = r > 0
-    phi = np.zeros_like(r)
-    phi[mask] = np.arccos(x1[mask] / r[mask]) * np.sign(x2[mask])
-    return r, phi
+def cart2pol(x,y):
+    z = x + 1j * y
+    return abs(z), np.angle(z)
 
 
 def pol2cart(radius, angle):
