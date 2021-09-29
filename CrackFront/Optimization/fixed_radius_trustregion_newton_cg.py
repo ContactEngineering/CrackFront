@@ -21,15 +21,116 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import math
 
+import scipy
 from scipy.optimize import OptimizeResult
-from scipy.optimize._trustregion_ncg import CGSteihaugSubproblem
+from scipy.optimize._trustregion_ncg import BaseQuadraticSubproblem
 import numpy as np
+
+
+class CGSteihaugSubproblem(BaseQuadraticSubproblem):
+    """Quadratic subproblem solved by a conjugate gradient method
+    Adapted from scipy
+    """
+    def __init__(self, x, fun, jac, hess=None, hessp=None, cg_tolerance=None):
+        super().__init__(x, fun, jac, hess, hessp)
+        if cg_tolerance==None:
+            cg_tolerance = lambda jac_mag: min(0.5, math.sqrt(jac_mag))
+        self._cg_tolerance = cg_tolerance
+
+    def solve(self, trust_radius):
+        """
+        Solve the subproblem using a conjugate gradient method.
+
+        Parameters
+        ----------
+        trust_radius : float
+            We are allowed to wander only this far away from the origin.
+
+        Returns
+        -------
+        p : ndarray
+            The proposed step.
+        hits_boundary : bool
+            True if the proposed step is on the boundary of the trust region.
+
+        Notes
+        -----
+        This is algorithm (7.2) of Nocedal and Wright 2nd edition.
+        Only the function that computes the Hessian-vector product is required.
+        The Hessian itself is not required, and the Hessian does
+        not need to be positive semidefinite.
+        """
+
+        # get the norm of jacobian and define the origin
+        p_origin = np.zeros_like(self.jac)
+
+        # define a default tolerance
+        tolerance = self._cg_tolerance(self.jac_mag)
+
+        # Stop the method if the search direction
+        # is a direction of nonpositive curvature.
+        if self.jac_mag < tolerance:
+            hits_boundary = False
+            return p_origin, hits_boundary
+
+        # init the state for the first iteration
+        z = p_origin
+        r = self.jac
+        d = -r
+
+        # Search for the min of the approximation of the objective function.
+        nit_CG = 1
+        while True:
+
+            # do an iteration
+            Bd = self.hessp(d)
+            dBd = np.dot(d, Bd)
+            if dBd <= 0:
+                # Look at the two boundary points.
+                # Find both values of t to get the boundary points such that
+                # ||z + t d|| == trust_radius
+                # and then choose the one with the predicted min value.
+                ta, tb = self.get_boundaries_intersections(z, d, trust_radius)
+                pa = z + ta * d
+                pb = z + tb * d
+                if self(pa) < self(pb):
+                    p_boundary = pa
+                else:
+                    p_boundary = pb
+                hits_boundary = True
+                return p_boundary, hits_boundary
+            r_squared = np.dot(r, r)
+            alpha = r_squared / dBd
+            z_next = z + alpha * d
+            if scipy.linalg.norm(z_next) >= trust_radius:
+                # Find t >= 0 to get the boundary point such that
+                # ||z + t d|| == trust_radius
+                ta, tb = self.get_boundaries_intersections(z, d, trust_radius)
+                p_boundary = z + tb * d
+                hits_boundary = True
+                return p_boundary, hits_boundary
+            r_next = r + alpha * Bd
+            r_next_squared = np.dot(r_next, r_next)
+            #if math.sqrt(r_next_squared) < tolerance:
+            if np.max(abs(r_next)) < tolerance:
+                hits_boundary = False
+                print("CG reaches tolerance: ", nit_CG)
+                return z_next, hits_boundary
+            beta_next = r_next_squared / r_squared
+            d_next = -r_next + beta_next * d
+
+            # update the state for the next iteration
+            z = z_next
+            r = r_next
+            d = d_next
+            nit_CG+=1
 
 
 def trustregion_newton_cg(x0, gradient, hessian=None, hessian_product=None,
                           trust_radius=0.5, gtol=1e-6, maxiter=1000,
-                          trust_radius_from_x=None):
+                          trust_radius_from_x=None, cg_tolerance=None):
     r"""
     minimizes the function having the given gradient and hessian
     In other words it finds only roots of gradient where the hessian
@@ -64,7 +165,8 @@ def trustregion_newton_cg(x0, gradient, hessian=None, hessian_product=None,
                              hess=wrapped_hessian if hessian is not None
                              else None,
                              hessp=wrapped_hessian_product
-                             if hessian_product is not None else None)
+                             if hessian_product is not None else None,
+                             cg_tolerance=cg_tolerance)
     n_hits_boundary = 0
     nit = 1
 
@@ -91,9 +193,10 @@ def trustregion_newton_cg(x0, gradient, hessian=None, hessian_product=None,
                                  hess=wrapped_hessian
                                  if hessian is not None else None,
                                  hessp=wrapped_hessian_product
-                                 if hessian_product is not None else None)
+                                 if hessian_product is not None else None,
+                                 cg_tolerance=cg_tolerance)
         max_r = np.max(abs(m.jac))
-        # print(f"max(|r|)= {max_r}")
+        print(f"max(|r|)= {max_r}")
         if max_r < gtol:
             result = OptimizeResult(
                 {
