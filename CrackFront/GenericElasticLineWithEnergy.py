@@ -114,7 +114,7 @@ class ElasticLinePotentialPreconditionned(ElasticLinePotential):
 
         self.halfcomplex_stiffness_diagonal = self.qk + abs(self.q_hc)
         self.preconditioner = np.sqrt(self.halfcomplex_stiffness_diagonal)
-        # The new variable b_hc = preconditioner * a_hc
+        # The new variable a_p = preconditioner * a_hc
 
     def real_to_halfcomplex(self, a):
         self.real_buffer.array()[...] = a
@@ -136,14 +136,15 @@ class ElasticLinePotentialPreconditionned(ElasticLinePotential):
         adhesion_potential = np.sum(self.pinning_potential(a_r, der="0"))
         return elastic_potential + adhesion_potential
 
-    def preconditioned_potential(self, b_hc, a_forcing, a_r=None):
+    def preconditioned_potential(self, a_p, a_forcing, a_r=None):
+        a_p = a_p.copy()
         if a_r is None:
-            a_hc = b_hc / self.preconditioner
+            a_hc = a_p / self.preconditioner
             a_r = self.halfcomplex_to_real(a_hc)
 
-        b_hc[0] -= self.preconditioner[0] * a_forcing
+        a_p[0] -= self.preconditioner[0] * a_forcing
 
-        elastic_potential = 0.5 * self.L * np.sum(self.hc_coeffs * b_hc**2)
+        elastic_potential = 0.5 * self.L * np.sum(self.hc_coeffs * a_p**2)
         adhesion_potential = np.sum(self.pinning_potential(a_r, der="0"))
         return elastic_potential + adhesion_potential
 
@@ -155,19 +156,44 @@ class ElasticLinePotentialPreconditionned(ElasticLinePotential):
         adhesive_gradient = self.L * self.hc_coeffs * self.real_to_halfcomplex(self.pinning_potential(a_r, der="1"))
         return elastic_gradient + adhesive_gradient
 
-    def preconditioned_gradient(self, b_hc, a_forcing, a_r=None):
+    def gradient_norm_from_halfcomplex(self, grad_hc):
+        """
+        computes the 2-norm of the realspace gradient but using the halfcomplex gradient and Parseval's theorem.
+        """
+        return np.sqrt(np.sum(grad_hc**2 / self.hc_coeffs / self.L))
+
+    def gradient_norm_from_preconditioned(self, grad_p):
+        """
+        computes the 2-norm of the realspace gradient but using the preconditionned gradient and Parseval's theorem.
+        """
+        return np.sqrt(np.sum(grad_p**2 * self.preconditioner**2 / self.hc_coeffs / self.L))
+
+
+    def preconditioned_gradient(self, a_p, a_forcing, a_r=None):
+        a_p = a_p.copy()
         if a_r is None:
-            a_hc = b_hc / self.preconditioner
+            a_hc = a_p / self.preconditioner
             a_r = self.halfcomplex_to_real(a_hc)
 
-        b_hc[0] -= self.preconditioner[0] * a_forcing
+        a_p[0] -= self.preconditioner[0] * a_forcing
 
-        elastic_potential = 0.5 * self.L * np.sum(self.hc_coeffs * b_hc**2)
-        adhesion_potential = np.sum(self.pinning_potential(a_r, der="0"))
         a_hc[0] -= a_forcing
-        elastic_gradient = self.L * self.hc_coeffs * b_hc
+        elastic_gradient = self.L * self.hc_coeffs * a_p
         adhesive_gradient = self.L * self.hc_coeffs / self.preconditioner * self.real_to_halfcomplex(self.pinning_potential(a_r, der="1"))
         return elastic_gradient + adhesive_gradient
+
+    def preconditioned_hessian_product(self, a_p, p_p, a_r=None, p_r=None):
+        if a_r is None:
+            a_hc = a_p / self.preconditioner
+            a_r = self.halfcomplex_to_real(a_hc)
+        if p_r is None:
+            p_r = self.halfcomplex_to_real(p_p / self.preconditioner)
+
+        adhesive_hessian_product = self.L * self.hc_coeffs / self.preconditioner \
+            * self.real_to_halfcomplex(self.pinning_potential(a_r, der="2")) * p_r
+        elastic_hessian_product = self.L * self.hc_coeffs * p_p
+
+        return adhesive_hessian_product + elastic_hessian_product
 
 import pytest
 
@@ -224,8 +250,8 @@ def test_preconditioned_energy(simple_elastic_line_preconditionned):
     line = simple_elastic_line_preconditionned
     a = np.random.normal(size=line.L)
     a_forcing=np.random.normal()
-    b_hc = line.real_to_halfcomplex(a) * line.preconditioner
-    np.testing.assert_allclose(line.preconditioned_potential(b_hc, a_forcing), line.potential(a, a_forcing))
+    a_p = line.real_to_halfcomplex(a) * line.preconditioner
+    np.testing.assert_allclose(line.preconditioned_potential(a_p, a_forcing), line.potential(a, a_forcing))
 
 
 def test_hc_elastic_energy(purely_elastic_line_preconditionned):
@@ -303,6 +329,60 @@ def test_preconditioned_potential_gradient_consistency(simple_elastic_line_preco
     ax.plot(epsilons, epsilons, "k")
     plt.show()
 
+
+def test_gradient_norm_halfcomplex(simple_elastic_line_preconditionned):
+    line = simple_elastic_line_preconditionned
+    a = np.random.normal(size=line.L)
+    a_forcing = np.random.normal()
+    gradient_r = line.gradient(a, a_forcing )
+    mag_r = np.sqrt(np.sum(gradient_r**2))
+
+    gradient_hc = line.halfcomplex_gradient(line.real_to_halfcomplex(a), a_forcing)
+    mag_hc = line.gradient_norm_from_halfcomplex(gradient_hc)
+
+    np.testing.assert_allclose(mag_hc, mag_r)
+
+def test_gradient_norm_preconditioned(simple_elastic_line_preconditionned):
+    line = simple_elastic_line_preconditionned
+    a = np.random.normal(size=line.L)
+    a_forcing = np.random.normal()
+    gradient_r = line.gradient(a, a_forcing )
+    mag_r = np.sqrt(np.sum(gradient_r**2))
+
+    gradient_p = line.preconditioned_gradient(line.real_to_halfcomplex(a) * line.preconditioner, a_forcing)
+    mag_p = line.gradient_norm_from_preconditioned(gradient_p)
+
+    np.testing.assert_allclose(mag_p, mag_r)
+
+def test_preconditioned_hesian_product(simple_elastic_line_preconditionned):
+    line = simple_elastic_line_preconditionned
+
+    a_forcing = np.random.normal()
+    a = np.random.normal(size=line.L)
+    a_p_test = np.zeros(line.L) # np.random.normal(size=line.L)
+    a_p_test[0] = 1
+    a_p_test /= scipy.linalg.norm(a_p_test)
+    a_p = line.real_to_halfcomplex(a) * line.preconditioner
+
+    grad_base = line.preconditioned_gradient(a_p, a_forcing)
+
+    epsilons = 10.**np.arange(-10, 10)
+    hessp_errors = np.zeros_like(epsilons)
+
+    for i, eps in enumerate(epsilons):
+        dgrad = line.preconditioned_gradient(a_p + a_p_test * eps, a_forcing) - grad_base
+        dgrad_from_hess = line.preconditioned_hessian_product(a_p=a_p, p_p=a_p_test * eps)
+        hessp_errors[i] = np.sqrt(np.mean((dgrad_from_hess - dgrad) ** 2))
+
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots()
+    ax.plot(epsilons, hessp_errors  # / epsilons ** 2
+            , "+-")
+    ax.plot(epsilons, epsilons ** 2)
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.grid(True)
+    plt.show()
 
 ########## ELASTICLINEPOTENTIAL tests
 
