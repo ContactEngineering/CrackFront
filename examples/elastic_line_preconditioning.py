@@ -42,10 +42,10 @@ driving_positions = np.linspace(0, 16, 200)
 force = []
 gtol = 1e-5
 disp = False
-for solver_name, trust_fac  in [#("lbfgsb", ""),
-                                #("lbfgsb_hc", ""),
-                                ("trust_ncg_fixed_preconditioned", 4),
-                                ("lbfgsb_preconditioned", ""),
+for solver_name, trust_fac  in [("lbfgsb", ""),
+                                ("lbfgsb_hc", ""),
+                                ("trust_ncg_fixed_p", 4),
+                                ("lbfgsb_p", ""),
                                 ("trust_ncg_fixed", 4),
 
                                 #("trust_ncg_fixed", 4),
@@ -117,7 +117,7 @@ for solver_name, trust_fac  in [#("lbfgsb", ""),
             assert sol.success, sol.message
             a=sol.x
 
-        elif solver_name == "trust_ncg_fixed_preconditioned":
+        elif solver_name == "trust_ncg_fixed_p":
             def gradient(a_p):
                 grad_p = line.preconditioned_gradient(a_p, a_forcing=w)
                 print(line.gradient_norm_from_preconditioned(grad_p))
@@ -125,9 +125,9 @@ for solver_name, trust_fac  in [#("lbfgsb", ""),
             sol = trustregion_newton_cg(
                 x0=a_p, gradient=gradient,
                 hessian_product=lambda a_p, p_p: line.preconditioned_hessian_product(a_p=a_p, p_p=p_p),
-                trust_radius=2 * np.pi / np.max(q_potential) / trust_fac / np.sqrt(line.L), # to a very good approximation, the two
+                trust_radius=2 * np.pi / np.max(q_potential) / trust_fac / np.sqrt(line.L) / 10, # to a very good approximation, the two
                 maxiter=10000,
-                gtol=1e-2 #gtol  # he has issues to reach the gtol at small values of a
+                gtol=gtol  # he has issues to reach the gtol at small values of a
                         )
             #print(sol.n_hits_boundary)
             #print(sol.nhev)
@@ -160,24 +160,24 @@ symbol = "s"
 ax.plot(nc.driving_position, nc.driving_force, symbol, alpha=0.5, label="lbfgsb")
 nc.close()
 
-nc = NCStructuredGrid("lbfgsb_hc.nc")
-symbol = "x"
-ax.plot(nc.driving_position, nc.driving_force, symbol, alpha=0.5, label="lbfgsa_p")
-nc.close()
+# nc = NCStructuredGrid("lbfgsb_hc.nc")
+# symbol = "x"
+# ax.plot(nc.driving_position, nc.driving_force, symbol, alpha=0.5, label="lbfgsa_p")
+# nc.close()
 
 nc = NCStructuredGrid("lbfgsb_p.nc")
 symbol = "+"
 ax.plot(nc.driving_position, nc.driving_force, symbol, alpha=0.5, label="lbfgsb_preconditioned")
 nc.close()
 
-nc = NCStructuredGrid("trust_ncg_fixed.nc")
+nc = NCStructuredGrid("trust_ncg_fixed4.nc")
 symbol = "^"
 ax.plot(nc.driving_position, nc.driving_force, symbol, alpha=0.5, label="trust_ncg_p")
 nc.close()
 
 
-nc = NCStructuredGrid("trust_ncg_fixed_p.nc")
-symbol = "^"
+nc = NCStructuredGrid("trust_ncg_fixed_p4.nc")
+symbol = "-"
 ax.plot(nc.driving_position, nc.driving_force, symbol, alpha=0.5, label="trust_ncg_p")
 nc.close()
 

@@ -190,7 +190,7 @@ class ElasticLinePotentialPreconditionned(ElasticLinePotential):
             p_r = self.halfcomplex_to_real(p_p / self.preconditioner)
 
         adhesive_hessian_product = self.L * self.hc_coeffs / self.preconditioner \
-            * self.real_to_halfcomplex(self.pinning_potential(a_r, der="2")) * p_r
+            * self.real_to_halfcomplex(self.pinning_potential(a_r, der="2") * p_r )
         elastic_hessian_product = self.L * self.hc_coeffs * p_p
 
         return adhesive_hessian_product + elastic_hessian_product
@@ -361,6 +361,10 @@ def test_preconditioned_hesian_product(simple_elastic_line_preconditionned):
     a = np.random.normal(size=line.L)
     a_p_test = np.zeros(line.L) # np.random.normal(size=line.L)
     a_p_test[0] = 1
+
+    # The 0s mode works but the higher modes are wrong.
+    a_p_test = np.random.normal(size=line.L)
+
     a_p_test /= scipy.linalg.norm(a_p_test)
     a_p = line.real_to_halfcomplex(a) * line.preconditioner
 
