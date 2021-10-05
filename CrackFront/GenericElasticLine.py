@@ -3,6 +3,7 @@ import timeit
 import numpy as np
 import scipy.sparse.linalg
 import pytest
+from muFFT import FFT
 
 class ElasticLine():
     def __init__(self, L, Lk, pinning_field):
@@ -127,3 +128,4 @@ class ElasticLine():
     def reset_neval(self):
         self._n_eval_grad = 0
         self._n_eval_hessp = 0
+
