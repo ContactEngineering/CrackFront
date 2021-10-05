@@ -33,11 +33,18 @@ class CGSteihaugSubproblem(BaseQuadraticSubproblem):
     """Quadratic subproblem solved by a conjugate gradient method
     Adapted from scipy
     """
-    def __init__(self, x, fun, jac, hess=None, hessp=None, cg_tolerance=None):
+
+    def __init__(self, x, fun, jac, hess=None, hessp=None, cg_tolerance=None, verbose=False):
         super().__init__(x, fun, jac, hess, hessp)
         if cg_tolerance==None:
-            cg_tolerance = lambda jac_mag: min(0.5, math.sqrt(jac_mag))
+            cg_tolerance = lambda jac_mag: min(0.5, math.sqrt(jac_mag)) * jac_mag
         self._cg_tolerance = cg_tolerance
+        self._verbose=verbose
+
+    def print(self, *args):
+        if self._verbose:
+            print(*args)
+
 
     def solve(self, trust_radius):
         """
@@ -73,6 +80,7 @@ class CGSteihaugSubproblem(BaseQuadraticSubproblem):
         # is a direction of nonpositive curvature.
         if self.jac_mag < tolerance:
             hits_boundary = False
+            print("Already fullfill tolerance")
             return p_origin, hits_boundary
 
         # init the state for the first iteration
@@ -81,7 +89,7 @@ class CGSteihaugSubproblem(BaseQuadraticSubproblem):
         d = -r
 
         # Search for the min of the approximation of the objective function.
-        nit_CG = 1
+        self.nit = 1
         while True:
 
             # do an iteration
@@ -100,6 +108,7 @@ class CGSteihaugSubproblem(BaseQuadraticSubproblem):
                 else:
                     p_boundary = pb
                 hits_boundary = True
+                self.print("negative search direction: ", self.nit)
                 return p_boundary, hits_boundary
             r_squared = np.dot(r, r)
             alpha = r_squared / dBd
@@ -110,13 +119,14 @@ class CGSteihaugSubproblem(BaseQuadraticSubproblem):
                 ta, tb = self.get_boundaries_intersections(z, d, trust_radius)
                 p_boundary = z + tb * d
                 hits_boundary = True
+                self.print("positive definite CG step hits boundary: ", self.nit)
                 return p_boundary, hits_boundary
             r_next = r + alpha * Bd
             r_next_squared = np.dot(r_next, r_next)
-            #if math.sqrt(r_next_squared) < tolerance:
-            if np.max(abs(r_next)) < tolerance:
+            if math.sqrt(r_next_squared) < tolerance:
+            #if np.max(abs(r_next)) < tolerance:
                 hits_boundary = False
-                print("CG reaches tolerance: ", nit_CG)
+                self.print("CG reaches tolerance: ", self.nit)
                 return z_next, hits_boundary
             beta_next = r_next_squared / r_squared
             d_next = -r_next + beta_next * d
@@ -125,12 +135,12 @@ class CGSteihaugSubproblem(BaseQuadraticSubproblem):
             z = z_next
             r = r_next
             d = d_next
-            nit_CG+=1
+            self.nit+=1
 
 
 def trustregion_newton_cg(x0, gradient, hessian=None, hessian_product=None,
                           trust_radius=0.5, gtol=1e-6, maxiter=1000,
-                          trust_radius_from_x=None, cg_tolerance=None):
+                          trust_radius_from_x=None, cg_tolerance=None, verbose=False):
     r"""
     minimizes the function having the given gradient and hessian
     In other words it finds only roots of gradient where the hessian
@@ -166,12 +176,13 @@ def trustregion_newton_cg(x0, gradient, hessian=None, hessian_product=None,
                              else None,
                              hessp=wrapped_hessian_product
                              if hessian_product is not None else None,
-                             cg_tolerance=cg_tolerance)
+                             cg_tolerance=cg_tolerance,
+                             verbose=verbose)
     n_hits_boundary = 0
     nit = 1
 
     while nit <= maxiter:
-        # print(f"####### it {nit}")
+        if verbose: print(f"####### it {nit}")
         if trust_radius_from_x is not None:
             # this allows to choose the trust radius
             # according to nonadmissible values of x
@@ -194,9 +205,9 @@ def trustregion_newton_cg(x0, gradient, hessian=None, hessian_product=None,
                                  if hessian is not None else None,
                                  hessp=wrapped_hessian_product
                                  if hessian_product is not None else None,
-                                 cg_tolerance=cg_tolerance)
+                                 cg_tolerance=cg_tolerance, verbose=verbose)
         max_r = np.max(abs(m.jac))
-        print(f"max(|r|)= {max_r}")
+        #print(f"max(|r|)= {max_r}")
         if max_r < gtol:
             result = OptimizeResult(
                 {

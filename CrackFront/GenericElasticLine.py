@@ -48,6 +48,10 @@ class ElasticLine():
         self._elastic_hessian = None
         self.q = 2 * np.pi * np.fft.rfftfreq(n, L / n)
 
+        self._n_eval_grad = 0
+        self._n_eval_hessp = 0
+
+
     @property
     def elastic_hessian(self):
         """
@@ -79,9 +83,11 @@ class ElasticLine():
         return 0.5 * self.qk * np.sum((a - a_forcing) ** 2) + 0.5 * np.sum(self.elastic_hessp(a) * a)
 
     def gradient(self, a, a_forcing):
+        self._n_eval_grad += 1
         return self.elastic_hessp(a) + self.qk * (a - a_forcing) + self.pinning_field(a)
 
     def hessian_product(self, p, a):
+        self._n_eval_hessp += 1
         return self.qk * p + self.elastic_hessp(p) + self.pinning_field(a, der="1") * p
 
     def hessian_operator_cached(self, a):
@@ -114,3 +120,10 @@ class ElasticLine():
         ncFrame.position_max = np.max(a)
 
         ncFrame.elastic_potential = self.elastic_potential(a, a_forcing)
+
+    def print_neval(self):
+        print("grad: {0._n_eval_grad}, hessp: {0._n_eval_hessp} ".format(self))
+
+    def reset_neval(self):
+        self._n_eval_grad = 0
+        self._n_eval_hessp = 0
