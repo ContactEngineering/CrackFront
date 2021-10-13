@@ -87,6 +87,10 @@ class ElasticLine():
         self._n_eval_grad += 1
         return self.elastic_hessp(a) + self.qk * (a - a_forcing) + self.pinning_field(a)
 
+    def elastic_gradient(self, a, a_forcing):
+        self._n_eval_grad += 1
+        return self.elastic_hessp(a) + self.qk * (a - a_forcing)
+
     def hessian_product(self, p, a):
         self._n_eval_hessp += 1
         return self.qk * p + self.elastic_hessp(p) + self.pinning_field(a, der="1") * p

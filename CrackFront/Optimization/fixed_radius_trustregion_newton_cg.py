@@ -34,17 +34,43 @@ class CGSteihaugSubproblem(BaseQuadraticSubproblem):
     Adapted from scipy
     """
 
-    def __init__(self, x, fun, jac, hess=None, hessp=None, cg_tolerance=None, verbose=False):
+    def __init__(self, x, fun, jac, hess=None, hessp=None, cg_tolerance=None, verbose=False, preco_dot=np.dot):
         super().__init__(x, fun, jac, hess, hessp)
         if cg_tolerance==None:
             cg_tolerance = lambda jac_mag: min(0.5, math.sqrt(jac_mag)) * jac_mag
         self._cg_tolerance = cg_tolerance
         self._verbose=verbose
+        self.preco_dot = preco_dot
 
     def print(self, *args):
         if self._verbose:
             print(*args)
 
+
+
+    def get_boundaries_intersections(self, z, d, trust_radius):
+        """
+        Solve the scalar quadratic equation ||z + t d|| == trust_radius.
+        This is like a line-sphere intersection.
+        Return the two values of t, sorted from low to high.
+        """
+        a = self.preco_dot(d, d)
+        b = 2 * self.preco_dot(z, d)
+        c = self.preco_dot(z, z) - trust_radius**2
+        delta = b*b - 4*a*c
+        sqrt_discriminant = math.sqrt(b*b - 4*a*c)
+
+        # The following calculation is mathematically
+        # equivalent to:
+        # ta = (-b - sqrt_discriminant) / (2*a)
+        # tb = (-b + sqrt_discriminant) / (2*a)
+        # but produce smaller round off errors.
+        # Look at Matrix Computation p.97
+        # for a better justification.
+        aux = b + math.copysign(sqrt_discriminant, b)
+        ta = -aux / (2*a)
+        tb = -2*c / aux
+        return sorted([ta, tb])
 
     def solve(self, trust_radius):
         """
@@ -113,7 +139,7 @@ class CGSteihaugSubproblem(BaseQuadraticSubproblem):
             r_squared = np.dot(r, r)
             alpha = r_squared / dBd
             z_next = z + alpha * d
-            if scipy.linalg.norm(z_next) >= trust_radius:
+            if self.preco_dot(z_next, z_next) >= trust_radius ** 2:
                 # Find t >= 0 to get the boundary point such that
                 # ||z + t d|| == trust_radius
                 ta, tb = self.get_boundaries_intersections(z, d, trust_radius)
@@ -137,10 +163,12 @@ class CGSteihaugSubproblem(BaseQuadraticSubproblem):
             d = d_next
             self.nit+=1
 
-
+# TODO: rename preco_dot to more sth. like dot producttrust radius
 def trustregion_newton_cg(x0, gradient, hessian=None, hessian_product=None,
                           trust_radius=0.5, gtol=1e-6, maxiter=1000,
-                          trust_radius_from_x=None, cg_tolerance=None, verbose=False):
+                          gnorm_termination=lambda grad: np.max(abs(grad)),
+                          trust_radius_from_x=None, cg_tolerance=None, verbose=False, preco_dot=np.dot
+                          ):
     r"""
     minimizes the function having the given gradient and hessian
     In other words it finds only roots of gradient where the hessian
@@ -177,7 +205,7 @@ def trustregion_newton_cg(x0, gradient, hessian=None, hessian_product=None,
                              hessp=wrapped_hessian_product
                              if hessian_product is not None else None,
                              cg_tolerance=cg_tolerance,
-                             verbose=verbose)
+                             verbose=verbose, preco_dot=preco_dot)
     n_hits_boundary = 0
     nit = 1
 
@@ -194,6 +222,9 @@ def trustregion_newton_cg(x0, gradient, hessian=None, hessian_product=None,
         # we choose trust_radis based on our knowledge of the nonlinear
         # part of the function
 
+        # TODO: check whether the trust region step length is actually ok
+
+
         x = x + p
 
         if hits_boundary:
@@ -205,8 +236,8 @@ def trustregion_newton_cg(x0, gradient, hessian=None, hessian_product=None,
                                  if hessian is not None else None,
                                  hessp=wrapped_hessian_product
                                  if hessian_product is not None else None,
-                                 cg_tolerance=cg_tolerance, verbose=verbose)
-        max_r = np.max(abs(m.jac))
+                                 cg_tolerance=cg_tolerance, verbose=verbose, preco_dot=preco_dot)
+        max_r = gnorm_termination(m.jac)
         #print(f"max(|r|)= {max_r}")
         if max_r < gtol:
             result = OptimizeResult(
@@ -236,6 +267,10 @@ def trustregion_newton_cg(x0, gradient, hessian=None, hessian_product=None,
         'message': 'MAXITER REACHED',
         })
     return result
+
+
+
+
 
 
 # A little demo
