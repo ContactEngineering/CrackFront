@@ -1,6 +1,8 @@
 import numpy as np
+from scipy.optimize import OptimizeResult
 
 from CrackFront.GenericElasticLine import ElasticLine
+from scipy.optimize import OptimizeResult
 
 
 class linear_interpolated_pinning_field:
@@ -34,7 +36,8 @@ class linear_interpolated_pinning_field:
         elif der == "1":
             return slope
 
-def brute_rosso_krauth(a, gradient, pinning_field, line, tol=1e-4, maxit=10000, monitor=False):
+
+def brute_rosso_krauth(a, driving_a, line, gtol=1e-4, maxit=10000):
     """
     Variation of PRE 65
 
@@ -51,65 +54,45 @@ def brute_rosso_krauth(a, gradient, pinning_field, line, tol=1e-4, maxit=10000, 
     elastic_stiffness_individual = line.elastic_gradient(a_test, 0)[0]
     # elastic reaction force when we move the pixel individually
 
-    grad = gradient(a)
+    grad = line.gradient(a, driving_a)
     nit = 0
-    if monitor:
-        import matplotlib.pyplot as plt
-        fig, ax = plt.subplots(3, 1, sharex=True)
-        l0, = ax[0].plot(grad, ".")
-        l1, = ax[1].plot(np.ones_like(grad), ".")
-        # l12, =ax[1].plot(grad)
-
-        l2, = ax[1].plot(grad, ".", c="r")
-        l3, = ax[2].plot(a, ".")
-        l32, = ax[2].plot(a, ".")
-
-        ax[1].set_ylim(1e-2, 2)
-        ax[1].set_yscale("log")
-    while (np.max(abs(grad)) > tol) and nit < maxit:
+    while (np.max(abs(grad)) > gtol) and nit < maxit:
         # print(grad)
         # Nullify the force on each pixel, assuming it is greater then
-        stiffness = pinning_field(a.copy(), "1") + elastic_stiffness_individual
+        stiffness = line.pinning_field(a.copy(), "1") + elastic_stiffness_individual
 
         increment = - grad / stiffness
         # negative stiffness generates wrong step length.
         a_new = np.where(stiffness > 0, a + increment, a + 1 + 1e-14)
-        # l12.set_ydata(a_new - a)
         a_new[grad >= 0] = a[grad >= 0]
 
         a_ceiled = np.ceil(a)
         a_new = np.minimum(a_ceiled, a_new)
-        if monitor:
-
-            l0.set_ydata(grad)
-            l1.set_ydata(a_new - a)
-            # ax[1].set_ylim(0, np.max(a_new-a))
-            l3.set_ydata(a)
-            l32.set_ydata(a_new)
-            ax[2].set_ylim(np.min(a) - 2, np.max(a) + 2)
-            ax[1].set_ylim(bottom=np.mean(a_new - a) / 10)
-
-            plt.pause(0.01)
         a = a_new
         a = np.where(a > np.floor(a), a, a + 1e-14)
-        grad = gradient(a.copy())
+        grad = line.gradient(a.copy(), driving_a)
 
         a[np.logical_and((grad < 0), (a == np.floor(a)))] += 1e-13
-        # print(grad)
         # Don't move backward when gradient is negative due to imprecision
-        # assert (grad < postol).all(), np.max(grad)
         nit += 1
 
     if nit == maxit:
-        print("maxit reached")
+        success = False
+    else:
+        success = True
 
-    return a
+    result = OptimizeResult({
+        'success': success,
+        'x': a,
+        'nit': nit,
+        })
+    return result
 
 
 
 import time
 
-def test_large_disp_force():
+def example_large_disp_force():
     from CrackFront.Optimization.fixed_radius_trustregion_newton_cg import trustregion_newton_cg
     L = 2048
     Lx = 2048
@@ -119,7 +102,6 @@ def test_large_disp_force():
 
     line = ElasticLine(L, L / 4, pinning_field=pinning_field)
 
-
     a_init = np.zeros(L) + 1e-14
     a = a_init.copy()
     w = 1
@@ -127,9 +109,8 @@ def test_large_disp_force():
     grad = line.gradient(a, w)
 
     while (grad > 0).any():
-        w+=1
-        grad = line.gradient(a,w)
-
+        w += 1
+        grad = line.gradient(a, w)
 
     gtol = 1e-6
 
@@ -137,22 +118,21 @@ def test_large_disp_force():
 
     start_time = time.time()
 
-    #%%
+    # %%
 
-    mean_a_RK=[]
+    mean_a_RK = []
     a = np.zeros(L)
     start_time = time.time()
     for a_forcing in a_forcings:
-        #print(a_forcing)
+        # print(a_forcing)
         wrapped_gradient = lambda a: line.gradient(a, a_forcing)
 
-        a = brute_rosso_krauth(a, wrapped_gradient, pinning_field, line, maxit=100000,tol=gtol,)
+        a = brute_rosso_krauth(a, wrapped_gradient, pinning_field, line, maxit=100000, tol=gtol, )
         mean_a_RK.append(np.mean(a))
     print("TIME ROSSO Krauth", time.time() - start_time)
 
-
     # %%
-    mean_a_trust_coarse=[]
+    mean_a_trust_coarse = []
     a = np.zeros(L)
     start_time = time.time()
     for a_forcing in a_forcings:
@@ -163,14 +143,14 @@ def test_large_disp_force():
             trust_radius=1 / 2,
             maxiter=1000000,
             gtol=gtol,  # he has issues to reach the gtol at small values of a
-            gnorm_termination=lambda a: np.max(abs(a)),)
+            )
         a = sol.x
         assert sol.success
         mean_a_trust_coarse.append(np.mean(a))
     print("TIME TR COARSE", time.time() - start_time)
 
     # %%
-    mean_a_trust=[]
+    mean_a_trust = []
     a = np.zeros(L)
     start_time = time.time()
     for a_forcing in a_forcings:
@@ -181,7 +161,7 @@ def test_large_disp_force():
             trust_radius=1 / 8,
             gtol=gtol,
             maxiter=10000000,
-            gnorm_termination=lambda a: np.max(abs(a)),)
+            )
         a = sol.x
         assert sol.success
 
@@ -193,24 +173,23 @@ def test_large_disp_force():
 
     fig, ax = plt.subplots()
 
-    ax.plot(a_forcings, a_forcings -mean_a_RK , label="KR")
-    ax.plot(a_forcings,  a_forcings - mean_a_trust, "+", label= "TR, safe")
+    ax.plot(a_forcings, a_forcings - mean_a_RK, label="KR")
+    ax.plot(a_forcings, a_forcings - mean_a_trust, "+", label="TR, safe")
 
-    ax.plot(a_forcings,  a_forcings - mean_a_trust_coarse,  "x",  label= "TR")
+    ax.plot(a_forcings, a_forcings - mean_a_trust_coarse, "x", label="TR")
     ax.legend()
     plt.pause(.5)
 
 
-def test_strong_pinning():
+def example_strong_pinning():
     from CrackFront.Optimization.fixed_radius_trustregion_newton_cg import trustregion_newton_cg
     L = 2048
     Lx = 2048
 
-    random_forces = np.random.normal(size=(L, Lx)) * 1. # *0.05
+    random_forces = np.random.normal(size=(L, Lx)) * 1.  # *0.05
     pinning_field = linear_interpolated_pinning_field(random_forces)
 
     line = ElasticLine(L, L / 16, pinning_field=pinning_field)
-
 
     a_init = np.zeros(L) + 1e-14
     a = a_init.copy()
@@ -219,9 +198,8 @@ def test_strong_pinning():
     grad = line.gradient(a, w)
 
     while (grad > 0).any():
-        w+=1
-        grad = line.gradient(a,w)
-
+        w += 1
+        grad = line.gradient(a, w)
 
     gtol = 1e-6
 
@@ -229,22 +207,21 @@ def test_strong_pinning():
 
     start_time = time.time()
 
-    #%%
+    # %%
 
-    mean_a_RK=[]
+    mean_a_RK = []
     a = np.zeros(L)
     start_time = time.time()
     for a_forcing in a_forcings:
-        #print(a_forcing)
+        # print(a_forcing)
         wrapped_gradient = lambda a: line.gradient(a, a_forcing)
 
-        a = brute_rosso_krauth(a, wrapped_gradient, pinning_field, line, maxit=100000,tol=gtol,)
+        a = brute_rosso_krauth(a, wrapped_gradient, pinning_field, line, maxit=100000, tol=gtol, )
         mean_a_RK.append(np.mean(a))
     print("TIME ROSSO Krauth", time.time() - start_time)
 
-
     # %%
-    mean_a_trust_coarse=[]
+    mean_a_trust_coarse = []
     a = np.zeros(L)
     start_time = time.time()
     for a_forcing in a_forcings:
@@ -254,15 +231,14 @@ def test_strong_pinning():
             hessian_product=lambda a, p: line.hessian_product(p, a),
             trust_radius=1 / 2,
             maxiter=1000000,
-            gtol=gtol,  # he has issues to reach the gtol at small values of a
-            gnorm_termination=lambda a: np.max(abs(a)),)
+            gtol=gtol, )
         a = sol.x
         assert sol.success
         mean_a_trust_coarse.append(np.mean(a))
     print("TIME TR COARSE", time.time() - start_time)
 
     # %%
-    mean_a_trust=[]
+    mean_a_trust = []
     a = np.zeros(L)
     start_time = time.time()
     for a_forcing in a_forcings:
@@ -272,8 +248,7 @@ def test_strong_pinning():
             hessian_product=lambda a, p: line.hessian_product(p, a),
             trust_radius=1 / 8,
             gtol=gtol,
-            maxiter=10000000,
-            gnorm_termination=lambda a: np.max(abs(a)),)
+            maxiter=10000000)
         a = sol.x
         assert sol.success
 
@@ -285,14 +260,14 @@ def test_strong_pinning():
 
     fig, ax = plt.subplots()
 
-    ax.plot(a_forcings, a_forcings -mean_a_RK , label="KR")
-    ax.plot(a_forcings,  a_forcings - mean_a_trust, "+", label= "TR, safe")
+    ax.plot(a_forcings, a_forcings - mean_a_RK, label="KR")
+    ax.plot(a_forcings, a_forcings - mean_a_trust, "+", label="TR, safe")
 
-    ax.plot(a_forcings,  a_forcings - mean_a_trust_coarse,  "x",  label= "TR")
+    ax.plot(a_forcings, a_forcings - mean_a_trust_coarse, "x", label="TR")
     ax.legend()
     plt.pause(.5)
 
 
-if __name__=="__main__":
-    test_strong_pinning()
-    test_large_disp_force()
+if __name__ == "__main__":
+    example_strong_pinning()
+    example_large_disp_force()
