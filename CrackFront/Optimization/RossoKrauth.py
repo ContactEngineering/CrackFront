@@ -37,8 +37,8 @@ class linear_interpolated_pinning_field:
             return slope
 
 
-def brute_rosso_krauth(a, driving_a, line, gtol=1e-4, maxit=10000):
-    """
+def brute_rosso_krauth(a, driving_a, line, gtol=1e-4, maxit=10000, dir=1):
+    r"""
     Variation of PRE 65
 
     In the original they move each pixel one after another.
@@ -46,6 +46,10 @@ def brute_rosso_krauth(a, driving_a, line, gtol=1e-4, maxit=10000):
     Here we move them all at once, which should make better use of vectorization and parallelisation.
 
     This might have drawbacks when the pinning field is weak, where pixels fail collectively.
+
+    One requirement for this algorithm is that the starting position is purely advancing,
+    i.e. the gradient is strictly negative for driving_a > mean(a)
+
 
     """
     L = line.L
@@ -55,6 +59,9 @@ def brute_rosso_krauth(a, driving_a, line, gtol=1e-4, maxit=10000):
     # elastic reaction force when we move the pixel individually
 
     grad = line.gradient(a, driving_a)
+    if (grad * dir > 0).any():
+        raise ValueError("Starting Configuration is not purely advancing or receding")
+
     nit = 0
     while (np.max(abs(grad)) > gtol) and nit < maxit:
         # print(grad)
@@ -63,18 +70,30 @@ def brute_rosso_krauth(a, driving_a, line, gtol=1e-4, maxit=10000):
 
         increment = - grad / stiffness
         # negative stiffness generates wrong step length.
-        a_new = np.where(stiffness > 0, a + increment, a + 1 + 1e-14)
-        a_new[grad >= 0] = a[grad >= 0]
+        a_new = np.where(stiffness > 0, a + increment, a + (1 + 1e-14) * dir)
+        a_new[grad * dir >= 0] = a[grad * dir >= 0]
 
-        a_ceiled = np.ceil(a)
-        a_new = np.minimum(a_ceiled, a_new)
-        a = a_new
-        a = np.where(a > np.floor(a), a, a + 1e-14)
+        if dir == 1:
+            a_ceiled = np.ceil(a)
+            a_new = np.minimum(a_ceiled, a_new)
+            a = a_new
+            a = np.where(a > np.floor(a), a, a + 1e-14)
+
+            # I think this line is useless
+            #a[np.logical_and((grad < 0), (a == np.floor(a)))] += 1e-13
+            # Don't move backward when gradient is negative due to imprecision
+        elif dir == -1:
+            a_floored = np.floor(a)
+            a_new = np.maximum(a_floored, a_new)
+            a = a_new
+            a = np.where(a < np.ceil(a), a, a - 1e-14)
+
+            #a[np.logical_and((grad < 0), (a == np.floor(a)))] += 1e-13
+
         grad = line.gradient(a.copy(), driving_a)
 
-        a[np.logical_and((grad < 0), (a == np.floor(a)))] += 1e-13
-        # Don't move backward when gradient is negative due to imprecision
         nit += 1
+
 
     if nit == maxit:
         success = False
@@ -89,10 +108,8 @@ def brute_rosso_krauth(a, driving_a, line, gtol=1e-4, maxit=10000):
     return result
 
 
-
-import time
-
 def example_large_disp_force():
+    import time
     from CrackFront.Optimization.fixed_radius_trustregion_newton_cg import trustregion_newton_cg
     L = 2048
     Lx = 2048
@@ -182,6 +199,7 @@ def example_large_disp_force():
 
 
 def example_strong_pinning():
+    import time
     from CrackFront.Optimization.fixed_radius_trustregion_newton_cg import trustregion_newton_cg
     L = 2048
     Lx = 2048
