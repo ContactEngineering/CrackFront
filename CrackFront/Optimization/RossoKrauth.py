@@ -21,6 +21,7 @@ class linear_interpolated_pinning_field:
         np.floor(a, out=self.a_below, casting="unsafe").reshape(-1)
         np.ceil(a, out=self.a_above, casting="unsafe").reshape(-1)
 
+        # Wrapping periodic boundary conditions
         self.a_below[self.a_below >= self.Lx] = self.a_below[self.a_below >= self.Lx] - self.Lx
         self.a_above[self.a_above >= self.Lx] = self.a_above[self.a_above >= self.Lx] - self.Lx
 
@@ -41,14 +42,14 @@ def brute_rosso_krauth(a, driving_a, line, gtol=1e-4, maxit=10000, dir=1):
     r"""
     Variation of PRE 65
 
+    One requirement for this algorithm is that the starting position is purely advancing,
+    i.e. the gradient is strictly negative when we pull the line in positive `a` direction
+
     In the original they move each pixel one after another.
 
     Here we move them all at once, which should make better use of vectorization and parallelisation.
 
     This might have drawbacks when the pinning field is weak, where pixels fail collectively.
-
-    One requirement for this algorithm is that the starting position is purely advancing,
-    i.e. the gradient is strictly negative for driving_a > mean(a)
 
 
     """
@@ -66,7 +67,7 @@ def brute_rosso_krauth(a, driving_a, line, gtol=1e-4, maxit=10000, dir=1):
     while (np.max(abs(grad)) > gtol) and nit < maxit:
         # print(grad)
         # Nullify the force on each pixel, assuming it is greater then
-        stiffness = line.pinning_field(a.copy(), "1") + elastic_stiffness_individual
+        stiffness = line.pinning_field(a, "1") + elastic_stiffness_individual
 
         increment = - grad / stiffness
         # negative stiffness generates wrong step length.
@@ -90,7 +91,7 @@ def brute_rosso_krauth(a, driving_a, line, gtol=1e-4, maxit=10000, dir=1):
 
             #a[np.logical_and((grad < 0), (a == np.floor(a)))] += 1e-13
 
-        grad = line.gradient(a.copy(), driving_a)
+        grad = line.gradient(a, driving_a)
 
         nit += 1
 
