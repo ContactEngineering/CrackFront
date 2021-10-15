@@ -292,23 +292,24 @@ class SphereCrackFrontERRPenetrationFull(SphereCrackFrontERRPenetrationLin):
 
 
 class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
+    r"""
+    Here we guessed an expression for the energy that has the correct first derivative of the energy release rate.
+
+    The gradient is __not__ the ERR G, but :math:`\frac{\partial U}{\partial a_j} = \Delta \theta a_j G(a_j)`
+
+    the nondimensionalisation assumes that R=1, w=1 / np.pi, Es=3. / 4,
+
+    Either the pair of callables w, dw or kc, dkc have to be provided.
+
+    Parameters:
+    -----------
+    npx: number of pixels
+    lin: bool, default False
+        wether to linearize the K0(a, ...) term
+
+    """
     def __init__(self, npx, w=None, dw=None, kc=None, dkc=None):
-        r"""
-        Here we guessed an expression for the energy that has the correct first derivative of the energy release rate.
 
-        The gradient is __not__ the ERR G, but :math:`\frac{\partial U}{\partial a_j} = \Delta \theta a_j G(a_j)`
-
-        the nondimensionalisation assumes that R=1, w=1 / np.pi, Es=3. / 4,
-
-        Either the pair of callables w, dw or kc, dkc have to be provided.
-
-        Parameters:
-        -----------
-        npx: number of pixels
-        lin: bool, default False
-            wether to linearize the K0(a, ...) term
-
-        """
 
         # TODO: enable to provide the integral of the work of adhesion field
         self.npx = npx
