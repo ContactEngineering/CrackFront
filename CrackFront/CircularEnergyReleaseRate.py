@@ -1,6 +1,7 @@
 import numpy as np
 from Adhesion.ReferenceSolutions import JKR
-from CrackFront.Circular import SphereCrackFrontPenetrationBase, NegativeRadiusError
+from CrackFront.Circular import SphereCrackFrontPenetrationBase, NegativeRadiusError,RadiusTooLowError
+from scipy.optimize import OptimizeResult
 
 # nondimensional units following Maugis Book:
 Es = 3 / 4
@@ -368,7 +369,7 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
     def elastic_hessp(self, a):
         return np.fft.irfft(self.nq * np.fft.rfft(a), n=self.npx)
 
-    def dump(self, ncFrame, penetration, sol, dump_fields=True):
+    def dump(self, ncFrame, penetration, a, dump_fields=True):
         """
         Writes the results of the current solution into the ncFrame
 
@@ -385,8 +386,6 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
             `CrackFront.Optimization.trustregion_newton_cg``
         """
 
-        a = sol.x
-
         ncFrame.penetration = penetration
         if dump_fields:
             ncFrame.radius = a
@@ -402,12 +401,6 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
         ncFrame.rms_radius = np.sqrt(np.mean((a - mean_radius) ** 2))
         ncFrame.min_radius = np.min(a)
         ncFrame.max_radius = np.max(a)
-
-        # infos on convergence
-        ncFrame.nit = sol.nit
-        ncFrame.n_hits_boundary = sol.n_hits_boundary
-        ncFrame.njev = sol.njev
-        ncFrame.nhev = sol.nhev
 
     @staticmethod
     def evaluate_normal_force(contact_radius, penetration):
@@ -500,6 +493,7 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
         )
 
 
+
 class SphereCrackFrontERRPenetrationEnergyConstGc(SphereCrackFrontERRPenetrationEnergy):
     def __init__(self, npx, w=None, dw=None, kc=None, dkc=None, wm=1/np.pi):
         r"""
@@ -544,6 +538,18 @@ class SphereCrackFrontERRPenetrationEnergyConstGc(SphereCrackFrontERRPenetration
                 + self.wm * self.elastic_hessp(radius)
                 - self.w(radius, self.angles) * radius)
 
+    def elastic_gradient(self, radius, penetration):
+        if (radius <= 0).any():
+            raise NegativeRadiusError
+        eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
+            contact_radius=radius,
+            penetration=penetration,
+            **_jkrkwargs)
+
+        return 2 * np.pi / self.npx * (
+                radius * eerr_j
+                + self.wm * self.elastic_hessp(radius))
+
     def hessian_product(self, p, radius, penetration):
         eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
             contact_radius=radius,
@@ -559,3 +565,94 @@ class SphereCrackFrontERRPenetrationEnergyConstGc(SphereCrackFrontERRPenetration
             + self.wm * self.elastic_hessp(p)
             - (self.w(radius, self.angles) + radius * self.dw(radius, self.angles)) * p
         )
+
+    def rosso_krauth(self, a, penetration, gtol=1e-4, maxit=10000, dir=1, logger=None):
+        L = len(a)
+        a_test = np.zeros(L)
+        a_test[0] = 1
+        line_stiffness_individual = 2 * np.pi / self.npx * self.wm * self.elastic_hessp(a_test)[0]
+
+
+        indexes = self.pinning_field.indexes
+        kinks = self.pinning_field.kinks
+        values = self.pinning_field.values
+        grid_spacing = self.pinning_field.grid_spacing
+        colloc_point_above = np.searchsorted(kinks, a, side="right")
+
+
+        pinning_field_slope = (values[indexes, colloc_point_above] - values[indexes, colloc_point_above-1]) / grid_spacing
+        grad = self.elastic_gradient(a, penetration) \
+                + values[indexes, colloc_point_above-1] \
+                + pinning_field_slope * (a - kinks[colloc_point_above-1])
+        if (grad * dir > 0).any():
+            raise ValueError("Starting Configuration is not purely advancing or receding")
+
+
+
+        # import matplotlib.pyplot as plt
+        # fig, ax = plt.subplots()
+        # l, = ax.plot(a)
+        # l_above,  = ax.plot(kinks[colloc_point_above])
+        nit = 0
+        while (np.max(abs(grad)) > gtol) and nit < maxit:
+            if logger:
+                logger.st(["it", "max. residual"], [nit, np.max(abs(grad))])
+                #print(a)
+            #print(grad)
+            # Nullify the force on each pixel, assuming it is greater then
+            pinning_field_slope = (values[indexes, colloc_point_above] - values[indexes, colloc_point_above-1]) / grid_spacing
+            grad = self.elastic_gradient(a, penetration) \
+                + values[indexes, colloc_point_above-1] \
+                + pinning_field_slope * (a - kinks[colloc_point_above-1])
+
+            eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
+                contact_radius=a,
+                penetration=penetration,
+                **_jkrkwargs)
+            outer_eastic_stifness = 2 * np.pi / self.npx * eerr_j
+            # TODO: strictly speaking I should take into account that this is nonlinear
+            stiffness = pinning_field_slope \
+                        + outer_eastic_stifness \
+                        + line_stiffness_individual
+
+
+            increment = - grad / stiffness
+            # negative stiffness generates wrong step length.
+            a_new = np.where(stiffness > 0, a + increment, a + (1 + 1e-14) * dir)
+            #colloc_point_above = np.where( )
+            a_new[grad * dir >= 0] = a[grad * dir >= 0]
+
+            if dir == 1:
+                mask_new_pixel = a_new  >= kinks[colloc_point_above]
+                a_new[mask_new_pixel] = kinks[colloc_point_above][mask_new_pixel]
+                colloc_point_above[mask_new_pixel] += 1
+                a = a_new
+            elif dir == -1:
+                mask_new_pixel = a_new <= kinks[colloc_point_above-1]
+                a_new[mask_new_pixel] = kinks[colloc_point_above-1][mask_new_pixel]
+                colloc_point_above[mask_new_pixel] -= 1
+
+                a = a_new
+
+
+            #l_above.set_ydata(kinks[colloc_point_above])
+            # l.set_ydata(a)
+            # ax.set_ylim(np.min(a-1), np.max(a))
+            # plt.pause(.001)
+
+            if (colloc_point_above < 0).any():
+                raise RadiusTooLowError
+
+            nit += 1
+
+        if nit == maxit:
+            success = False
+        else:
+            success = True
+
+        result = OptimizeResult({
+            'success': success,
+            'x': a,
+            'nit': nit,
+            })
+        return result

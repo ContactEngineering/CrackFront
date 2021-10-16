@@ -12,7 +12,7 @@ class linear_interpolated_pinning_field:
         self.Lx = Lx
         self.period = Lx
         self.values = values
-
+        self.grid_spacing = 1
         self.a_below = np.zeros(L, dtype=int)
         self.a_above = np.zeros(L, dtype=int)
         self.kinks = np.arange(self.Lx)
@@ -45,6 +45,40 @@ class linear_interpolated_pinning_field:
     # https://numpy.org/doc/stable/reference/generated/numpy.searchsorted.html
     #
     #
+
+class linear_interpolated_pinning_field_equaly_spaced:
+    def __init__(self, values, kinks):
+        L, Lx = values.shape
+        self.L = L
+        self.Lx = Lx
+        self.grid_spacing = kinks[1] - kinks[0]
+        self.period = Lx * self.grid_spacing
+        self.values = values
+
+        self.a_below = np.zeros(L, dtype=int)
+        self.a_above = np.zeros(L, dtype=int)
+        self.kinks = kinks
+        self.indexes = np.arange(L, dtype=int)
+
+    def __call__(self, a, der="0"):
+        np.floor(a, out=self.a_below, casting="unsafe").reshape(-1)
+        np.ceil(a, out=self.a_above, casting="unsafe").reshape(-1)
+
+        # Wrapping periodic boundary conditions
+        self.a_below[self.a_below >= self.Lx] = self.a_below[self.a_below >= self.Lx] - self.Lx
+        self.a_above[self.a_above >= self.Lx] = self.a_above[self.a_above >= self.Lx] - self.Lx
+
+        # print(a_below)
+
+        value_below = self.values[self.indexes, self.a_below].reshape(-1)
+        value_above = self.values[self.indexes, self.a_above].reshape(-1)
+
+        slope = (value_above - value_below) / self.grid_spacing
+
+        if der == "0":
+            return value_below + slope * (a - self.a_below)
+        elif der == "1":
+            return slope
 
 def brute_rosso_krauth(a, driving_a, line, gtol=1e-4, maxit=10000, dir=1):
     r"""
@@ -132,7 +166,7 @@ def brute_rosso_krauth_other_spacing(a, driving_a, line, gtol=1e-4, maxit=10000,
 
 
     """
-    L = line.L
+    L = len(a)
     a_test = np.zeros(L)
     a_test[0] = 1
     elastic_stiffness_individual = line.elastic_gradient(a_test, 0)[0]
@@ -149,7 +183,7 @@ def brute_rosso_krauth_other_spacing(a, driving_a, line, gtol=1e-4, maxit=10000,
 
     period = line.pinning_field.period
 
-    grid_spacing = 1
+    grid_spacing = line.pinning_field.grid_spacing
     # import matplotlib.pyplot as plt
     # fig, ax = plt.subplots()
     # l, = ax.plot(a)
