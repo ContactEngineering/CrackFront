@@ -565,23 +565,42 @@ class SphereCrackFrontERRPenetrationEnergyConstGc(SphereCrackFrontERRPenetration
             - (self.w(radius, self.angles) + radius * self.dw(radius, self.angles)) * p
         )
 
+
+class SphereCFPenetrationEnergyConstGcPiecewiseLinearField(SphereCrackFrontERRPenetrationEnergyConstGc):
+    def __init__(self, piecewise_linear_w, wm=1/np.pi):
+        n_pixels = piecewise_linear_w.L
+        self.piecewise_linear_w = piecewise_linear_w
+
+        # Note that we still provide the function w and dw, directly,
+        # which is useful for postprocessing purposes or using the trust_region_solver.
+        super().__init__(npx=n_pixels,
+                         w=lambda x, angles: piecewise_linear_w(x, der="0"),
+                         dw=lambda x, angles: piecewise_linear_w(x, der="1"), wm=wm)
+
     def rosso_krauth(self, a, penetration, gtol=1e-4, maxit=10000, dir=1, logger=None):
+        """
+        This is an adaptation of the Algorithm by Krauth and Rosso PRE 65
+
+        This version of Rosso Krauth uses the fact that the work of adhesion is piecewise linear
+        """
         L = len(a)
         a_test = np.zeros(L)
         a_test[0] = 1
         line_stiffness_individual = 2 * np.pi / self.npx * self.wm * self.elastic_hessp(a_test)[0]
 
-        indexes = self.pinning_field.indexes
-        kinks = self.pinning_field.kinks
-        values = self.pinning_field.values
-        grid_spacing = self.pinning_field.grid_spacing
+        indexes = self.piecewise_linear_w.indexes
+        kinks = self.piecewise_linear_w.kinks
+        values = self.piecewise_linear_w.values
+        grid_spacing = self.piecewise_linear_w.grid_spacing
+
+        # index of the next (higher radius) kink of the piecewise linear work of adhesion
         colloc_point_above = np.searchsorted(kinks, a, side="right")
 
         pinning_field_slope = (values[indexes, colloc_point_above] - values[indexes, colloc_point_above - 1]) \
             / grid_spacing
         grad = self.elastic_gradient(a, penetration) \
-            + values[indexes, colloc_point_above - 1] \
-            + pinning_field_slope * (a - kinks[colloc_point_above - 1])
+            - values[indexes, colloc_point_above - 1] \
+            - pinning_field_slope * (a - kinks[colloc_point_above - 1])
         if (grad * dir > 0).any():
             raise ValueError("Starting Configuration is not purely advancing or receding")
 
@@ -594,8 +613,8 @@ class SphereCrackFrontERRPenetrationEnergyConstGc(SphereCrackFrontERRPenetration
             pinning_field_slope = (values[indexes, colloc_point_above] - values[indexes, colloc_point_above - 1]) \
                 / grid_spacing
             grad = self.elastic_gradient(a, penetration) \
-                + values[indexes, colloc_point_above - 1] \
-                + pinning_field_slope * (a - kinks[colloc_point_above - 1])
+                - values[indexes, colloc_point_above - 1] \
+                - pinning_field_slope * (a - kinks[colloc_point_above - 1])
 
             eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
                 contact_radius=a,
@@ -607,7 +626,7 @@ class SphereCrackFrontERRPenetrationEnergyConstGc(SphereCrackFrontERRPenetration
             # But in practice with a fine discretisation the stiffness associated
             # with moving one pixel leads to contact area increments small enough so that this nonlinearity
             # doesn't matter
-            stiffness = pinning_field_slope + outer_eastic_stifness + line_stiffness_individual
+            stiffness = - pinning_field_slope + outer_eastic_stifness + line_stiffness_individual
 
             increment = - grad / stiffness
             # negative stiffness generates wrong step length.
