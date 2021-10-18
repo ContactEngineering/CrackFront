@@ -360,7 +360,7 @@ def test_hessian_product():
     da = np.random.normal(size=npx) * np.mean(a) / 10
 
     grad = cf.gradient(a, penetration)
-    if True:
+    if False:
         hs = np.array([1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5,
                        1e-6, 1e-7])
         rms_errors = []
