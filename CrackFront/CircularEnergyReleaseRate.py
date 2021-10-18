@@ -568,7 +568,7 @@ class SphereCrackFrontERRPenetrationEnergyConstGc(SphereCrackFrontERRPenetration
 
 class SphereCFPenetrationEnergyConstGcPiecewiseLinearField(SphereCrackFrontERRPenetrationEnergyConstGc):
     def __init__(self, piecewise_linear_w, wm=1/np.pi):
-        n_pixels = piecewise_linear_w.L
+        n_pixels = piecewise_linear_w.npx_front
         self.piecewise_linear_w = piecewise_linear_w
 
         # Note that we still provide the function w and dw, directly,

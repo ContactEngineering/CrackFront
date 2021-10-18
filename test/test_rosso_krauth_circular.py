@@ -41,7 +41,7 @@ def test_JKR_single():
 
 def test_JKR_curve():
     npx_front = 100
-    # L can't be too low because there is a nonlinear part in the elasticity (coming from the JKR solution)
+    # npx_front can't be too low because there is a nonlinear part in the elasticity (coming from the JKR solution)
     # that we ignore
     #
     # Having more pixels increases the stiffness associated with moving one pixel at a time, so we make more

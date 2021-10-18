@@ -8,14 +8,14 @@ from scipy.optimize import OptimizeResult
 class linear_interpolated_pinning_field:
     def __init__(self, values):
         L, Lx = values.shape
-        self.L = L
-        self.Lx = Lx
+        self.npx_front = L
+        self.npx_propagation = Lx
         self.period = Lx
         self.values = values
         self.grid_spacing = 1
         self.a_below = np.zeros(L, dtype=int)
         self.a_above = np.zeros(L, dtype=int)
-        self.kinks = np.arange(self.Lx)
+        self.kinks = np.arange(self.npx_propagation)
         self.indexes = np.arange(L, dtype=int)
 
     def __call__(self, a, der="0"):
@@ -23,8 +23,8 @@ class linear_interpolated_pinning_field:
         np.ceil(a, out=self.a_above, casting="unsafe").reshape(-1)
 
         # Wrapping periodic boundary conditions
-        self.a_below[self.a_below >= self.Lx] = self.a_below[self.a_below >= self.Lx] - self.Lx
-        self.a_above[self.a_above >= self.Lx] = self.a_above[self.a_above >= self.Lx] - self.Lx
+        self.a_below[self.a_below >= self.npx_propagation] = self.a_below[self.a_below >= self.npx_propagation] - self.npx_propagation
+        self.a_above[self.a_above >= self.npx_propagation] = self.a_above[self.a_above >= self.npx_propagation] - self.npx_propagation
 
         # print(a_below)
 
@@ -49,7 +49,7 @@ class linear_interpolated_pinning_field:
 class linear_interpolated_pinning_field_equaly_spaced:
     def __init__(self, values, kinks):
         L, Lx = values.shape
-        self.L = L
+        self.npx_front = L
         self.Lx = Lx
         self.grid_spacing = kinks[1] - kinks[0]
         self.period = Lx * self.grid_spacing
@@ -95,7 +95,7 @@ def brute_rosso_krauth(a, driving_a, line, gtol=1e-4, maxit=10000, dir=1, logger
 
 
     """
-    L = line.L
+    L = line.npx_front
     a_test = np.zeros(L)
     a_test[0] = 1
     elastic_stiffness_individual = line.elastic_gradient(a_test, 0)[0]
