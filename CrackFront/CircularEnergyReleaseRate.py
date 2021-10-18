@@ -1,6 +1,6 @@
 import numpy as np
 from Adhesion.ReferenceSolutions import JKR
-from CrackFront.Circular import SphereCrackFrontPenetrationBase, NegativeRadiusError,RadiusTooLowError
+from CrackFront.Circular import SphereCrackFrontPenetrationBase, NegativeRadiusError, RadiusTooLowError
 from scipy.optimize import OptimizeResult
 
 # nondimensional units following Maugis Book:
@@ -249,7 +249,7 @@ class SphereCrackFrontERRPenetrationFull(SphereCrackFrontERRPenetrationLin):
         sif = JKR.stress_intensity_factor(contact_radius=radius,
                                           penetration=penetration,
                                           **_jkrkwargs)
-        return 1 / Es *  (1 + 1 / radius * self.elastic_hessp(radius)) * sif ** 2 / 2 \
+        return 1 / Es * (1 + 1 / radius * self.elastic_hessp(radius)) * sif ** 2 / 2 \
             - self.w(radius, self.angles)
 
     def hessian(self, radius, penetration):
@@ -289,7 +289,7 @@ class SphereCrackFrontERRPenetrationFull(SphereCrackFrontERRPenetrationLin):
                                  - K ** 2 / 2 * el_hessp / radius ** 2
                          ) * p
                          ) \
-               - self.dw(radius, self.angles) * p
+            - self.dw(radius, self.angles) * p
 
 
 class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
@@ -309,8 +309,8 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
         wether to linearize the K0(a, ...) term
 
     """
-    def __init__(self, npx, w=None, dw=None, kc=None, dkc=None):
 
+    def __init__(self, npx, w=None, dw=None, kc=None, dkc=None):
 
         # TODO: enable to provide the integral of the work of adhesion field
         self.npx = npx
@@ -493,7 +493,6 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
         )
 
 
-
 class SphereCrackFrontERRPenetrationEnergyConstGc(SphereCrackFrontERRPenetrationEnergy):
     def __init__(self, npx, w=None, dw=None, kc=None, dkc=None, wm=1/np.pi):
         r"""
@@ -572,73 +571,66 @@ class SphereCrackFrontERRPenetrationEnergyConstGc(SphereCrackFrontERRPenetration
         a_test[0] = 1
         line_stiffness_individual = 2 * np.pi / self.npx * self.wm * self.elastic_hessp(a_test)[0]
 
-
         indexes = self.pinning_field.indexes
         kinks = self.pinning_field.kinks
         values = self.pinning_field.values
         grid_spacing = self.pinning_field.grid_spacing
         colloc_point_above = np.searchsorted(kinks, a, side="right")
 
-
-        pinning_field_slope = (values[indexes, colloc_point_above] - values[indexes, colloc_point_above-1]) / grid_spacing
+        pinning_field_slope = (values[indexes, colloc_point_above] - values[indexes, colloc_point_above - 1]) \
+            / grid_spacing
         grad = self.elastic_gradient(a, penetration) \
-                + values[indexes, colloc_point_above-1] \
-                + pinning_field_slope * (a - kinks[colloc_point_above-1])
+            + values[indexes, colloc_point_above - 1] \
+            + pinning_field_slope * (a - kinks[colloc_point_above - 1])
         if (grad * dir > 0).any():
             raise ValueError("Starting Configuration is not purely advancing or receding")
 
-
-
-        # import matplotlib.pyplot as plt
-        # fig, ax = plt.subplots()
-        # l, = ax.plot(a)
-        # l_above,  = ax.plot(kinks[colloc_point_above])
         nit = 0
         while (np.max(abs(grad)) > gtol) and nit < maxit:
             if logger:
                 logger.st(["it", "max. residual"], [nit, np.max(abs(grad))])
-                #print(a)
-            #print(grad)
-            # Nullify the force on each pixel, assuming it is greater then
-            pinning_field_slope = (values[indexes, colloc_point_above] - values[indexes, colloc_point_above-1]) / grid_spacing
+
+            # Nullify the force on each pixel
+            pinning_field_slope = (values[indexes, colloc_point_above] - values[indexes, colloc_point_above - 1]) \
+                / grid_spacing
             grad = self.elastic_gradient(a, penetration) \
-                + values[indexes, colloc_point_above-1] \
-                + pinning_field_slope * (a - kinks[colloc_point_above-1])
+                + values[indexes, colloc_point_above - 1] \
+                + pinning_field_slope * (a - kinks[colloc_point_above - 1])
 
             eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
                 contact_radius=a,
                 penetration=penetration,
                 **_jkrkwargs)
             outer_eastic_stifness = 2 * np.pi / self.npx * eerr_j
-            # TODO: strictly speaking I should take into account that this is nonlinear
-            stiffness = pinning_field_slope \
-                        + outer_eastic_stifness \
-                        + line_stiffness_individual
 
+            # strictly speaking I should take into account that this is nonlinear
+            # But in practice with a fine discretisation the stiffness associated
+            # with moving one pixel leads to contact area increments small enough so that this nonlinearity
+            # doesn't matter
+            stiffness = pinning_field_slope + outer_eastic_stifness + line_stiffness_individual
 
             increment = - grad / stiffness
             # negative stiffness generates wrong step length.
             a_new = np.where(stiffness > 0, a + increment, a + (1 + 1e-14) * dir)
-            #colloc_point_above = np.where( )
+
+            # because of numerical errors it can be that the gradient points in the wrong
+            # direction on some pixels, but is very small.
+            # We just make sure these points do not move backwards
             a_new[grad * dir >= 0] = a[grad * dir >= 0]
 
             if dir == 1:
-                mask_new_pixel = a_new  >= kinks[colloc_point_above]
+                # When the new contact area exceeds the boundary of the current pixel,
+                # we
+                mask_new_pixel = a_new >= kinks[colloc_point_above]
                 a_new[mask_new_pixel] = kinks[colloc_point_above][mask_new_pixel]
                 colloc_point_above[mask_new_pixel] += 1
                 a = a_new
             elif dir == -1:
-                mask_new_pixel = a_new <= kinks[colloc_point_above-1]
-                a_new[mask_new_pixel] = kinks[colloc_point_above-1][mask_new_pixel]
+                mask_new_pixel = a_new <= kinks[colloc_point_above - 1]
+                a_new[mask_new_pixel] = kinks[colloc_point_above - 1][mask_new_pixel]
                 colloc_point_above[mask_new_pixel] -= 1
 
                 a = a_new
-
-
-            #l_above.set_ydata(kinks[colloc_point_above])
-            # l.set_ydata(a)
-            # ax.set_ylim(np.min(a-1), np.max(a))
-            # plt.pause(.001)
 
             if (colloc_point_above < 0).any():
                 raise RadiusTooLowError
