@@ -1,4 +1,5 @@
 import numpy as np
+from ContactMechanics.Tools.Logger import Logger
 
 from CrackFront.GenericElasticLine import ElasticLine
 from CrackFront.Optimization.fixed_radius_trustregion_newton_cg import trustregion_newton_cg
@@ -137,7 +138,11 @@ def test_force_displacement_curve(rosso_krauth, plot=False):
 
     np.testing.assert_allclose(mean_a_trust, mean_a_RK)
 
-@pytest.mark.parametrize("rosso_krauth", [brute_rosso_krauth, brute_rosso_krauth_other_spacing])
+
+@pytest.mark.parametrize("rosso_krauth", [brute_rosso_krauth,
+                                          pytest.param(brute_rosso_krauth_other_spacing, marks=pytest.mark.skip(
+                                              reason="does not support the periodic BC"))
+                                          ])
 def test_force_displacement_curve_hysteresis(rosso_krauth, plot=False):
     np.random.seed(0)
 
@@ -172,7 +177,8 @@ def test_force_displacement_curve_hysteresis(rosso_krauth, plot=False):
         # print(a_forcing)
         dir = 1 if a_forcing > a_forcing_prev else -1
         # print(dir)
-        sol = rosso_krauth(a, a_forcing, line, maxit=100000, gtol=gtol, dir=dir)
+        sol = rosso_krauth(a, a_forcing, line, maxit=1000000, gtol=gtol, dir=dir,
+                           logger=Logger("test_force_displacement_curve_hysteresis.log", outevery=100))
         assert sol.success
         a = sol.x
         mean_a_RK.append(np.mean(a))
@@ -346,7 +352,8 @@ def test_force_displacement_curve(rosso_krauth, plot=False):
 
     np.testing.assert_allclose(mean_a_trust, mean_a_RK)
 
-@pytest.mark.parametrize("rosso_krauth", [#brute_rosso_krauth,
+@pytest.mark.parametrize("rosso_krauth", [
+    brute_rosso_krauth,
     brute_rosso_krauth_other_spacing])
 def test_force_displacement_curve_hysteresis_do_not_wrap_periodic(rosso_krauth, plot=False):
     """
@@ -414,7 +421,7 @@ def test_force_displacement_curve_hysteresis_do_not_wrap_periodic(rosso_krauth, 
 
     print("trust  done")
     # %%
-    if True:
+    if plot:
         import matplotlib.pyplot as plt
 
         fig, ax = plt.subplots()
