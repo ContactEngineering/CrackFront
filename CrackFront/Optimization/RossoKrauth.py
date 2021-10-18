@@ -80,7 +80,7 @@ class linear_interpolated_pinning_field_equaly_spaced:
         elif der == "1":
             return slope
 
-def brute_rosso_krauth(a, driving_a, line, gtol=1e-4, maxit=10000, dir=1):
+def brute_rosso_krauth(a, driving_a, line, gtol=1e-4, maxit=10000, dir=1, logger=None):
     r"""
     Variation of PRE 65
 
@@ -107,6 +107,8 @@ def brute_rosso_krauth(a, driving_a, line, gtol=1e-4, maxit=10000, dir=1):
 
     nit = 0
     while (np.max(abs(grad)) > gtol) and nit < maxit:
+        if logger:
+            logger.st(["it", "max. residual"], [nit, np.max(abs(grad))])
         # print(grad)
         # Nullify the force on each pixel, assuming it is greater then
         stiffness = line.pinning_field(a, "1") + elastic_stiffness_individual
@@ -151,8 +153,10 @@ def brute_rosso_krauth(a, driving_a, line, gtol=1e-4, maxit=10000, dir=1):
     return result
 
 
-def brute_rosso_krauth_other_spacing(a, driving_a, line, gtol=1e-4, maxit=10000, dir=1):
+def brute_rosso_krauth_other_spacing(a, driving_a, line, gtol=1e-4, maxit=10000, dir=1, logger=None):
     r"""
+    WARNING: this has still some bugs when the front crosses the periodic boundary conditions.
+
     Variation of PRE 65
 
     One requirement for this algorithm is that the starting position is purely advancing,
@@ -163,7 +167,6 @@ def brute_rosso_krauth_other_spacing(a, driving_a, line, gtol=1e-4, maxit=10000,
     Here we move them all at once, which should make better use of vectorization and parallelisation.
 
     This might have drawbacks when the pinning field is weak, where pixels fail collectively.
-
 
     """
     L = len(a)
@@ -190,6 +193,8 @@ def brute_rosso_krauth_other_spacing(a, driving_a, line, gtol=1e-4, maxit=10000,
     # l_above,  = ax.plot(kinks[colloc_point_above])
     nit = 0
     while (np.max(abs(grad)) > gtol) and nit < maxit:
+        if logger:
+            logger.st(["it", "max. residual"], [nit, np.max(abs(grad))])
         # print(grad)
         # Nullify the force on each pixel, assuming it is greater then
         pinning_field_slope = (values[indexes, colloc_point_above] - values[indexes, colloc_point_above-1]) / grid_spacing
@@ -202,7 +207,6 @@ def brute_rosso_krauth_other_spacing(a, driving_a, line, gtol=1e-4, maxit=10000,
         increment = - grad / stiffness
         # negative stiffness generates wrong step length.
         a_new = np.where(stiffness > 0, a + increment, a + (1 + 1e-14) * dir)
-        #colloc_point_above = np.where( )
         a_new[grad * dir >= 0] = a[grad * dir >= 0]
 
         if dir == 1:
@@ -218,7 +222,7 @@ def brute_rosso_krauth_other_spacing(a, driving_a, line, gtol=1e-4, maxit=10000,
             a = a_new
 
 
-        #l_above.set_ydata(kinks[colloc_point_above])
+        # l_above.set_ydata(kinks[colloc_point_above])
         # l.set_ydata(a)
         # ax.set_ylim(np.min(a-1), np.max(a))
         # plt.pause(.001)
