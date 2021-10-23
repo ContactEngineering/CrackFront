@@ -1,4 +1,8 @@
-from CrackFront.Roughness import straight_crack_sif_from_roughness, circular_crack_sif_from_roughness
+from CrackFront.Roughness import (
+    straight_crack_sif_from_roughness,
+    circular_crack_sif_from_roughness,
+    circular_crack_sif_from_roughness_memory_friendly
+    )
 from SurfaceTopography import Topography
 
 import numpy as np
@@ -59,7 +63,12 @@ def test_straight_crack_sif_from_roughness_perpendicular(s):
     np.testing.assert_allclose(K, K_simple_analytical, atol=1e-13)
 
 
-def test_circular_waviness_amplitude():
+@pytest.mark.parametrize("circular_crack_sif_from_roughness",
+                         [
+                             circular_crack_sif_from_roughness,
+                             circular_crack_sif_from_roughness_memory_friendly
+                             ])
+def test_circular_waviness_amplitude(circular_crack_sif_from_roughness):
     Es = 0.75
     R = 1
     w = 1 / np.pi
