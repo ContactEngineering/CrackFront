@@ -80,7 +80,7 @@ e^{i \vec q \cdot \vec x} \frac{E^*}{\sqrt{2}} \sqrt{|q_z \cos\theta - q_x \sin 
     return SIF
 
 
-def circular_crack_sif_from_roughness_memory_friendly(roughness, radius, angle, Es=1):
+def circular_crack_sif_from_roughness_memory_friendly(roughness, radius, angle, Es=1, verbose=0):
 
     nx, ny = roughness.nb_grid_pts
     sx, sy = roughness.physical_sizes
@@ -100,6 +100,8 @@ def circular_crack_sif_from_roughness_memory_friendly(roughness, radius, angle, 
     _radius = radius.flat
     SIF = np.zeros((len(angle), len(_radius)))
     for idx_angle in range(len(angle)):
+        if verbose:
+            print("{:d} / {:d}\r".format(idx_angle, len(angle)))
         _angle = angle[idx_angle]
         # direction tangential to the crack front
         q_front = qy * np.cos(_angle) - qx * np.sin(_angle)
