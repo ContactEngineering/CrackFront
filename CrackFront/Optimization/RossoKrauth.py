@@ -50,7 +50,7 @@ class linear_interpolated_pinning_field_equaly_spaced:
     def __init__(self, values, kinks):
         L, Lx = values.shape
         self.npx_front = L
-        self.Lx = Lx
+        self.npx_propagation = Lx
         self.grid_spacing = kinks[1] - kinks[0]
         self.period = Lx * self.grid_spacing
         self.values = values
@@ -65,8 +65,8 @@ class linear_interpolated_pinning_field_equaly_spaced:
         np.ceil(a, out=self.a_above, casting="unsafe").reshape(-1)
 
         # Wrapping periodic boundary conditions
-        self.a_below[self.a_below >= self.Lx] = self.a_below[self.a_below >= self.Lx] - self.Lx
-        self.a_above[self.a_above >= self.Lx] = self.a_above[self.a_above >= self.Lx] - self.Lx
+        self.a_below[self.a_below >= self.npx_propagation] = self.a_below[self.a_below >= self.npx_propagation] - self.npx_propagation
+        self.a_above[self.a_above >= self.npx_propagation] = self.a_above[self.a_above >= self.npx_propagation] - self.npx_propagation
 
         # print(a_below)
 
