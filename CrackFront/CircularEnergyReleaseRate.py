@@ -602,7 +602,7 @@ class SphereCFPenetrationEnergyConstGcPiecewiseLinearField(SphereCrackFrontERRPe
             - values[indexes, colloc_point_above - 1] \
             - pinning_field_slope * (a - kinks[colloc_point_above - 1])
         if (grad * dir > 0).any():
-            raise ValueError("Starting Configuration is not purely advancing or receding")
+            print("WARNING: Starting Configuration is not purely advancing or receding")
 
         nit = 0
         while (np.max(abs(grad)) > gtol) and nit < maxit:
