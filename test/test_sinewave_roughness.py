@@ -26,7 +26,7 @@ def test_CFRconstK_against_CFK_tangential_sinewave():
     sy = 0.25
     load = 0
     n = 32
-    _plot = True
+    _plot = False
     if _plot:
         fig, ax = plt.subplots()
 
@@ -88,7 +88,7 @@ def test_CFRconstK_against_CFK_tangential_sinewave():
 
             ax.plot(.5 + ar, cf_k.y)
             ax.plot(0.5 - al, cf_k.y)
-    plt.show()
+            plt.show()
     assert np.max(np.abs(a_k - a_R) < 1e-2)
 
 

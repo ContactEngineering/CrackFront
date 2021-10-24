@@ -23,7 +23,7 @@ class ElasticLine():
 
         Parameters:
         -----------
-        L: integer
+        npx_front: integer
             length of the line in pixels.
         Lk: float
             structural length
@@ -31,16 +31,16 @@ class ElasticLine():
         pinning_field: callable
 
             parameters:
-                - ``position`` : array of length `L`
+                - ``position`` : array of length `npx_front`
                         index of the position along the crack front
                 - ``derivative``: order of derivative (0 or 1)
 
             returns:
-                - array of length `L` gradient or curvature of the pinning potential
+                - array of length `npx_front` gradient or curvature of the pinning potential
 
         """
 
-        self.L = self.npx = n = L
+        self.npx_front = self.npx = n = L
 
         self.z = np.arange(L) # position along the line (in the straight configuration)
         self.qk = 2 * np.pi / Lk
@@ -81,6 +81,9 @@ class ElasticLine():
     def gradient(self, a, a_forcing):
         return self.elastic_hessp(a) + self.qk * (a - a_forcing) + self.pinning_field(a)
 
+    def elastic_gradient(self, a, a_forcing):
+        return self.elastic_hessp(a) + self.qk * (a - a_forcing)
+
     def hessian_product(self, p, a):
         return self.qk * p + self.elastic_hessp(p) + self.pinning_field(a, der="1") * p
 
@@ -88,7 +91,7 @@ class ElasticLine():
         _pinning_curvature = self.pinning_field(a, der="1")
         def hessian_product(p):
             return self.qk * p + self.elastic_hessp(p) + _pinning_curvature * p
-        return scipy.sparse.linalg.LinearOperator((self.L, self.L), matvec=hessian_product)
+        return scipy.sparse.linalg.LinearOperator((self.npx_front, self.npx_front), matvec=hessian_product)
 
     def hessian(self, a):
         return np.diag(self.qk + self.pinning_field(a, der="1")) + self.elastic_hessian

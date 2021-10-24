@@ -334,7 +334,7 @@ def test_hessp_and_hessian_equivalent(cfclass):
     np.testing.assert_allclose(hessp, bruteforce)
 
 
-def test_hessian_product():
+def test_hessian_product(plot=False):
 
     penetration = 0
 
@@ -360,7 +360,8 @@ def test_hessian_product():
     da = np.random.normal(size=npx) * np.mean(a) / 10
 
     grad = cf.gradient(a, penetration)
-    if True:
+
+    if plot:
         hs = np.array([1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5,
                        1e-6, 1e-7])
         rms_errors = []
@@ -385,7 +386,7 @@ def test_hessian_product():
         ax.grid(True)
         plt.show()
 
-        hs = np.array([1e-2, 1e-3, 1e-4])
+    hs = np.array([1e-2, 1e-3, 1e-4])
     rms_errors = []
     for h in hs:
         grad_d = cf.gradient(a + h * da, penetration)

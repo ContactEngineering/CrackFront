@@ -37,6 +37,8 @@ def pol2cart(radius, angle):
 class NegativeRadiusError(Exception):
     pass
 
+class RadiusTooLowError(Exception):
+    pass
 
 # nondimensional units following Maugis Book:
 Es = 3 / 4

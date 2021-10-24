@@ -1,5 +1,5 @@
+import sys
 import numpy as np
-from CrackFront.Circular import pol2cart
 
 
 def straight_crack_sif_from_roughness(roughness, Es=1):
@@ -76,5 +76,41 @@ e^{i \vec q \cdot \vec x} \frac{E^*}{\sqrt{2}} \sqrt{|q_z \cos\theta - q_x \sin 
 
     SIF = - 1 / (nx * ny) * np.sum(np.fft.fft2(heights)[:, :, np.newaxis, np.newaxis] * kernel * np.exp(
         1j * (q_propagation * radius.reshape(1, 1, 1, -1))), axis=(0, 1))
+
+    return SIF
+
+
+def circular_crack_sif_from_roughness_memory_friendly(roughness, radius, angle, Es=1, verbose=0):
+
+    nx, ny = roughness.nb_grid_pts
+    sx, sy = roughness.physical_sizes
+    dx, dy = roughness.pixel_size
+
+    # qx, qy = compute_wavevectors((nx, ny), (sx, sy), 2)
+    qx = 2 * np.pi * np.fft.fftfreq(nx, dx).reshape(-1, 1)
+    qy = 2 * np.pi * np.fft.fftfreq(ny, dy).reshape(1, -1)
+
+    heights = np.roll(roughness.heights(), [n // 2 for n in roughness.nb_grid_pts], axis=(0, 1))
+    heights_fourier = np.fft.fft2(heights)[:, :]
+
+    # place the center of the coordinate system in the center of the topography
+
+    _radius = radius.flat
+    SIF = np.zeros((len(angle), len(_radius)))
+    for idx_angle in range(len(angle)):
+        if verbose:
+            print("{:d} / {:d}\r".format(idx_angle, len(angle)))
+            sys.stdout.flush()
+        _angle = angle[idx_angle]
+        # direction tangential to the crack front
+        q_front = qy * np.cos(_angle) - qx * np.sin(_angle)
+        # direction in crack propagation direction
+        q_propagation = qx * np.cos(_angle) + qy * np.sin(_angle)
+        kernel = Es / np.sqrt(2) * np.sqrt(abs(q_front) + 1j * q_propagation)
+        kernel[0, 0] = 0
+        for idx_radius in range(len(_radius)):
+            SIF[idx_angle, idx_radius] = - 1 / (nx * ny) * np.sum((heights_fourier * kernel
+                                                                   * np.exp(1j * (q_propagation * _radius[idx_radius]))
+                                                                   ).real, axis=(0, 1))
 
     return SIF
