@@ -113,11 +113,11 @@ def brute_rosso_krauth(a, driving_a, line, gtol=1e-4, maxit=10000, dir=1, logger
         ###
         # Nullify the force on each pixel, assuming each pixel moves individually
         stiffness = line.pinning_field(a, "1") + elastic_stiffness_individual
-
         increment = - grad / stiffness
+        ###
+
         # negative stiffness generates wrong step length.
         a_new = np.where(stiffness > 0, a + increment, a + (1 + 1e-14) * dir)
-        ###
 
         # because of numerical errors it can be that the gradient points in the wrong
         # direction on some pixels, but is very small.
@@ -138,7 +138,7 @@ def brute_rosso_krauth(a, driving_a, line, gtol=1e-4, maxit=10000, dir=1, logger
             # TODO: this is not optimal.
             # - I could actually do that the iteration before, 2 lines above.
             # - Using piecewise quadratic, instead of linear interpolation solves this problem because the curvature is continuous
-            # - Evaluating the pinning field in this code instead of in a black box way, like I did for the circular case
+            # - Evaluating the pinning field in this code instead of in a black box way, like I do for other spacings
             a = np.where(a > np.floor(a), a, a + 1e-14)
 
         elif dir == -1:
@@ -200,29 +200,40 @@ def brute_rosso_krauth_other_spacing(a, driving_a, line, gtol=1e-4, maxit=10000,
     period = line.pinning_field.period
 
     grid_spacing = line.pinning_field.grid_spacing
-    # import matplotlib.pyplot as plt
-    # fig, ax = plt.subplots()
-    # l, = ax.plot(a)
-    # l_above,  = ax.plot(kinks[colloc_point_above])
+
     nit = 0
     while (np.max(abs(grad)) > gtol) and nit < maxit:
         if logger:
             logger.st(["it", "max. residual"], [nit, np.max(abs(grad))])
-        # print(grad)
-        # Nullify the force on each pixel, assuming it is greater then
+
+        ###
+        # Nullify the force on each pixel, assuming each pixel moves individually
         pinning_field_slope = (values[indexes, colloc_point_above] - values[indexes, colloc_point_above-1]) / grid_spacing
         grad = line.elastic_gradient(a, driving_a) \
             + values[indexes, colloc_point_above-1] \
             + pinning_field_slope * (a - kinks[colloc_point_above-1])
-
         stiffness = pinning_field_slope + elastic_stiffness_individual
-
         increment = - grad / stiffness
+        ###
+
         # negative stiffness generates wrong step length.
         a_new = np.where(stiffness > 0, a + increment, a + (1 + 1e-14) * dir)
+        # TODO: Is this + 1e-14 actually necessary ?
+
+        # because of numerical errors it can be that the gradient points in the wrong
+        # direction on some pixels, but is very small.
+        # We just make sure these points do not move backwards
+        # The same could be achieved by a_new = np.maximum(a_new, a)
         a_new[grad * dir >= 0] = a[grad * dir >= 0]
 
         if dir == 1:
+            # We let the line advance only until the boundary to the next pixel.
+            # This is because the step length was based on the pinning curvature
+            # which is erroneous as soon as we meet the next pixel
+            # TODO: I have a bug in handling periodicity.
+            # A solution would be actually to roll the kinks array every once in a while.
+            # This problem probably solves on it's own when we implement loading only part of the heterogeneous field onto
+            # the GPU
             mask_new_pixel = a_new % period >= kinks[colloc_point_above]
             a_new[mask_new_pixel] = kinks[colloc_point_above][mask_new_pixel]
             colloc_point_above[mask_new_pixel] += 1
@@ -233,12 +244,6 @@ def brute_rosso_krauth_other_spacing(a, driving_a, line, gtol=1e-4, maxit=10000,
             colloc_point_above[mask_new_pixel] -= 1
 
             a = a_new
-
-
-        # l_above.set_ydata(kinks[colloc_point_above])
-        # l.set_ydata(a)
-        # ax.set_ylim(np.min(a-1), np.max(a))
-        # plt.pause(.001)
 
         nit += 1
 
