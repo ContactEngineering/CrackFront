@@ -1,27 +1,40 @@
 import numpy as np
 from ContactMechanics.Tools.Logger import Logger
 
+# %%
+######################## PARAMETERS
 L = npx_front = 256
 Lx = npx_propagation = 256
-q_front_rfft = 2 * np.pi * np.fft.rfftfreq(npx_front, L / npx_front)
-
 rms = 1.
+Lk = L / 4
 
-a_init = np.random.normal(size=L)
+# randomness:
+seed = 0
+
+# numerics:
+gtol = 1e-6
+maxit = 10000
+
+# history:
+#             |-  This should ensures that we will find a strictly advancing configuration from beginning
+#            v Otherwise our algorithm has problems
+a_drivings = Lk * rms ** 2 + np.linspace(0, npx_propagation * 1.5, 100)
+a_drivings = np.concatenate([a_drivings[:-1], a_drivings[::-1]])
+
+######################## K
+
+q_front_rfft = 2 * np.pi * np.fft.rfftfreq(npx_front, L / npx_front)
 
 # pinning field and its interpolation
 period = Lx
 grid_spacing = 1
 indexes = np.arange(L, dtype=int)
 #
-kinks = np.arange(npx_propagation)
-
-np.random.seed(0)
+np.random.seed(seed)
 values = random_forces = np.random.normal(size=(L, Lx)) * rms
 
-Lk = L / 4
+# %%
 qk = 2 * np.pi / Lk
-
 a_test = np.zeros(npx_front)
 a_test[0] = 1
 elastic_stiffness_individual = np.fft.irfft(q_front_rfft * np.fft.rfft(a_test), n=npx_front)[0] + qk
@@ -29,16 +42,11 @@ elastic_stiffness_individual = np.fft.irfft(q_front_rfft * np.fft.rfft(a_test), 
 a_init = np.zeros(L) + 1e-14
 a = a_init.copy()
 
-# initialize
+# initialize the collocation points that correspond to the crack front.
+# of course for a = 0 it is trivial.....
+kinks = np.arange(npx_propagation)
 colloc_point_above = np.searchsorted(kinks, a, side="right")
 
-gtol = 1e-6
-maxit = 10000
-
-#             |-  This should ensures that we will find a strictly advancing configuration from beginning
-#            v Otherwise our algorithm has problems
-a_forcings = Lk * rms ** 2 + np.linspace(0, npx_propagation * 1.5, 100)
-a_forcings = np.concatenate([a_forcings[:-1], a_forcings[::-1]])
 
 # %%
 
@@ -47,14 +55,12 @@ logger = Logger(outevery=100)
 driving_a_prev = -10
 mean_a_RK = []
 a = np.zeros(npx_front)
-for driving_a in a_forcings:
-    # print(driving_a)
+for driving_a in a_drivings:
+    # whether the crack is expected to move forward or backward
     direction = np.sign(driving_a - driving_a_prev)
     # print(direction)
     nit = 0
     while nit < maxit:
-        # print(a)
-        # print(colloc_point_above)
         ###
         # Nullify the force on each pixel, assuming each pixel moves individually
         pinning_field_slope = (values[indexes, colloc_point_above % npx_propagation] - values[
@@ -102,7 +108,6 @@ for driving_a in a_forcings:
         nit += 1
 
     driving_a_prev = driving_a
-
     mean_a_RK.append(np.mean(a))
 
 # %%
@@ -110,10 +115,7 @@ import matplotlib.pyplot as plt
 
 fig, ax = plt.subplots()
 
-ax.plot(a_forcings,
-        a_forcings - mean_a_RK, label="KR")
-# ax.plot(a_forcings, a_forcings - mean_a_trust, "+", label="TR, safe")
-# ax.plot(a_forcings, a_forcings - mean_a_trust_coarse, "x", label="TR")
+ax.plot(a_drivings, a_drivings - mean_a_RK, label="KR")
 
 ax.legend()
 plt.show(block=True)
