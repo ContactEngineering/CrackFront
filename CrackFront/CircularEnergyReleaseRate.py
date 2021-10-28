@@ -631,6 +631,8 @@ class SphereCFPenetrationEnergyConstGcPiecewiseLinearField(SphereCrackFrontERRPe
             increment = - grad / stiffness
             # negative stiffness generates wrong step length.
             a_new = np.where(stiffness > 0, a + increment, a + (1 + 1e-14) * dir)
+            # TODO: I am not sure it is actually correct to advance the front by one whole pixel.
+            #       If I want to guarantee forward motion, I should advance only until the boundary.
 
             # because of numerical errors it can be that the gradient points in the wrong
             # direction on some pixels, but is very small.
