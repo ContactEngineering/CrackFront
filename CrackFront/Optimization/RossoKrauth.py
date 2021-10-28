@@ -118,6 +118,7 @@ def brute_rosso_krauth(a, driving_a, line, gtol=1e-4, maxit=10000, dir=1, logger
 
         # negative stiffness generates wrong step length.
         a_new = np.where(stiffness > 0, a + increment, a + (1 + 1e-14) * dir)
+        # TODO: I am not sure that is correct, ending up in the middle of the next pixel might be too far.
 
         # because of numerical errors it can be that the gradient points in the wrong
         # direction on some pixels, but is very small.
@@ -217,14 +218,12 @@ def brute_rosso_krauth_other_spacing(a, driving_a, line, gtol=1e-4, maxit=10000,
         ###
 
         # negative stiffness generates wrong step length.
-        a_new = np.where(stiffness > 0, a + increment, a + (1 + 1e-14) * dir)
+        #a_new = np.where(stiffness > 0, a + increment, a + (1 + 1e-14) * dir)
         # TODO: Is this + 1e-14 actually necessary ?
 
-        # because of numerical errors it can be that the gradient points in the wrong
-        # direction on some pixels, but is very small.
-        # We just make sure these points do not move backwards
-        # The same could be achieved by a_new = np.maximum(a_new, a)
-        a_new[grad * dir >= 0] = a[grad * dir >= 0]
+        a_new = a + increment
+        mask_negative_stiffness = stiffness <= 0
+
 
         if dir == 1:
             # We let the line advance only until the boundary to the next pixel.
@@ -234,16 +233,22 @@ def brute_rosso_krauth_other_spacing(a, driving_a, line, gtol=1e-4, maxit=10000,
             # A solution would be actually to roll the kinks array every once in a while.
             # This problem probably solves on it's own when we implement loading only part of the heterogeneous field onto
             # the GPU
-            mask_new_pixel = a_new % period >= kinks[colloc_point_above]
+            mask_new_pixel = np.logical_or(a_new % period >= kinks[colloc_point_above], mask_negative_stiffness)
             a_new[mask_new_pixel] = kinks[colloc_point_above][mask_new_pixel]
             colloc_point_above[mask_new_pixel] += 1
-            a = a_new
+
         elif dir == -1:
-            mask_new_pixel = a_new % period <= kinks[colloc_point_above-1]
+            mask_new_pixel = np.logical_or(a_new % period <= kinks[colloc_point_above-1], mask_negative_stiffness)
             a_new[mask_new_pixel] = kinks[colloc_point_above-1][mask_new_pixel]
             colloc_point_above[mask_new_pixel] -= 1
 
-            a = a_new
+        # because of numerical errors it can be that the gradient points in the wrong
+        # direction on some pixels, but is very small.
+        # We just make sure these points do not move backwards
+        # The same could be achieved by a_new = np.maximum(a_new, a)
+        a_new[grad * dir >= 0] = a[grad * dir >= 0]
+
+        a = a_new
 
         nit += 1
 
@@ -263,6 +268,8 @@ def brute_rosso_krauth_other_spacing(a, driving_a, line, gtol=1e-4, maxit=10000,
 
 
 def example_large_disp_force():
+    print("example_large_disp_force")
+
     import time
     from CrackFront.Optimization.fixed_radius_trustregion_newton_cg import trustregion_newton_cg
     L = 2048
@@ -352,6 +359,8 @@ def example_large_disp_force():
 
 
 def example_strong_pinning():
+    print("example_strong_pinning")
+
     import time
     from CrackFront.Optimization.fixed_radius_trustregion_newton_cg import trustregion_newton_cg
     L = 2048
@@ -442,6 +451,8 @@ def example_strong_pinning():
     plt.pause(.5)
 
 def time_RK_implementations():
+    print("time_RK_implementations")
+
     import time
 
     L = 2048
@@ -478,12 +489,15 @@ def time_RK_implementations():
             # print(a_forcing)
             wrapped_gradient = lambda a: line.gradient(a, a_forcing)
 
-            a = rosso_krauth(a, w, line, maxit=100000, gtol=gtol, )
+            sol = rosso_krauth(a, w, line, maxit=100000, gtol=gtol, )
+            assert sol.success
+            a = sol.x
             mean_a_RK.append(np.mean(a))
         print("TIME ROSSO Krauth", time.time() - start_time)
 
 
 def example_brute_rosso_krauth_other_spacing():
+    print("example_brute_rosso_krauth_other_spacing")
     L = 4
     Lx = 50
 
@@ -509,5 +523,6 @@ def example_brute_rosso_krauth_other_spacing():
 
 if __name__ == "__main__":
     example_brute_rosso_krauth_other_spacing()
+    time_RK_implementations()
     example_strong_pinning()
     example_large_disp_force()
