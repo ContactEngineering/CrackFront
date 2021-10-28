@@ -238,6 +238,10 @@ def brute_rosso_krauth_other_spacing(a, driving_a, line, gtol=1e-4, maxit=10000,
             colloc_point_above[mask_new_pixel] += 1
 
         elif dir == -1:
+            # TODO:                           here the % period introduces a bug. negative radii
+            #                                  (they can be predicted with positive stiffnesses ! )
+            #                                   are mapped to positive radii above the actual position
+            #                                   The safer way to introduce this periodic BC is to use grid_spacing * (colloc_point_above) instead
             mask_new_pixel = np.logical_or(a_new % period <= kinks[colloc_point_above-1], mask_negative_stiffness)
             a_new[mask_new_pixel] = kinks[colloc_point_above-1][mask_new_pixel]
             colloc_point_above[mask_new_pixel] -= 1
