@@ -109,31 +109,44 @@ def brute_rosso_krauth(a, driving_a, line, gtol=1e-4, maxit=10000, dir=1, logger
     while (np.max(abs(grad)) > gtol) and nit < maxit:
         if logger:
             logger.st(["it", "max. residual"], [nit, np.max(abs(grad))])
-        # print(grad)
-        # Nullify the force on each pixel, assuming it is greater then
+
+        ###
+        # Nullify the force on each pixel, assuming each pixel moves individually
         stiffness = line.pinning_field(a, "1") + elastic_stiffness_individual
 
         increment = - grad / stiffness
         # negative stiffness generates wrong step length.
         a_new = np.where(stiffness > 0, a + increment, a + (1 + 1e-14) * dir)
+        ###
+
+        # because of numerical errors it can be that the gradient points in the wrong
+        # direction on some pixels, but is very small.
+        # We just make sure these points do not move backwards
+        # The same could be achieved by a_new = np.maximum(a_new, a)
         a_new[grad * dir >= 0] = a[grad * dir >= 0]
 
         if dir == 1:
             a_ceiled = np.ceil(a)
+            # We let the line advance only until the boundary to the next pixel.
+            # This is because the step length was based on the pinning curvature
+            # which is erroneous as soon as we meet the next pixel
             a_new = np.minimum(a_ceiled, a_new)
             a = a_new
+
+            # When the pixel is at the edge, I am not sure on which pixel the curvature is actually evaluated.
+            # A quickfix is to simply push the front a littlbit before.
+            # TODO: this is not optimal.
+            # - I could actually do that the iteration before, 2 lines above.
+            # - Using piecewise quadratic, instead of linear interpolation solves this problem because the curvature is continuous
+            # - Evaluating the pinning field in this code instead of in a black box way, like I did for the circular case
             a = np.where(a > np.floor(a), a, a + 1e-14)
 
-            # I think this line is useless
-            #a[np.logical_and((grad < 0), (a == np.floor(a)))] += 1e-13
-            # Don't move backward when gradient is negative due to imprecision
         elif dir == -1:
+            # a is decreasing
             a_floored = np.floor(a)
             a_new = np.maximum(a_floored, a_new)
             a = a_new
             a = np.where(a < np.ceil(a), a, a - 1e-14)
-
-            #a[np.logical_and((grad < 0), (a == np.floor(a)))] += 1e-13
 
         grad = line.gradient(a, driving_a)
 
@@ -277,10 +290,9 @@ def example_large_disp_force():
     a = np.zeros(L)
     start_time = time.time()
     for a_forcing in a_forcings:
-        # print(a_forcing)
-        wrapped_gradient = lambda a: line.gradient(a, a_forcing)
-
-        a = brute_rosso_krauth(a, wrapped_gradient, pinning_field, line, maxit=100000, tol=gtol, )
+        sol = brute_rosso_krauth(a, a_forcing, line, maxit=100000, gtol=gtol, )
+        assert sol.success
+        a = sol.x
         mean_a_RK.append(np.mean(a))
     print("TIME ROSSO Krauth", time.time() - start_time)
 
@@ -368,9 +380,12 @@ def example_strong_pinning():
     start_time = time.time()
     for a_forcing in a_forcings:
         # print(a_forcing)
-        wrapped_gradient = lambda a: line.gradient(a, a_forcing)
 
-        a = brute_rosso_krauth(a, wrapped_gradient, pinning_field, line, maxit=100000, tol=gtol, )
+        sol = brute_rosso_krauth(a, a_forcing, line, maxit=100000, gtol=gtol, )
+        assert sol.success
+
+        a = sol.x
+
         mean_a_RK.append(np.mean(a))
     print("TIME ROSSO Krauth", time.time() - start_time)
 
@@ -463,7 +478,7 @@ def time_RK_implementations():
         print("TIME ROSSO Krauth", time.time() - start_time)
 
 
-if __name__ == "__main__":
+def example_brute_rosso_krauth_other_spacing():
     L = 4
     Lx = 50
 
@@ -485,5 +500,9 @@ if __name__ == "__main__":
     assert sol.success
 
     np.testing.assert_allclose(sol.x, w)
-    #example_strong_pinning()
-    #example_large_disp_force()
+
+
+if __name__ == "__main__":
+    example_brute_rosso_krauth_other_spacing()
+    example_strong_pinning()
+    example_large_disp_force()
