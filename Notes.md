@@ -19,4 +19,38 @@
 
 for a sparse collection nonzero wavevectors. It might be more efficient to do 
 directly brute force fourier interpolation. 
- 
+
+### GPU
+
+Pytorch examples 
+
+https://github.com/ritchieng/eigenvectors-from-eigenvalues
+
+https://www.youtube.com/playlist?list=PLlMkM4tgfjnJ3I-dbhO9JTw7gNty6o_2m
+
+https://github.com/dionhaefner/pyhpc-benchmarks/blob/master/benchmarks/isoneutral_mixing/isoneutral_pytorch.py
+
+torch has really a lot of numpy similar functions implemented
+
+https://pytorch.org/docs/stable/generated/torch.cartesian_prod.html#torch.cartesian_prod
+https://pytorch.org/docs/stable/generated/torch.minimum.html#torch.minimum
+
+#### Optional: compute smallest eigenvalue. 
+(but maybe I don't need it, anyway)
+
+There is also the eigenvalue computation. But is there also the sparse compute of only the first eigenvalue ?
+
+#### Implementation 
+##### GPU the FFT 
+
+##### What about all the logic for the heterogeneity ? 
+
+##### quadratic or linear ? 
+
+##### Load only part of the heterogeneity
+
+##### Workflow:
+
+- make it work on laptop
+- execute on AMD node
+- execute on gpu node
