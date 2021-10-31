@@ -5,10 +5,10 @@ import time
 
 # %%
 ######################## PARAMETERS
-L = npx_front = 512
+L = npx_front = 4096
 Lx = npx_propagation = 256
 rms = 1.
-Lk = L / 4
+Lk = 256
 
 # randomness:
 seed = 0
@@ -20,7 +20,7 @@ maxit = 100000
 # history:
 #             |-  This should ensures that we will find a strictly advancing configuration from beginning
 #            v Otherwise our algorithm has problems
-a_drivings = Lk * rms ** 2 + np.linspace(0, npx_propagation * 0.5, 25)
+a_drivings = Lk * rms ** 2 + np.linspace(0, npx_propagation * 0.1, 5)
 a_drivings = np.concatenate([a_drivings[:-1], a_drivings[::-1]])
 
 ######################## K
@@ -33,7 +33,10 @@ grid_spacing = torch.tensor(1., dtype=torch.double)
 indexes = torch.arange(L, dtype=int)
 #
 np.random.seed(seed)
-values = random_forces = torch.from_numpy(np.random.normal(size=(L, Lx)) * rms).cuda()
+values = random_forces = np.random.normal(size=(L, Lx)) * rms
+
+slopes =  np.roll(values, -1, axis=-1)- values # / grid _spacing ! 
+values_and_slopes = torch.from_numpy(np.stack([values, slopes], axis=2)).cuda()
 
 # %%
 qk = 2 * np.pi / Lk
@@ -55,26 +58,12 @@ torch.cuda.is_available()
 # %%
 elastic_stiffness_individual
 
+# %%
+a = torch.zeros(npx_front, dtype=torch.double, device=torch.device('cuda'))
+driving_a = a_drivings[0]
+driving_a = torch.tensor(driving_a).cuda()
+direction = torch.tensor(1, device=torch.device('cuda'))
 
-# %% [raw]
-# a = torch.zeros(npx_front, dtype=torch.double, device=torch.device('cuda'))
-# driving_a = a_drivings[0]
-# driving_a = torch.tensor(driving_a).cuda()
-# direction = torch.sign(driving_a - driving_a_prev)
-#
-
-# %% [raw]
-# pinning_field_slope = (values[indexes, colloc_point_above % npx_propagation] - values[
-#             indexes, (colloc_point_above - 1) % npx_propagation]) / grid_spacing
-
-# %% [raw]
-# grid_spacing * (colloc_point_above - 1)
-
-# %% [raw]
-# grad = torch.fft.irfft(q_front_rfft * torch.fft.rfft(a), n=npx_front) \
-#                + qk * (a - driving_a) \
-#                + values[indexes, (colloc_point_above - 1) % npx_propagation] \
-#                + pinning_field_slope * (a - grid_spacing * (colloc_point_above - 1))
 
 # %%
 class ConvergenceError(Exception):
@@ -82,7 +71,9 @@ class ConvergenceError(Exception):
 
 
 # %%
-
+# Now I introduced a bug !
+#
+# Lesson: these tweaky optimisations are not worth it
 def simulate():
     logger= None
     #logger = Logger(outevery=100)
@@ -98,18 +89,21 @@ def simulate():
         while nit < maxit:
             ###
             # Nullify the force on each pixel, assuming each pixel moves individually
-            pinning_field_slope = (values[indexes, colloc_point_above % npx_propagation] - values[indexes, (colloc_point_above - 1) % npx_propagation]) / grid_spacing
+            
+            current_value_and_slope = values_and_slopes[indexes, (colloc_point_above - 1) % npx_propagation, :]
+            #print(current_value_and_slope.shape)
+            #pinning_field_slope = (values[indexes, colloc_point_above % npx_propagation] - values[indexes, (colloc_point_above - 1) % npx_propagation]) / grid_spacing
             grad = torch.fft.irfft(q_front_rfft * torch.fft.rfft(a), n=npx_front)
             grad.add_(qk * (a - driving_a))
-            grad.add_(values[indexes, (colloc_point_above - 1) % npx_propagation])
-            grad.add_(pinning_field_slope * (a - grid_spacing * (colloc_point_above - 1)))
+            grad.add_(current_value_and_slope[:,0])
+            grad.add_(current_value_and_slope[:,1] * (a - grid_spacing * (colloc_point_above - 1)))
 
             if logger:
                 logger.st(["it", "max. residual"], [nit, torch.max(abs(grad))])
             if (torch.max(torch.abs(grad)) < gtol):
                 break
 
-            stiffness = pinning_field_slope + elastic_stiffness_individual
+            stiffness = current_value_and_slope[:,1] + elastic_stiffness_individual
             increment = - grad / stiffness
             ###
 
