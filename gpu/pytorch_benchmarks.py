@@ -44,7 +44,7 @@ for L in Ls:
     for i in range(repeats):
         r = torch.fft.rfft(values_cuda)
     times_cuda.append(time.time() - start_time)
-    
+
 
 # +
 fig, ax = plt.subplots()
@@ -61,9 +61,12 @@ ax.set_yscale("log")
 
 # The speedup of the FFT is indeed excellent
 
-# # it is better to do maxes instead of masks
+# # it is better to do maxes or wheres instead of masks
 
+# +
 times_numpy = []
+times_cuda3 = []
+
 times_cuda2 = []
 times_cuda = []
 repeats=10
@@ -77,6 +80,9 @@ for L in Ls:
     
     values2_cuda = torch.from_numpy(values_numpy).cuda()
     values2_cuda2 = torch.from_numpy(values_numpy).cuda()
+    
+    values3_cuda = torch.from_numpy(values_numpy).cuda()
+    values3_cuda2 = torch.from_numpy(values_numpy).cuda()
     
     start_time = time.time()
     for i in range(repeats):
@@ -92,13 +98,16 @@ for L in Ls:
         values_cuda[mask] = values_cuda2[mask]
     times_cuda.append(time.time() - start_time)
     
-    
+    start_time = time.time()
+    for i in range(repeats):
+        values3_cuda = torch.where(values3_cuda > values3_cuda2, values3_cuda, values3_cuda2)
+    times_cuda3.append(time.time() - start_time)
     
     start_time = time.time()
     for i in range(repeats):
-        values_cuda = torch.maximum(values_cuda, values_cuda2)
+        values2_cuda = torch.maximum(values2_cuda, values2_cuda2)
     times_cuda2.append(time.time() - start_time)
-    
+
 
 # +
 fig, ax = plt.subplots()
@@ -106,6 +115,8 @@ fig, ax = plt.subplots()
 ax.plot(Ls, times_numpy, "o", label="numpy, mask")
 ax.plot(Ls, times_cuda, "x", label="cuda, mask")
 ax.plot(Ls, times_cuda2, "+", label="cuda, max")
+ax.plot(Ls, times_cuda3, "<", label="cuda, where")
+
 
 ax.legend()
 
