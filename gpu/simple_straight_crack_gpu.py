@@ -71,9 +71,7 @@ class ConvergenceError(Exception):
 
 
 # %%
-# Now I introduced a bug !
-#
-# Lesson: these tweaky optimisations are not worth it
+
 def simulate():
     logger= None
     #logger = Logger(outevery=100)
