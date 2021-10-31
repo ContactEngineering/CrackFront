@@ -1,12 +1,13 @@
 # %%
 import numpy as np
+import torch
 from ContactMechanics.Tools.Logger import Logger
 
 # %%
 ######################## PARAMETERS
 L = npx_front = 4096
 Lx = npx_propagation = 256
-rms = 0.1
+rms = 1.
 Lk = L / 4
 
 # randomness:
@@ -24,15 +25,15 @@ a_drivings = np.concatenate([a_drivings[:-1], a_drivings[::-1]])
 
 ######################## K
 
-q_front_rfft = 2 * np.pi * np.fft.rfftfreq(npx_front, L / npx_front)
+q_front_rfft = 2 * np.pi * torch.fft.rfftfreq(npx_front, L / npx_front)
 
 # pinning field and its interpolation
 period = Lx
-grid_spacing = 1
-indexes = np.arange(L, dtype=int)
+grid_spacing = torch.tensor(1., dtype=torch.double)
+indexes = torch.arange(L, dtype=int)
 #
 np.random.seed(seed)
-values = random_forces = np.asfortranarray(np.random.normal(size=(L, Lx)) * rms)
+values = random_forces = torch.from_numpy(np.random.normal(size=(L, Lx)) * rms)
 
 # %%
 qk = 2 * np.pi / Lk
@@ -46,20 +47,19 @@ a = a_init.copy()
 # initialize the collocation points that correspond to the crack front.
 # of course for a = 0 it is trivial.....
 kinks = np.arange(npx_propagation)
-colloc_point_above = np.searchsorted(kinks, a, side="right")
+colloc_point_above = torch.from_numpy(np.searchsorted(kinks, a, side="right"))
 
 
 # %%
-#%load_ext snakeviz
+
 # %%
-#%%snakeviz
+
 def simulate():
-    logger = Logger(outevery=100)
-    logger = None
-
+    logger= None
+    #logger = Logger(outevery=100)
     driving_a_prev = -10
     mean_a_RK = []
-    a = np.zeros(npx_front)
+    a = torch.zeros(npx_front, dtype=torch.double)
     for driving_a in a_drivings:
         # whether the crack is expected to move forward or backward
         direction = np.sign(driving_a - driving_a_prev)
@@ -68,15 +68,16 @@ def simulate():
         while nit < maxit:
             ###
             # Nullify the force on each pixel, assuming each pixel moves individually
-            pinning_field_slope = (values[indexes, colloc_point_above % npx_propagation] - values[indexes, (colloc_point_above - 1) % npx_propagation]) / grid_spacing
-            grad = np.fft.irfft(q_front_rfft * np.fft.rfft(a), n=npx_front) \
+            pinning_field_slope = (values[indexes, colloc_point_above % npx_propagation] - values[
+                indexes, (colloc_point_above - 1) % npx_propagation]) / grid_spacing
+            grad = torch.fft.irfft(q_front_rfft * torch.fft.rfft(a), n=npx_front) \
                    + qk * (a - driving_a) \
                    + values[indexes, (colloc_point_above - 1) % npx_propagation] \
                    + pinning_field_slope * (a - grid_spacing * (colloc_point_above - 1))
 
             if logger:
-                logger.st(["it", "max. residual"], [nit, np.max(abs(grad))])
-            if (np.max(abs(grad)) < gtol):
+                logger.st(["it", "max. residual"], [nit, torch.max(abs(grad))])
+            if (torch.max(torch.abs(grad)) < gtol):
                 break
 
             stiffness = pinning_field_slope + elastic_stiffness_individual
@@ -90,11 +91,11 @@ def simulate():
                 # We let the line advance only until the boundary to the next pixel.
                 # This is because the step length was based on the pinning curvature
                 # which is erroneous as soon as we meet the next pixel
-                mask_new_pixel = np.logical_or(a_new >= colloc_point_above * grid_spacing, mask_negative_stiffness)
+                mask_new_pixel = torch.logical_or(a_new >= colloc_point_above * grid_spacing, mask_negative_stiffness)
                 a_new[mask_new_pixel] = grid_spacing * colloc_point_above[mask_new_pixel]
                 colloc_point_above[mask_new_pixel] += 1
             elif direction == -1:
-                mask_new_pixel = np.logical_or(a_new <= grid_spacing * (colloc_point_above - 1), mask_negative_stiffness)
+                mask_new_pixel = torch.logical_or(a_new <= grid_spacing * (colloc_point_above - 1), mask_negative_stiffness)
                 a_new[mask_new_pixel] = grid_spacing * (colloc_point_above[mask_new_pixel] - 1)
                 colloc_point_above[mask_new_pixel] -= 1
 
@@ -112,19 +113,23 @@ def simulate():
             nit += 1
 
         driving_a_prev = driving_a
-        mean_a_RK.append(np.mean(a))
+        mean_a_RK.append(torch.mean(a))
     return mean_a_RK
 
-# %%
-%load_ext line_profiler
-
-%lprun -f simulate -T line_profile.txt mean_a_RK = simulate()
+# %% [raw]
+#
+# mean_a_RK = simulate()
 
 # %%
 %load_ext snakeviz
-
 # %%
 %snakeviz mean_a_RK = simulate()
+# %%
+%load_ext line_profiler
+%lprun -f simulate -T line_profile.txt mean_a_RK = simulate()
+
+# %%
+!open .
 
 # %%
 import matplotlib.pyplot as plt
@@ -135,10 +140,4 @@ ax.plot(a_drivings, a_drivings - mean_a_RK, label="KR")
 
 ax.legend()
 plt.show(block=True)
-
-
-# %%
-!open .
-
-
 # %%

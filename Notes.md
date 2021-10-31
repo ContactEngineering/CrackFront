@@ -40,6 +40,10 @@ https://pytorch.org/docs/stable/generated/torch.minimum.html#torch.minimum
 
 There is also the eigenvalue computation. But is there also the sparse compute of only the first eigenvalue ?
 
+#### Course on GPU
+
+http://courses.cms.caltech.edu/cs179/
+
 #### Implementation 
 ##### GPU the FFT 
 
@@ -54,3 +58,12 @@ There is also the eigenvalue computation. But is there also the sparse compute o
 - make it work on laptop
 - execute on AMD node
 - execute on gpu node
+
+## On NEMO 
+
+ml devel/cuda/11.3 
+
+Follwing the `Getting started` instructions:
+
+
+python3 -m pip install --user torch==1.10.0+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html
