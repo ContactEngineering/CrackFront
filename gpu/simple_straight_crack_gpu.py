@@ -1,11 +1,18 @@
+# -*- coding: utf-8 -*-
 # %%
 import numpy as np
 import torch
 import time
 
 # %%
+8 * 16384 * 256/ 1e9
+
+# %%
+16384 * 2
+
+# %%
 ######################## PARAMETERS
-L = npx_front = 4096
+L = npx_front = 32768  # starting from 8000 pix numpy starts to slower then cuda
 Lx = npx_propagation = 256
 rms = 1.
 Lk = 256
@@ -112,9 +119,16 @@ def simulate():
                 # We let the line advance only until the boundary to the next pixel.
                 # This is because the step length was based on the pinning curvature
                 # which is erroneous as soon as we meet the next pixel
+                
+                # TODO: replace these lines with where
+                # TODO: I wonder whether I can just replace all this with simply a maximum and a minimum…
+                # However I need to update the colloc_point above 
                 mask_new_pixel = torch.logical_or(a_new >= colloc_point_above * grid_spacing, mask_negative_stiffness)
                 a_new[mask_new_pixel] = grid_spacing * colloc_point_above[mask_new_pixel]
-                colloc_point_above[mask_new_pixel] += 1
+                # Why mot simply a_new += grid_spacing * colloc_point_above * mask_new_pixel ? 
+                
+                # TODO: Also with where ? Do a test ! 
+                colloc_point_above.add_(mask_new_pixel)
                 
                 # instead of a_new[grad*direction >= 0]
                 a_new = torch.maximum(a_new, a)
@@ -122,7 +136,7 @@ def simulate():
             elif direction == -1:
                 mask_new_pixel = torch.logical_or(a_new <= grid_spacing * (colloc_point_above - 1), mask_negative_stiffness)
                 a_new[mask_new_pixel] = grid_spacing * (colloc_point_above[mask_new_pixel] - 1)
-                colloc_point_above[mask_new_pixel] -= 1
+                colloc_point_above.add_(mask_new_pixel, alpha=-1) # alpha is a scalar prefactor for mask_new_pixel
                 a_new = torch.minimum(a_new, a)
 
             # because of numerical errors it can be that the gradient points in the wrong
