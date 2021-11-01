@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # %%
 import numpy as np
 import torch
@@ -36,13 +35,15 @@ q_front_rfft = 2 * np.pi * torch.fft.rfftfreq(npx_front, L / npx_front, device=t
 
 # pinning field and its interpolation
 period = Lx
-grid_spacing = torch.tensor(1., dtype=torch.double)
+grid_spacing = 1.
 indexes = torch.arange(L, dtype=int)
 #
 np.random.seed(seed)
 values = random_forces = np.random.normal(size=(L, Lx)) * rms
 
-slopes =  np.roll(values, -1, axis=-1)- values # / grid _spacing ! 
+slopes =  (np.roll(values, -1, axis=-1)- values) / grid _spacing ! 
+grid_spacing = torch.tensor(grid_spacing, dtype=torch.double)
+
 values_and_slopes = torch.from_numpy(np.stack([values, slopes], axis=2)).cuda()
 
 # %%
@@ -96,8 +97,9 @@ def simulate():
             # Nullify the force on each pixel, assuming each pixel moves individually
             
             current_value_and_slope = values_and_slopes[indexes, (colloc_point_above - 1) % npx_propagation, :]
-            #print(current_value_and_slope.shape)
-            #pinning_field_slope = (values[indexes, colloc_point_above % npx_propagation] - values[indexes, (colloc_point_above - 1) % npx_propagation]) / grid_spacing
+            
+            # Here I splitted the evalation of grad in sevaral lines using add_ just in order to time these expressions
+            # individually. 
             grad = torch.fft.irfft(q_front_rfft * torch.fft.rfft(a), n=npx_front)
             grad.add_(qk * (a - driving_a))
             grad.add_(current_value_and_slope[:,0])
@@ -119,40 +121,26 @@ def simulate():
                 # We let the line advance only until the boundary to the next pixel.
                 # This is because the step length was based on the pinning curvature
                 # which is erroneous as soon as we meet the next pixel
-                
-                # TODO: replace these lines with where
-                # TODO: I wonder whether I can just replace all this with simply a maximum and a minimum…
-                # However I need to update the colloc_point above 
+                #
+                # Additionally, when the curvature is negative, the increment is negative but the front should actually move forward.
+                # In this case as well we advance the front until the edge of the next pixel
                 mask_new_pixel = torch.logical_or(a_new >= colloc_point_above * grid_spacing, mask_negative_stiffness)
-                a_new[mask_new_pixel] = grid_spacing * colloc_point_above[mask_new_pixel]
-                # Why mot simply a_new += grid_spacing * colloc_point_above * mask_new_pixel ? 
+                a_new = torch.where(mask_new_pixel, grid_spacing * colloc_point_above, a_new)
                 
-                # TODO: Also with where ? Do a test ! 
                 colloc_point_above.add_(mask_new_pixel)
                 
-                # instead of a_new[grad*direction >= 0]
+                # because of numerical errors it can be that the gradient points in the wrong
+                # direction on some pixels, but is very small.
+                # We just make sure these points do not move backwards
                 a_new = torch.maximum(a_new, a)
                 
             elif direction == -1:
                 mask_new_pixel = torch.logical_or(a_new <= grid_spacing * (colloc_point_above - 1), mask_negative_stiffness)
-                a_new[mask_new_pixel] = grid_spacing * (colloc_point_above[mask_new_pixel] - 1)
+                a_new = torch.where(mask_new_pixel, grid_spacing * (colloc_point_above - 1 ), a_new)
+                
                 colloc_point_above.add_(mask_new_pixel, alpha=-1) # alpha is a scalar prefactor for mask_new_pixel
                 a_new = torch.minimum(a_new, a)
 
-            # because of numerical errors it can be that the gradient points in the wrong
-            # direction on some pixels, but is very small.
-            # We just make sure these points do not move backwards
-            # I replaced this line with 
-            # a_new = torch.maximum(a_new, a)
-            # above. Reduced the time from 15% to 0.8 % 
-            #
-            # it seems that this masking is time insensitive.
-            # 
-            #a_new[grad * direction >= 0] = a[grad * direction >= 0]
-
-            # if direction == 1:
-            #     assert (a_new >= a).all()
-            # elif
             a = a_new
 
             nit += 1
