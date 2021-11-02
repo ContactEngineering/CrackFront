@@ -6,12 +6,29 @@ import time
 # %%
 8 * 16384 * 256/ 1e9
 
-# %%
-16384 * 2
+# %% [markdown]
+# # Main insights: 
+#
+# cuda's computation time increases very slowly with system size. 
+# It is slower than numpy for L < 8192. 
+#
+# In cuda, the time barely increases as we increase L from 8192 to 32k, so that cuda is much faster at 32k then numpy is.
+#
+
+# %% [markdown]
+# # Next steps:
+#
+# - Test that makes sure we get the same result i the cuda code and in the original numpy code
+# - scaling test showing how cuda compute time increases with system size
+# - Storage order for pinning field ? 
+# - use 2nd order polynomials ? -> more polynom coefficients are for free because stored in the fast memory direction
+# - measure memory requirements
+# - if needed do caching of the field.
+#
 
 # %%
 ######################## PARAMETERS
-L = npx_front = 32768  # starting from 8000 pix numpy starts to slower then cuda
+L = npx_front = 8192  # starting from 8000 pix numpy starts to slower then cuda
 Lx = npx_propagation = 256
 rms = 1.
 Lk = 256
@@ -41,7 +58,7 @@ indexes = torch.arange(L, dtype=int)
 np.random.seed(seed)
 values = random_forces = np.random.normal(size=(L, Lx)) * rms
 
-slopes =  (np.roll(values, -1, axis=-1)- values) / grid _spacing ! 
+slopes =  (np.roll(values, -1, axis=-1)- values) / grid_spacing 
 grid_spacing = torch.tensor(grid_spacing, dtype=torch.double)
 
 values_and_slopes = torch.from_numpy(np.stack([values, slopes], axis=2)).cuda()
@@ -107,6 +124,8 @@ def simulate():
 
             if logger:
                 logger.st(["it", "max. residual"], [nit, torch.max(abs(grad))])
+            
+            # TODO: Optimization: I don't to evaluate this every iteration
             if (torch.max(torch.abs(grad)) < gtol):
                 break
 
@@ -160,9 +179,9 @@ time_cuda = time.time() - start_time
 # %load_ext snakeviz
 # %% [markdown]
 # %snakeviz mean_a_RK = simulate()
-# %%
-%load_ext line_profiler
-%lprun -f simulate -T line_profile.txt mean_a_RK = simulate()
+# %% [raw]
+# %load_ext line_profiler
+# %lprun -f simulate -T line_profile.txt mean_a_RK = simulate()
 
 # %%
 import matplotlib.pyplot as plt
