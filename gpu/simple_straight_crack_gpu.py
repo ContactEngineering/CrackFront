@@ -15,17 +15,6 @@ import time
 # In cuda, the time barely increases as we increase L from 8192 to 32k, so that cuda is much faster at 32k then numpy is.
 #
 
-# %% [markdown]
-# # Next steps:
-#
-# - Test that makes sure we get the same result i the cuda code and in the original numpy code
-# - scaling test showing how cuda compute time increases with system size
-# - Storage order for pinning field ? 
-# - use 2nd order polynomials ? -> more polynom coefficients are for free because stored in the fast memory direction
-# - measure memory requirements
-# - if needed do caching of the field.
-#
-
 # %%
 ######################## PARAMETERS
 L = npx_front = 8192  # starting from 8000 pix numpy starts to slower then cuda
@@ -158,6 +147,8 @@ def simulate():
                 a_new = torch.where(mask_new_pixel, grid_spacing * (colloc_point_above - 1 ), a_new)
                 
                 colloc_point_above.add_(mask_new_pixel, alpha=-1) # alpha is a scalar prefactor for mask_new_pixel
+                # Why not just -= ?
+                
                 a_new = torch.minimum(a_new, a)
 
             a = a_new
