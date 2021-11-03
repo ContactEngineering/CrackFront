@@ -17,7 +17,7 @@ import time
 
 # %%
 ######################## PARAMETERS
-L = npx_front = 8192  # starting from 8000 pix numpy starts to slower then cuda
+L = npx_front = 1024  # starting from 8000 pix numpy starts to slower then cuda
 Lx = npx_propagation = 256
 rms = 1.
 Lk = 256
@@ -37,24 +37,35 @@ a_drivings = np.concatenate([a_drivings[:-1], a_drivings[::-1]])
 
 ######################## K
 
-q_front_rfft = 2 * np.pi * torch.fft.rfftfreq(npx_front, L / npx_front, device=torch.device('cuda'))
 
 # pinning field and its interpolation
 period = Lx
 grid_spacing = 1.
-indexes = torch.arange(L, dtype=int)
 #
 np.random.seed(seed)
 values = random_forces = np.random.normal(size=(L, Lx)) * rms
+slopes = (np.roll(values, -1, axis=-1)- values) / grid_spacing
 
-slopes =  (np.roll(values, -1, axis=-1)- values) / grid_spacing 
+# TORCH code starts here
+
+if torch.cuda.is_available():
+    accelerator = torch.device("cuda")
+else:
+    print("CUDA not available, fall back to torch on CPU")
+    accelerator = torch.device("cpu")
+
+kwargs_array_creation = dict(device=accelerator)
+
+indexes = torch.arange(L, dtype=int)
 grid_spacing = torch.tensor(grid_spacing, dtype=torch.double)
+values_and_slopes = torch.from_numpy(np.stack([values, slopes], axis=2)).to(device=accelerator)
 
-values_and_slopes = torch.from_numpy(np.stack([values, slopes], axis=2)).cuda()
+q_front_rfft = 2 * np.pi * torch.fft.rfftfreq(npx_front, L / npx_front, **kwargs_array_creation)
+
 
 # %%
 qk = 2 * np.pi / Lk
-a_test = torch.zeros(npx_front, device=torch.device('cuda'))
+a_test = torch.zeros(npx_front, **kwargs_array_creation)
 a_test[0] = 1
 elastic_stiffness_individual = torch.fft.irfft(q_front_rfft * torch.fft.rfft(a_test), n=npx_front)[0] + qk
 
@@ -64,19 +75,14 @@ a = a_init.copy()
 # initialize the collocation points that correspond to the crack front.
 # of course for a = 0 it is trivial.....
 kinks = np.arange(npx_propagation)
-colloc_point_above = torch.from_numpy(np.searchsorted(kinks, a, side="right")).cuda()
+colloc_point_above = torch.from_numpy(np.searchsorted(kinks, a, side="right")).to(device=accelerator)
+
 
 # %%
-torch.cuda.is_available()
-
-# %%
-elastic_stiffness_individual
-
-# %%
-a = torch.zeros(npx_front, dtype=torch.double, device=torch.device('cuda'))
+a = torch.zeros(npx_front, dtype=torch.double, **kwargs_array_creation)
 driving_a = a_drivings[0]
-driving_a = torch.tensor(driving_a).cuda()
-direction = torch.tensor(1, device=torch.device('cuda'))
+driving_a = torch.tensor(driving_a).to(device=accelerator)
+direction = torch.tensor(1, **kwargs_array_creation)
 
 
 # %%
@@ -91,9 +97,9 @@ def simulate():
     #logger = Logger(outevery=100)
     driving_a_prev = -10
     mean_a_RK = []
-    a = torch.zeros(npx_front, dtype=torch.double, device=torch.device('cuda'))
+    a = torch.zeros(npx_front, dtype=torch.double, **kwargs_array_creation)
     for driving_a in a_drivings:
-        driving_a = torch.tensor(driving_a).cuda()
+        driving_a = torch.tensor(driving_a).to(device=accelerator)
         # whether the crack is expected to move forward or backward
         direction = torch.sign(driving_a - driving_a_prev)
         # print(direction)
