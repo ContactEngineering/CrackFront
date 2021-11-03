@@ -12,22 +12,45 @@ jupyter:
     name: python3
 ---
 
+<!-- #region -->
 # Next steps:
 
 ## make the code CPU-GPU agnostic
-Or only numpy - torch agnostic ?  
-    - use += instead of add_
-    - Initialisations are difficult in an agnostic way, unless there is a way to override the default for the device. 
-    - It seeems that not (https://pytorch.org/docs/stable/notes/cuda.html?highlight=device). 
-    - https://pytorch.org/docs/stable/generated/torch.cuda.set_device.html?highlight=torch%20cuda%20set_device#torch.cuda.set_device is probably a way. TODO: test.
-    - alternative: provide some eventually empty kwarg for all array initialisations.
+
+
+using numpy instead of torch is not relevant for performance (the numpy fft is only faster in the regime where cuda is faster).
+
+
+ - Initialisations are difficult in an agnostic way, unless there is a way to override the default for the device. 
+ - It seeems that not (https://pytorch.org/docs/stable/notes/cuda.html?highlight=device). 
+ - [torch.cuda.set_device](https://pytorch.org/docs/stable/generated/torch.cuda.set_device.html?highlight=torch%20cuda%20set_device#torch.cuda.set_device) allows to set the default gpu but doesn't make the arrays be created on the GPU by default. 
+ - alternative: provide some eventually empty kwarg for all array initialisations.
+
+Let's follow their guidelines for a device agnostic code.
+
+```
+accelerator = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu") 
+```
+
+instead of `.cuda()` write `.to(device=accelerator)`
+ 
+### Even better:  numpy-torch agnostic 
+- use += instead of add_ (add_ is only very slightly faster)
+    
+
+<!-- #endregion -->
+
+```python
+import torch
+```
+
+ 
 ## Test that makes sure we get the same result in the cuda code and in the original numpy code
 ## scaling test showing how cuda compute time increases with system size
 ## Storage order for pinning field ? 
 ## use 2nd order polynomials ? -> more polynom coefficients are for free because stored in the fast memory direction
 ## measure memory requirements
 ## if needed do caching of the field.
-
 
 
 # Some useful resources 
