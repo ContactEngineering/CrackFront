@@ -103,7 +103,7 @@ def brute_rosso_krauth(a, driving_a, line, gtol=1e-4, maxit=10000, direction=1, 
 
     grad = line.gradient(a, driving_a)
     if (grad * direction > 0).any():
-        raise ValueError("Starting Configuration is not purely advancing or receding")
+        print("WARNING: Starting Configuration is not purely advancing or receding")
 
     nit = 0
     while (np.max(abs(grad)) > gtol) and nit < maxit:
@@ -195,12 +195,12 @@ def brute_rosso_krauth_other_spacing(a, driving_a, line, gtol=1e-4, maxit=10000,
     npx_propagation = line.pinning_field.npx_propagation
 
     # This would also work on irregular grids
-    #colloc_point_above = np.searchsorted(kinks, a, side="right")
-    #colloc_point_above[a < 0] = colloc_point_above[a < 0] - npx_propagation
+    # colloc_point_above = np.searchsorted(kinks, a, side="right")
+    # colloc_point_above[a < 0] = colloc_point_above[a < 0] - npx_propagation
 
     colloc_point_above = np.zeros_like(a, dtype=int)
     colloc_point_above = np.ceil(a / line.pinning_field.grid_spacing, casting="unsafe", out=colloc_point_above)
-
+    colloc_point_above[colloc_point_above==a] += 1
     grid_spacing = line.pinning_field.grid_spacing
 
     pinning_field_slope = (values[indexes, colloc_point_above % npx_propagation] - values[indexes, (colloc_point_above - 1) % npx_propagation]) / grid_spacing
@@ -221,7 +221,8 @@ def brute_rosso_krauth_other_spacing(a, driving_a, line, gtol=1e-4, maxit=10000,
                + pinning_field_slope * (a - grid_spacing * (colloc_point_above - 1))
 
         if logger:
-            logger.st(["it", "max. residual", "min. a", "mean a", "max. a"], [nit, np.max(abs(grad)), np.min(a), np.mean(a), np.max(a)])
+            logger.st(["it", "min. residual", "max. residual", "min. a", "mean a", "max. a", "min. collo", "max.collo"],
+                      [nit, np.min(grad), np.max(grad), np.min(a), np.mean(a), np.max(a), np.min(colloc_point_above), np.max(colloc_point_above)])
 
         if (np.max(abs(grad)) < gtol):
             break
