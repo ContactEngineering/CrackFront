@@ -80,7 +80,7 @@ class linear_interpolated_pinning_field_equaly_spaced:
         elif der == "1":
             return slope
 
-def brute_rosso_krauth(a, driving_a, line, gtol=1e-4, maxit=10000, dir=1, logger=None):
+def brute_rosso_krauth(a, driving_a, line, gtol=1e-4, maxit=10000, direction=1, logger=None):
     r"""
     Variation of PRE 65
 
@@ -102,7 +102,7 @@ def brute_rosso_krauth(a, driving_a, line, gtol=1e-4, maxit=10000, dir=1, logger
     # elastic reaction force when we move the pixel individually
 
     grad = line.gradient(a, driving_a)
-    if (grad * dir > 0).any():
+    if (grad * direction > 0).any():
         raise ValueError("Starting Configuration is not purely advancing or receding")
 
     nit = 0
@@ -117,16 +117,16 @@ def brute_rosso_krauth(a, driving_a, line, gtol=1e-4, maxit=10000, dir=1, logger
         ###
 
         # negative stiffness generates wrong step length.
-        a_new = np.where(stiffness > 0, a + increment, a + (1 + 1e-14) * dir)
+        a_new = np.where(stiffness > 0, a + increment, a + (1 + 1e-14) * direction)
         # TODO: I am not sure that is correct, ending up in the middle of the next pixel might be too far.
 
         # because of numerical errors it can be that the gradient points in the wrong
         # direction on some pixels, but is very small.
         # We just make sure these points do not move backwards
         # The same could be achieved by a_new = np.maximum(a_new, a)
-        a_new[grad * dir >= 0] = a[grad * dir >= 0]
+        a_new[grad * direction >= 0] = a[grad * direction >= 0]
 
-        if dir == 1:
+        if direction == 1:
             a_ceiled = np.ceil(a)
             # We let the line advance only until the boundary to the next pixel.
             # This is because the step length was based on the pinning curvature
@@ -142,7 +142,7 @@ def brute_rosso_krauth(a, driving_a, line, gtol=1e-4, maxit=10000, dir=1, logger
             # - Evaluating the pinning field in this code instead of in a black box way, like I do for other spacings
             a = np.where(a > np.floor(a), a, a + 1e-14)
 
-        elif dir == -1:
+        elif direction == -1:
             # a is decreasing
             a_floored = np.floor(a)
             a_new = np.maximum(a_floored, a_new)
@@ -167,7 +167,7 @@ def brute_rosso_krauth(a, driving_a, line, gtol=1e-4, maxit=10000, dir=1, logger
     return result
 
 
-def brute_rosso_krauth_other_spacing(a, driving_a, line, gtol=1e-4, maxit=10000, dir=1, logger=None):
+def brute_rosso_krauth_other_spacing(a, driving_a, line, gtol=1e-4, maxit=10000, direction=1, logger=None):
     r"""
     WARNING: this has still some bugs when the front crosses the periodic boundary conditions.
 
@@ -189,74 +189,71 @@ def brute_rosso_krauth_other_spacing(a, driving_a, line, gtol=1e-4, maxit=10000,
     elastic_stiffness_individual = line.elastic_gradient(a_test, 0)[0]
     # elastic reaction force when we move the pixel individually
 
-    grad = line.gradient(a, driving_a)
-    if (grad * dir > 0).any():
-        raise ValueError("Starting Configuration is not purely advancing or receding")
-
     indexes = line.pinning_field.indexes
     kinks = line.pinning_field.kinks
     values = line.pinning_field.values
-    colloc_point_above = np.searchsorted(kinks, a, side="right")
+    npx_propagation = line.pinning_field.npx_propagation
 
-    period = line.pinning_field.period
+    # This would also work on irregular grids
+    #colloc_point_above = np.searchsorted(kinks, a, side="right")
+    #colloc_point_above[a < 0] = colloc_point_above[a < 0] - npx_propagation
+
+    colloc_point_above = np.zeros_like(a, dtype=int)
+    colloc_point_above = np.ceil(a / line.pinning_field.grid_spacing, casting="unsafe", out=colloc_point_above)
 
     grid_spacing = line.pinning_field.grid_spacing
 
+    pinning_field_slope = (values[indexes, colloc_point_above % npx_propagation] - values[indexes, (colloc_point_above - 1) % npx_propagation]) / grid_spacing
+    grad = line.elastic_gradient(a, driving_a) \
+           + values[indexes, (colloc_point_above - 1) % npx_propagation] \
+           + pinning_field_slope * (a - grid_spacing * (colloc_point_above - 1))
+    if (grad * direction > 0).any():
+        print("WARNING: Starting Configuration is not purely advancing or receding")
+
     nit = 0
     while (np.max(abs(grad)) > gtol) and nit < maxit:
-        if logger:
-            logger.st(["it", "max. residual"], [nit, np.max(abs(grad))])
 
         ###
         # Nullify the force on each pixel, assuming each pixel moves individually
-        pinning_field_slope = (values[indexes, colloc_point_above] - values[indexes, colloc_point_above-1]) / grid_spacing
+        pinning_field_slope = (values[indexes, colloc_point_above % npx_propagation] - values[indexes, (colloc_point_above - 1) % npx_propagation]) / grid_spacing
         grad = line.elastic_gradient(a, driving_a) \
-            + values[indexes, colloc_point_above-1] \
-            + pinning_field_slope * (a - kinks[colloc_point_above-1])
+               + values[indexes, (colloc_point_above - 1) % npx_propagation] \
+               + pinning_field_slope * (a - grid_spacing * (colloc_point_above - 1))
+
+        if logger:
+            logger.st(["it", "max. residual", "min. a", "mean a", "max. a"], [nit, np.max(abs(grad)), np.min(a), np.mean(a), np.max(a)])
+
+        if (np.max(abs(grad)) < gtol):
+            break
+
         stiffness = pinning_field_slope + elastic_stiffness_individual
         increment = - grad / stiffness
         ###
 
-        # negative stiffness generates wrong step length.
-        #a_new = np.where(stiffness > 0, a + increment, a + (1 + 1e-14) * dir)
-        # TODO: Is this + 1e-14 actually necessary ?
-
         a_new = a + increment
         mask_negative_stiffness = stiffness <= 0
 
-
-        if dir == 1:
+        if direction == 1:
             # We let the line advance only until the boundary to the next pixel.
             # This is because the step length was based on the pinning curvature
             # which is erroneous as soon as we meet the next pixel
-            # TODO: I have a bug in handling periodicity.
-            # A solution would be actually to roll the kinks array every once in a while.
-            # This problem probably solves on it's own when we implement loading only part of the heterogeneous field onto
-            # the GPU
-            mask_new_pixel = np.logical_or(a_new % period >= kinks[colloc_point_above], mask_negative_stiffness)
-            a_new[mask_new_pixel] = kinks[colloc_point_above][mask_new_pixel]
+            mask_new_pixel = np.logical_or(a_new >= colloc_point_above * grid_spacing, mask_negative_stiffness)
+            a_new[mask_new_pixel] = grid_spacing * colloc_point_above[mask_new_pixel]
             colloc_point_above[mask_new_pixel] += 1
-
-        elif dir == -1:
-            # TODO:                           here the % period introduces a bug. negative radii
-            #                                  (they can be predicted with positive stiffnesses ! )
-            #                                   are mapped to positive radii above the actual position
-            #                                   The safer way to introduce this periodic BC is to use grid_spacing * (colloc_point_above) instead
-            mask_new_pixel = np.logical_or(a_new % period <= kinks[colloc_point_above-1], mask_negative_stiffness)
-            a_new[mask_new_pixel] = kinks[colloc_point_above-1][mask_new_pixel]
+        elif direction == -1:
+            mask_new_pixel = np.logical_or(a_new <= grid_spacing * (colloc_point_above - 1), mask_negative_stiffness)
+            a_new[mask_new_pixel] = grid_spacing * (colloc_point_above[mask_new_pixel] - 1)
             colloc_point_above[mask_new_pixel] -= 1
 
         # because of numerical errors it can be that the gradient points in the wrong
         # direction on some pixels, but is very small.
         # We just make sure these points do not move backwards
         # The same could be achieved by a_new = np.maximum(a_new, a)
-        a_new[grad * dir >= 0] = a[grad * dir >= 0]
+        a_new[grad * direction >= 0] = a[grad * direction >= 0]
 
         a = a_new
 
         nit += 1
-
-
 
     if nit == maxit:
         success = False
@@ -306,7 +303,7 @@ def example_large_disp_force():
     a = np.zeros(L)
     start_time = time.time()
     for a_forcing in a_forcings:
-        sol = brute_rosso_krauth(a, a_forcing, line, maxit=100000, gtol=gtol, )
+        sol = brute_rosso_krauth(a, a_forcing, line, gtol=gtol, maxit=100000)
         assert sol.success
         a = sol.x
         mean_a_RK.append(np.mean(a))
@@ -399,7 +396,7 @@ def example_strong_pinning():
     for a_forcing in a_forcings:
         # print(a_forcing)
 
-        sol = brute_rosso_krauth(a, a_forcing, line, maxit=100000, gtol=gtol, )
+        sol = brute_rosso_krauth(a, a_forcing, line, gtol=gtol, maxit=100000)
         assert sol.success
 
         a = sol.x

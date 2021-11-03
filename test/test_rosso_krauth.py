@@ -50,7 +50,7 @@ def test_no_pinning_field_moving_left(rosso_krauth, L, Lx):
         w -= 1
         grad = line.gradient(a, w)
 
-    sol = rosso_krauth(a, w, line, gtol=1e-10, dir=-1)
+    sol = rosso_krauth(a, w, line, gtol=1e-10, direction=-1)
     assert sol.success
 
     np.testing.assert_allclose(sol.x, w)
@@ -140,8 +140,7 @@ def test_force_displacement_curve(rosso_krauth, plot=False):
 
 
 @pytest.mark.parametrize("rosso_krauth", [brute_rosso_krauth,
-                                          pytest.param(brute_rosso_krauth_other_spacing, marks=pytest.mark.skip(
-                                              reason="does not support the periodic BC"))
+                                          brute_rosso_krauth_other_spacing
                                           ])
 def test_force_displacement_curve_hysteresis(rosso_krauth, plot=False):
     np.random.seed(0)
@@ -175,9 +174,9 @@ def test_force_displacement_curve_hysteresis(rosso_krauth, plot=False):
     a_forcing_prev = 0
     for a_forcing in a_forcings:
         # print(a_forcing)
-        dir = 1 if a_forcing > a_forcing_prev else -1
+        direction = 1 if a_forcing > a_forcing_prev else -1
         # print(dir)
-        sol = rosso_krauth(a, a_forcing, line, maxit=1000000, gtol=gtol, dir=dir,
+        sol = rosso_krauth(a, a_forcing, line, maxit=1000000, gtol=gtol, direction=direction,
                            logger=Logger("test_force_displacement_curve_hysteresis.log", outevery=100))
         assert sol.success
         a = sol.x
@@ -262,13 +261,13 @@ def test_no_pinning_field_moving_left(rosso_krauth, L, Lx):
         w -= 1
         grad = line.gradient(a, w)
 
-    sol = rosso_krauth(a, w, line, gtol=1e-10, dir=-1)
+    sol = rosso_krauth(a, w, line, gtol=1e-10, direction=-1)
     assert sol.success
 
     np.testing.assert_allclose(sol.x, w)
 
 @pytest.mark.parametrize("rosso_krauth", [brute_rosso_krauth,
-                                        pytest.param(brute_rosso_krauth_other_spacing, marks=pytest.mark.skip(reason="does not support the periodic BC"))
+                                          brute_rosso_krauth_other_spacing
                                           ])
 def test_force_displacement_curve(rosso_krauth, plot=False):
     np.random.seed(0)
@@ -392,9 +391,9 @@ def test_force_displacement_curve_hysteresis_do_not_wrap_periodic(rosso_krauth, 
     a_forcing_prev = 0
     for a_forcing in a_forcings:
         # print(a_forcing)
-        dir = 1 if a_forcing > a_forcing_prev else -1
+        direction = 1 if a_forcing > a_forcing_prev else -1
         # print(dir)
-        sol = rosso_krauth(a, a_forcing, line, maxit=10000000, gtol=gtol, dir=dir)
+        sol = rosso_krauth(a, a_forcing, line, maxit=10000000, gtol=gtol, direction=direction)
         assert sol.success
         a = sol.x
         mean_a_RK.append(np.mean(a))

@@ -60,7 +60,7 @@ for a_forcing in a_forcings:
     # print(a_forcing)
     dir = 1 if a_forcing > a_forcing_prev else -1
     # print(dir)
-    sol = brute_rosso_krauth(a, a_forcing, line, maxit=100000, gtol=gtol, dir=dir)
+    sol = brute_rosso_krauth(a, a_forcing, line, gtol=gtol, maxit=100000, direction=dir)
     assert sol.success
     a = sol.x
     mean_a_RK.append(np.mean(a))
