@@ -16,6 +16,9 @@ import time
 #
 
 # %%
+disable_cuda = False
+
+# %%
 ######################## PARAMETERS
 L = npx_front = 1024  # starting from 8000 pix numpy starts to slower then cuda
 Lx = npx_propagation = 256
@@ -30,7 +33,7 @@ gtol = 1e-6
 maxit = 100000
 
 # history:
-#             |-  This should ensures that we will find a strictly advancing configuration from beginning
+#            |-  This should ensures that we will find a strictly advancing configuration from beginning
 #            v Otherwise our algorithm has problems
 a_drivings = Lk * rms ** 2 + np.linspace(0, npx_propagation * 0.1, 5)
 a_drivings = np.concatenate([a_drivings[:-1], a_drivings[::-1]])
@@ -48,7 +51,7 @@ slopes = (np.roll(values, -1, axis=-1)- values) / grid_spacing
 
 # TORCH code starts here
 
-if torch.cuda.is_available():
+if torch.cuda.is_available() and not disable_cuda:
     accelerator = torch.device("cuda")
 else:
     print("CUDA not available, fall back to torch on CPU")
