@@ -1,0 +1,41 @@
+
+Bootstrap: localimage
+From: gpu_minimal_dependencies.sif
+#
+# Remarks: 
+#   On a cluster, you might need to 
+#  To use the GPU, don't forget the --nv option when calling singularity.
+#
+
+%files
+  .vimrc ~/.vimrc
+  ../../CrackFront ./CrackFront
+
+%labels
+    Author antoine.sanner@imtek.uni-freiburg.de
+
+
+%post
+  python3 -m pip install ./CrackFront
+  python3 -m pip install git+https://github.com/ContactEngineering/SurfaceTopography
+  python3 -m pip install dtool dtool-smb dtool-cli ruamel.yaml pandas matplotlib>=1.0.0
+  python3 -m pip install yamllint
+  python3 -m pip install git+https://github.com/jic-dtool/dtool-s3
+  python3 -m pip install git+https://github.com/jic-dtool/dtool-ecs
+  
+
+  python3 -m pip install ipython jupyter jupyterlab jupytext
+  apt-get -qq update && apt-get -qq -y install vim
+  git clone https://github.com/gmarik/Vundle.vim.git ~/.vim/bundle/Vundle.vim
+ 
+  vim +PluginInstall +qall
+
+  rm -rf ./CrackFront  
+ 
+%environment
+    # prevent OMP jobs to use all want he thinks is available                      
+    export OMP_NUM_THREADS=1
+    #export LD_LIBRARY_PATH=/usr/lib64/:/usr/local/lib:$LD_LIBRARY_PATH
+%runscript
+    python3 "$@" 
+    
