@@ -1,11 +1,9 @@
 import time
 
 import numpy as np
-from ContactMechanics.Tools.Logger import Logger
+#from ContactMechanics.Tools.Logger import Logger
 from NuMPI.IO.NetCDF import NCStructuredGrid
 import sys
-
-
 
 from CrackFront.GenericElasticLine import ElasticLine
 from CrackFront.Optimization.RossoKrauth import linear_interpolated_pinning_field, brute_rosso_krauth_other_spacing
@@ -114,8 +112,12 @@ def propagate_rosso_krauth_torch(line_length, propagation_length, structural_len
     # TORCH code starts here
     if torch.cuda.is_available() and not disable_cuda:
         accelerator = torch.device("cuda")
+        print("CUDA detected, using CUDA")
     else:
-        print("CUDA not available, fall back to torch on CPU")
+        if not disable_cuda: 
+            print("CUDA not available, fall back to torch on CPU")
+        else:
+            print("CUDA disabled, use CPU")
         accelerator = torch.device("cpu")
 
     kwargs_array_creation = dict(device=accelerator)
@@ -290,11 +292,12 @@ def time_vs_line_length_scaling():
     nit_cpu = []
     nit_numpy = []
 
-    line_lengths = [256, 1024, 4096, 16384]
+    line_lengths = [256, 1024, 4096, 16384, 65536]
     # measure scaling of time
     for line_length in line_lengths:
+        print("Line length", line_length)
         params = dict(
-        line_length=line_length,  # starting from 8000 pix numpy starts to slower then cuda
+        line_length=line_length,
         propagation_length=256,
         rms=.5,
         structural_length=128,
@@ -363,6 +366,9 @@ def time_vs_line_length_scaling():
     ax.set_ylabel("total time")
     ax.set_xlabel("line length")
 
+    ax.set_xscale("log")
+    ax.set_yscale("log")  
+    
     fig, ax = plt.subplots()
 
     ax.plot(line_lengths, np.array(time_cpu) / np.array(nit_cpu), "+", label="cpu")
@@ -372,7 +378,17 @@ def time_vs_line_length_scaling():
     ax.legend()
     ax.set_ylabel("time per iteration")
     ax.set_xlabel("line length")
+    ax.set_xscale("log")
+    ax.set_yscale("log")    
 
 if __name__ == "__main__":
     check_same_result()
     time_vs_line_length_scaling()
+
+
+
+
+
+
+
+

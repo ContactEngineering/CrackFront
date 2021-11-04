@@ -17,8 +17,6 @@ values_numpy
 
 values_cuda
 
-4096 * 64
-
 times_numpy = []
 times_torch = []
 times_cuda = []
@@ -57,6 +55,10 @@ ax.legend()
 
 ax.set_xscale("log")
 ax.set_yscale("log")
+
+ax.set_xlabel("vector length")
+ax.set_ylabel(f"time for {repeats} repeats")
+
 # -
 
 # The speedup of the FFT is indeed excellent
@@ -122,6 +124,10 @@ ax.legend()
 
 ax.set_xscale("log")
 ax.set_yscale("log")
+
+
+ax.set_xlabel("vector length")
+ax.set_ylabel(f"time for {repeats} repeats")
 # -
 3276832768
 
@@ -170,16 +176,7 @@ for L in Ls:
     #for i in range(repeats):
     #    values2_cuda = torch.maximum(values2_cuda, values2_cuda2)
     #times_cuda2.append(time.time() - start_time)
-# -
 
-
-v = torch.tensor([0, 1, 2, ])
-
-v
-
-v += v < 1
-
-v
 
 # +
 fig, ax = plt.subplots()
@@ -194,11 +191,10 @@ ax.legend()
 
 ax.set_xscale("log")
 ax.set_yscale("log")
-# -
-colloc_point_above
 
 
-
+ax.set_xlabel("vector length")
+ax.set_ylabel(f"time for {repeats} repeats")
 # +
 times_numpy = []
 times_cuda3 = []
@@ -243,16 +239,7 @@ for L in Ls:
     for i in range(repeats):
         values2_cuda.add_(values_cuda > values_cuda2)
     times_cuda2.append(time.time() - start_time)
-# -
 
-
-v = torch.tensor([0, 1, 2, ])
-
-v
-
-v += v < 1
-
-v
 
 # +
 fig, ax = plt.subplots()
@@ -267,5 +254,9 @@ ax.legend()
 
 ax.set_xscale("log")
 ax.set_yscale("log")
+
+
+ax.set_xlabel("vector length")
+ax.set_ylabel(f"time for {repeats} repeats")
 # -
 

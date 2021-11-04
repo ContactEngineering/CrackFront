@@ -44,7 +44,7 @@ instead of `.cuda()` write `.to(device=accelerator)`
 import torch
 ```
 
- 
+
 ## Test that makes sure we get the same result in the cuda code and in the original numpy code
 ## scaling test showing how cuda compute time increases with system size
 ## Storage order for pinning field ? 
@@ -114,6 +114,7 @@ Follwing the `Getting started` instructions:
 python3 -m pip install --user torch==1.10.0+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html
 <!-- #endregion -->
 
-```python
+# On NEMO with Singularity
 
-```
+Installing all the dependencies for the 
+
