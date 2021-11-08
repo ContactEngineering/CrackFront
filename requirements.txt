@@ -13,3 +13,4 @@ ContactMechanics
 Adhesion
 sphinx>=1.8.2
 sphinx_rtd_theme
+torch
