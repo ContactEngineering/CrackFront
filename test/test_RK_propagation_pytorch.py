@@ -2,7 +2,9 @@ import numpy as np
 from NuMPI.IO.NetCDF import NCStructuredGrid
 
 from CrackFront.Optimization.propagate_elastic_line import propagate_rosso_krauth
-from CrackFront.Optimization.propagate_elastic_line_pytorch import propagate_rosso_krauth as propagate_rosso_krauth_torch
+from CrackFront.Optimization.propagate_elastic_line_pytorch import \
+    propagate_rosso_krauth as propagate_rosso_krauth_torch
+
 
 def test_propagate_rosso_krauth_numpy_vs_pytorch_accuracy():
     params = dict(
@@ -26,7 +28,7 @@ def test_propagate_rosso_krauth_numpy_vs_pytorch_accuracy():
         pinning_forces=pinning_forces,
         dump_fields=True,
         simulation_type="reciprocating parabolic potential",
-        #logger=Logger("simulation.log", outevery=100),
+        # logger=Logger("simulation.log", outevery=100),
         filename="numpy.nc"
         )
 
@@ -35,7 +37,7 @@ def test_propagate_rosso_krauth_numpy_vs_pytorch_accuracy():
         pinning_forces=pinning_forces,
         dump_fields=True,
         simulation_type="reciprocating parabolic potential",
-        #logger=Logger("simulation.log", outevery=100),
+        # logger=Logger("simulation.log", outevery=100),
         filename="torch.nc"
         )
 
