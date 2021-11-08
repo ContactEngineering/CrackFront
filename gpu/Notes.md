@@ -15,11 +15,13 @@ jupyter:
 <!-- #region -->
 # Next steps:
 
+## Singularity containers 
+https://github.com/bdusell/singularity-tutorial
+
+ 
 ## make the code CPU-GPU agnostic
 
-
 using numpy instead of torch is not relevant for performance (the numpy fft is only faster in the regime where cuda is faster).
-
 
  - Initialisations are difficult in an agnostic way, unless there is a way to override the default for the device. 
  - It seeems that not (https://pytorch.org/docs/stable/notes/cuda.html?highlight=device). 
@@ -79,7 +81,6 @@ maybe also usefull to monitor memory usage
 https://pytorch.org/docs/stable/notes/cuda.html?highlight=device
 
 
-
 #### Optional: compute smallest eigenvalue. 
 (but maybe I don't need it, anyway)
 
@@ -90,19 +91,14 @@ There is also the eigenvalue computation. But is there also the sparse compute o
 http://courses.cms.caltech.edu/cs179/
 
 #### Implementation 
-##### GPU the FFT 
-
-##### What about all the logic for the heterogeneity ? 
 
 ##### quadratic or linear ? 
 
 ##### Load only part of the heterogeneity
 
-##### Workflow:
+##### Is the FFT optimal right now ? 
 
-- make it work on laptop
-- execute on AMD node
-- execute on gpu node
+OR should I try an inplace variable or something like that ? 
 
 ## On NEMO 
 
