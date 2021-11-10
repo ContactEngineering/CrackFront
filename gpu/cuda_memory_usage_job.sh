@@ -2,7 +2,7 @@
 #MSUB -m ea                                                                    
 #MSUB -q gpu
 #MSUB -l nodes=1:ppn=1:gpus=1 
-#MSUB -l pmem=20gb
+#MSUB -l pmem=20G
 
 
 set -e
