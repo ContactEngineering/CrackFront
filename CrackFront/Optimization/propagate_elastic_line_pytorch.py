@@ -15,7 +15,7 @@ def propagate_rosso_krauth(line_length, propagation_length, structural_length,
                                  gtol,
                                  n_steps,
                                  pinning_forces,
-                                 initial_a,
+                                 initial_a, # can also be an initial configuration from a restart
                                  dump_fields=True,
                                  simulation_type="pulling parabolic potential",
                                  maxit=10000,
@@ -23,7 +23,17 @@ def propagate_rosso_krauth(line_length, propagation_length, structural_length,
                                  logger=None,
                                  disable_cuda=False,
                                  filename="data.nc",
+                                 handle_signals=False,
+                                 restart=False,
                                  **kwargs):
+
+    there_is_enough_time_left = True
+    if handle_signals:
+        import signal
+        def recieve_signal(signum, stack):
+            nonlocal there_is_enough_time_left
+            there_is_enough_time_left = False
+        signal.signal(signal.SIGUSR1, recieve_signal)
     L = line_length
 
     # axev.axhline(2 * np.pi / structural_length)  # no disorder limit of the smallest eigenvalue
@@ -75,9 +85,12 @@ def propagate_rosso_krauth(line_length, propagation_length, structural_length,
 
     a = torch.from_numpy(initial_a).to(**kwargs_array_creation)
 
-    nc = NCStructuredGrid(filename, "w", (L,))
-    driving_a_prev = driving_positions[0] - 1
-    for i in range(len(driving_positions)):
+    nc = NCStructuredGrid(filename, "a" if restart else "w", (L,))
+    i = len(nc)
+    driving_a_prev = driving_positions[i] - 1
+    n_driving_positions = len(driving_positions)
+
+    while i < n_driving_positions :
 
         driving_a_cpu = driving_positions[i]
         print(driving_a_cpu)
@@ -100,9 +113,10 @@ def propagate_rosso_krauth(line_length, propagation_length, structural_length,
             grad.add_(current_value_and_slope[:, 1] * (a - grid_spacing * (colloc_point_above - 1)))
 
             if logger:
+            # TODO: also call this only every n iteration. computing the maximum is quite expensive
                 logger.st(["it", "max. residual"], [nit, torch.max(abs(grad))])
 
-            # TODO: Optimization: I don't to evaluate this every iteration
+            # TODO: Optimization: I don't need to evaluate this every iteration
             if (torch.max(torch.abs(grad)) < gtol):
                 break
 
@@ -128,7 +142,7 @@ def propagate_rosso_krauth(line_length, propagation_length, structural_length,
                 # because of numerical errors it can be that the gradient points in the wrong
                 # direction on some pixels, but is very small.
                 # We just make sure these points do not move backwards
-                a_new = torch.maximum(a_new, a)
+                a = torch.maximum(a_new, a)
 
             elif direction == -1:
                 mask_new_pixel = torch.logical_or(a_new <= grid_spacing * (colloc_point_above - 1), mask_negative_stiffness)
@@ -137,26 +151,30 @@ def propagate_rosso_krauth(line_length, propagation_length, structural_length,
                 colloc_point_above.add_(mask_new_pixel, alpha=-1) # alpha is a scalar prefactor for mask_new_pixel
                 # Why not just -= ?
 
-                a_new = torch.minimum(a_new, a)
-
-            a = a_new
+                a = torch.minimum(a_new, a)
 
             nit += 1
         assert nit < maxit
 
-        line.dump(nc[i], driving_a_cpu, a.to(device=torch.device("cpu")).numpy(), dump_fields=dump_fields)
-        if compute_smallest_eigenvalue:
-            eigval, eigvec = line.eigenvalues(a)
-            nc[i].eigenvalue = eigval
-            if dump_fields:
-                nc[i].eigenvector = eigvec
-
         nc[i].nit = nit
         print("nit: {}".format(nit))
+        a_cpu = a.to(device=torch.device("cpu")).numpy()
+        # if compute_smallest_eigenvalue:
+        #     eigval, eigvec = line.eigenvalues(a)
+        #     nc[i].eigenvalue = eigval
+        #     if dump_fields:
+        #         nc[i].eigenvector = eigvec
+        line.dump(nc[i], driving_a_cpu, a_cpu, dump_fields=dump_fields)
+
 
         driving_a_prev = driving_a
+        if not there_is_enough_time_left:
+            #if not dump_fields: # this is actually useless when we dumpfields, but who cares ?
+            np.save("restart_position.npy", a_cpu)
+            break
+
         nc.sync()
         sys.stdout.flush()
-
+        i += 1
     nc.close()
-    return True
+    return there_is_enough_time_left

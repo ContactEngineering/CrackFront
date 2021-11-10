@@ -60,3 +60,82 @@ def test_propagate_rosso_krauth_numpy_vs_pytorch_accuracy():
     np.testing.assert_allclose(nc_torch.driving_force, nc_numpy.driving_force, )
     np.testing.assert_allclose(nc_torch.elastic_potential, nc_numpy.elastic_potential, )
     np.testing.assert_allclose(nc_torch.nit, nc_numpy.nit,)
+
+import threading
+import signal
+import os
+import time
+def test_restart():
+
+    params = dict(
+        line_length=256,  # starting from 8000 pix numpy starts to slower then cuda
+        propagation_length=256,
+        rms=.1,
+        structural_length=64,
+        n_steps=100,
+        # randomness:
+        seed=0,
+        # numerics:
+        gtol=1e-10,
+        maxit=10000000,
+        )
+    params.update(initial_a=- np.ones(params["line_length"]) * params["structural_length"] * params["rms"] ** 2 * 2)
+    np.random.seed(params["seed"])
+    pinning_forces = np.random.normal(size=(params["line_length"], params["propagation_length"])) * params["rms"]
+
+    propagate_rosso_krauth_torch(
+        **params,
+        pinning_forces=pinning_forces,
+        dump_fields=False,
+        simulation_type="reciprocating parabolic potential",
+        # logger=Logger("simulation.log", outevery=100),
+        filename="uninterupted.nc"
+        )
+
+    pid = os.getpid()
+    # https://stackoverflow.com/questions/26158373/how-to-really-test-signal-handling-in-python
+    def trigger_signal():
+        # You could do something more robust, e.g. wait until port is listening
+        time.sleep(1)
+        os.kill(pid, signal.SIGUSR1)
+
+    thread = threading.Thread(target=trigger_signal)
+    thread.daemon = True
+    thread.start()
+
+    # simulate until interrupted by signal
+    assert not propagate_rosso_krauth_torch(
+        **params,
+        pinning_forces=pinning_forces,
+        dump_fields=False,
+        simulation_type="reciprocating parabolic potential",
+        # logger=Logger("simulation.log", outevery=100),
+        filename="interupted.nc",
+        handle_signals=True,
+        restart=False,
+        ), "Simulation finished successfully before being interupted"
+
+    # restart and finish simulation
+    params.update(initial_a=np.load("restart_position.npy"))
+    assert propagate_rosso_krauth_torch(
+        **params,
+        pinning_forces=pinning_forces,
+        dump_fields=False,
+        simulation_type="reciprocating parabolic potential",
+        # logger=Logger("simulation.log", outevery=100),
+        filename="interupted.nc",
+        handle_signals=False,
+        restart=True,
+        )
+
+    # Now we assert the result was unaffected by the restart
+    nc_uninterupted = NCStructuredGrid("uninterupted.nc")
+    nc_interupted = NCStructuredGrid("interupted.nc")
+
+    np.testing.assert_allclose(nc_interupted.position_mean, nc_uninterupted.position_mean)
+    #np.testing.assert_allclose(nc_interupted.position, nc_uninterupted.position, atol=1e-5)
+    # 1e-5 is already very small compared to the heterogeneity spacing
+    np.testing.assert_allclose(nc_interupted.position_rms, nc_uninterupted.position_rms, )
+    np.testing.assert_allclose(nc_interupted.driving_force, nc_uninterupted.driving_force, )
+    np.testing.assert_allclose(nc_interupted.elastic_potential, nc_uninterupted.elastic_potential, )
+    np.testing.assert_allclose(nc_interupted.nit, nc_uninterupted.nit,)
