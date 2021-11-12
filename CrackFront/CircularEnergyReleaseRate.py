@@ -629,31 +629,38 @@ class SphereCFPenetrationEnergyConstGcPiecewiseLinearField(SphereCrackFrontERRPe
             stiffness = - pinning_field_slope + outer_eastic_stifness + line_stiffness_individual
 
             increment = - grad / stiffness
-            # negative stiffness generates wrong step length.
-            a_new = np.where(stiffness > 0, a + increment, a + (1 + 1e-14) * dir)
-            # TODO: I am not sure it is actually correct to advance the front by one whole pixel.
-            #       If I want to guarantee forward motion, I should advance only until the boundary.
 
-            # because of numerical errors it can be that the gradient points in the wrong
-            # direction on some pixels, but is very small.
-            # We just make sure these points do not move backwards
-            a_new[grad * dir >= 0] = a[grad * dir >= 0]
+            a_new = a + increment
+            mask_negative_stiffness = stiffness <= 0
 
             if dir == 1:
-                # When the new contact area exceeds the boundary of the current pixel,
-                # we
-                mask_new_pixel = a_new >= kinks[colloc_point_above]
-                a_new[mask_new_pixel] = kinks[colloc_point_above][mask_new_pixel]
-                colloc_point_above[mask_new_pixel] += 1
-                a = a_new
+                # We let the line advance only until the boundary to the next pixel.
+                # This is because the step length was based on the pinning curvature
+                # which is erroneous as soon as we meet the next pixel
+                #
+                # Additionally, when the curvature is negative, the increment is negative
+                # but the front should actually move forward.
+                # In this case as well we advance the front until the edge of the next pixel
+                mask_new_pixel = np.logical_or(a_new >= colloc_point_above * grid_spacing, mask_negative_stiffness)
+                a_new = np.where(mask_new_pixel, grid_spacing * colloc_point_above, a_new)
+
+                colloc_point_above += mask_new_pixel
+
+                # because of numerical errors it can be that the gradient points in the wrong
+                # direction on some pixels, but is very small.
+                # We just make sure these points do not move backwards
+                a = np.maximum(a_new, a)
             elif dir == -1:
-                mask_new_pixel = a_new <= kinks[colloc_point_above - 1]
-                a_new[mask_new_pixel] = kinks[colloc_point_above - 1][mask_new_pixel]
-                colloc_point_above[mask_new_pixel] -= 1
+                mask_new_pixel = np.logical_or(a_new <= grid_spacing * (colloc_point_above - 1),
+                                                  mask_negative_stiffness)
+                a_new = np.where(mask_new_pixel, grid_spacing * (colloc_point_above - 1), a_new)
 
-                a = a_new
+                colloc_point_above -= mask_new_pixel
+                # Why not just -= ?
 
-            if (colloc_point_above < 0).any():
+                a = np.minimum(a_new, a)
+
+            if (colloc_point_above < 1).any():
                 raise RadiusTooLowError
 
             nit += 1
