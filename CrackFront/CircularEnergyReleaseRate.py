@@ -568,14 +568,24 @@ class SphereCrackFrontERRPenetrationEnergyConstGc(SphereCrackFrontERRPenetration
 
 class SphereCFPenetrationEnergyConstGcPiecewiseLinearField(SphereCrackFrontERRPenetrationEnergyConstGc):
     def __init__(self, piecewise_linear_w, wm=1/np.pi):
-        n_pixels = piecewise_linear_w.npx_front
+        npx_front = piecewise_linear_w.npx_front
         self.piecewise_linear_w = piecewise_linear_w
 
         # Note that we still provide the function w and dw, directly,
         # which is useful for postprocessing purposes or using the trust_region_solver.
-        super().__init__(npx=n_pixels,
-                         w=lambda x, angles: piecewise_linear_w(x, der="0"),
-                         dw=lambda x, angles: piecewise_linear_w(x, der="1"), wm=wm)
+        super().__init__(
+            npx=npx_front,
+            w=lambda x, angles:
+                piecewise_linear_w(x, der="0")
+                / (x * 2 * np.pi / npx_front),
+            dw=lambda x, angles:
+                piecewise_linear_w(x, der="1")
+                / (x * 2 * np.pi / npx_front)
+                - piecewise_linear_w(x, der="0")
+                / (x ** 2 * 2 * np.pi / npx_front), wm=wm)
+        # piecewise_linear_w returns a d\theta w is linearly interpolated, not w
+        # We have to compensate for that because the gradient and hessian product for the trust region solver
+        # is implemented using w and dw.
 
     def rosso_krauth(self, a, penetration, gtol=1e-4, maxit=10000, direction=1, logger=None):
         """
@@ -651,8 +661,7 @@ class SphereCFPenetrationEnergyConstGcPiecewiseLinearField(SphereCrackFrontERRPe
                 # We just make sure these points do not move backwards
                 a = np.maximum(a_new, a)
             elif direction == -1:
-                mask_new_pixel = np.logical_or(a_new <= kinks[colloc_point_above - 1],
-                                                  mask_negative_stiffness)
+                mask_new_pixel = np.logical_or(a_new <= kinks[colloc_point_above - 1], mask_negative_stiffness)
                 a_new = np.where(mask_new_pixel, kinks[colloc_point_above - 1], a_new)
 
                 colloc_point_above -= mask_new_pixel

@@ -76,7 +76,7 @@ class linear_interpolated_pinning_field_equaly_spaced:
         slope = (value_above - value_below) / self.grid_spacing
 
         if der == "0":
-            return value_below + slope * (a - self.a_below)
+            return value_below + slope * (a - self.kinks[self.a_below])
         elif der == "1":
             return slope
 
