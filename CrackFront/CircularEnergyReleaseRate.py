@@ -577,7 +577,7 @@ class SphereCFPenetrationEnergyConstGcPiecewiseLinearField(SphereCrackFrontERRPe
                          w=lambda x, angles: piecewise_linear_w(x, der="0"),
                          dw=lambda x, angles: piecewise_linear_w(x, der="1"), wm=wm)
 
-    def rosso_krauth(self, a, penetration, gtol=1e-4, maxit=10000, dir=1, logger=None):
+    def rosso_krauth(self, a, penetration, gtol=1e-4, maxit=10000, direction=1, logger=None):
         """
         This is an adaptation of the Algorithm by Krauth and Rosso PRE 65
 
@@ -601,7 +601,7 @@ class SphereCFPenetrationEnergyConstGcPiecewiseLinearField(SphereCrackFrontERRPe
         grad = self.elastic_gradient(a, penetration) \
             - values[indexes, colloc_point_above - 1] \
             - pinning_field_slope * (a - kinks[colloc_point_above - 1])
-        if (grad * dir > 0).any():
+        if (grad * direction > 0).any():
             print("WARNING: Starting Configuration is not purely advancing or receding")
 
         nit = 0
@@ -633,7 +633,7 @@ class SphereCFPenetrationEnergyConstGcPiecewiseLinearField(SphereCrackFrontERRPe
             a_new = a + increment
             mask_negative_stiffness = stiffness <= 0
 
-            if dir == 1:
+            if direction == 1:
                 # We let the line advance only until the boundary to the next pixel.
                 # This is because the step length was based on the pinning curvature
                 # which is erroneous as soon as we meet the next pixel
@@ -641,8 +641,8 @@ class SphereCFPenetrationEnergyConstGcPiecewiseLinearField(SphereCrackFrontERRPe
                 # Additionally, when the curvature is negative, the increment is negative
                 # but the front should actually move forward.
                 # In this case as well we advance the front until the edge of the next pixel
-                mask_new_pixel = np.logical_or(a_new >= colloc_point_above * grid_spacing, mask_negative_stiffness)
-                a_new = np.where(mask_new_pixel, grid_spacing * colloc_point_above, a_new)
+                mask_new_pixel = np.logical_or(a_new >= kinks[colloc_point_above], mask_negative_stiffness)
+                a_new = np.where(mask_new_pixel, kinks[colloc_point_above], a_new)
 
                 colloc_point_above += mask_new_pixel
 
@@ -650,18 +650,20 @@ class SphereCFPenetrationEnergyConstGcPiecewiseLinearField(SphereCrackFrontERRPe
                 # direction on some pixels, but is very small.
                 # We just make sure these points do not move backwards
                 a = np.maximum(a_new, a)
-            elif dir == -1:
-                mask_new_pixel = np.logical_or(a_new <= grid_spacing * (colloc_point_above - 1),
+            elif direction == -1:
+                mask_new_pixel = np.logical_or(a_new <= kinks[colloc_point_above - 1],
                                                   mask_negative_stiffness)
-                a_new = np.where(mask_new_pixel, grid_spacing * (colloc_point_above - 1), a_new)
+                a_new = np.where(mask_new_pixel, kinks[colloc_point_above - 1], a_new)
 
                 colloc_point_above -= mask_new_pixel
-                # Why not just -= ?
 
                 a = np.minimum(a_new, a)
 
             if (colloc_point_above < 1).any():
                 raise RadiusTooLowError
+
+            if (colloc_point_above >= self.piecewise_linear_w.npx_propagation).any():
+                raise Exception
 
             nit += 1
 
