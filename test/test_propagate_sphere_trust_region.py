@@ -16,9 +16,10 @@ w = 1 / np.pi
 R = 1.
 maugis_K = 1.
 
+
 def test_propagate_sphere_trust_region_vs_JKR():
     # nondimensional units following Maugis Book:
-    Es = 3 / 4
+    # Es = 3 / 4
     w = 1 / np.pi
     R = 1.
     maugis_K = 1.
@@ -44,7 +45,10 @@ def test_propagate_sphere_trust_region_vs_JKR():
 
     nc = NCStructuredGrid("trust.nc")
     np.testing.assert_allclose(nc.force, [JKR.force(penetration=p) for p in nc.penetration[:]], rtol=1e-06)
-    np.testing.assert_allclose(nc.mean_radius, [JKR.contact_radius(penetration=p) for p in nc.penetration[:]], rtol=1e-06)
+    np.testing.assert_allclose(nc.mean_radius,
+                               [JKR.contact_radius(penetration=p) for p in nc.penetration[:]],
+                               rtol=1e-06)
+
 
 @pytest.mark.skip("just plotting")
 def test_linear_interpolated_pinning_field_derivative():
@@ -55,8 +59,8 @@ def test_linear_interpolated_pinning_field_derivative():
     w_values = np.ones((npx_front, 1)) * sample_radii.reshape(1, -1)
     w_values = np.random.normal(size=(npx_front, n_radii))
 
-    piecewise_linear_w = linear_interpolated_pinning_field_equaly_spaced(w_values * sample_radii * 2 * np.pi / npx_front,
-                                                                        sample_radii)
+    piecewise_linear_w = linear_interpolated_pinning_field_equaly_spaced(
+        w_values * sample_radii * 2 * np.pi / npx_front, sample_radii)
     cf = SphereCFPenetrationEnergyConstGcPiecewiseLinearField(piecewise_linear_w)
 
     a = 3 + np.random.uniform(0, 1, size=npx_front)
@@ -81,14 +85,12 @@ def test_linear_interpolated_pinning_field_derivative():
         # What is the precision with which the hessian product is made ?
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
-        ax.plot(hs, rms_errors# / hs ** 2
-                , "+-")
+        ax.plot(hs, rms_errors, "+-")
         print(rms_errors)
         ax.set_xscale("log")
         ax.set_yscale("log")
         ax.grid(True)
         plt.show()
-
 
 
 def test_linear_interpolated_pinning_field_vs_JKR():
@@ -104,8 +106,8 @@ def test_linear_interpolated_pinning_field_vs_JKR():
 
     sample_radii = np.linspace(0.5 * pulloff_radius, 6, n_radii)
     w_values = np.ones((npx_front, n_radii)) * w
-    piecewise_linear_w = linear_interpolated_pinning_field_equaly_spaced(w_values * sample_radii * 2 * np.pi / npx_front,
-                                                                        sample_radii)
+    piecewise_linear_w = linear_interpolated_pinning_field_equaly_spaced(
+        w_values * sample_radii * 2 * np.pi / npx_front, sample_radii)
     cf = SphereCFPenetrationEnergyConstGcPiecewiseLinearField(piecewise_linear_w, wm=w)
 
     simulate_crack_front(
@@ -121,4 +123,6 @@ def test_linear_interpolated_pinning_field_vs_JKR():
 
     nc = NCStructuredGrid("trust.nc")
     np.testing.assert_allclose(nc.force, [JKR.force(penetration=p) for p in nc.penetration[:]], rtol=1e-06)
-    np.testing.assert_allclose(nc.mean_radius, [JKR.contact_radius(penetration=p) for p in nc.penetration[:]], rtol=1e-06)
+    np.testing.assert_allclose(nc.mean_radius,
+                               [JKR.contact_radius(penetration=p) for p in nc.penetration[:]],
+                               rtol=1e-06)
