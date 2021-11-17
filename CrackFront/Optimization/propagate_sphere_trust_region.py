@@ -1,11 +1,9 @@
 import sys
 
 import numpy as np
-from Adhesion.ReferenceSolutions import JKR
 from NuMPI.IO.NetCDF import NCStructuredGrid
 
 from CrackFront.Circular import RadiusTooLowError
-from CrackFront.CircularEnergyReleaseRate import SphereCrackFrontERRPenetrationEnergyConstGc
 from CrackFront.Optimization import trustregion_newton_cg
 
 
@@ -21,6 +19,7 @@ def penetrations_generator(dpen, max_pen):
         i -= 1
         pen = dpen * i
         yield pen
+
 
 def simulate_crack_front(
         cf,
@@ -61,7 +60,7 @@ def simulate_crack_front(
 
     def trust_radius_from_x(radius):
         if np.max(radius) < pulloff_radius:
-                raise RadiusTooLowError
+            raise RadiusTooLowError
         return np.min((trust_radius, 0.9 * np.min(radius)))
 
     try:
@@ -70,7 +69,6 @@ def simulate_crack_front(
             try:
                 sol = trustregion_newton_cg(
                     x0=a, gradient=lambda radius: cf.gradient(radius, penetration),
-                    #hessian=lambda a: cf.hessian(a, penetration),
                     hessian_product=lambda a, p: cf.hessian_product(p,
                                                                     radius=a,
                                                                     penetration=penetration),
@@ -90,7 +88,6 @@ def simulate_crack_front(
 
             nc_CF.sync()
             sys.stdout.flush()
-
 
     finally:
         nc_CF.close()
