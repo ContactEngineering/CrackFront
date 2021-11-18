@@ -34,7 +34,7 @@ def test_JKR_single():
     a = np.ones(npx_front) * 0.1
 
     penetration = 0.5
-    sol = cf.rosso_krauth(a, penetration, gtol=1e-10, maxit=1000, dir=1, logger=Logger("RK.log", outevery=1))
+    sol = cf.rosso_krauth(a, penetration, gtol=1e-10, maxit=1000, direction=1, logger=Logger("RK.log", outevery=1))
     assert sol.success
     np.testing.assert_allclose(sol.x, JKR.contact_radius(penetration=penetration))
 
@@ -60,12 +60,12 @@ def test_JKR_curve():
     a = np.ones(npx_front) * 1.
     penetration = 0.0
     dpen = 0.1
-    dir = 1
+    direction = 1
     maxpen = 0.5
     while True:
         print(penetration)
         try:
-            sol = cf.rosso_krauth(a, penetration, gtol=1e-10, maxit=100000, dir=dir,
+            sol = cf.rosso_krauth(a, penetration, gtol=1e-10, maxit=100000, direction=direction,
                                   logger=Logger("RK.log", outevery=1))
         except RadiusTooLowError:
             print("lost contact")
@@ -75,5 +75,5 @@ def test_JKR_curve():
         np.testing.assert_allclose(sol.x, JKR.contact_radius(penetration=penetration))
 
         if penetration > maxpen:
-            dir = -1
-        penetration += dir * dpen
+            direction = -1
+        penetration += direction * dpen
