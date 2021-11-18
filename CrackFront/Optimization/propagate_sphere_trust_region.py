@@ -33,6 +33,7 @@ def simulate_crack_front(
         trust_radius=0.05,
         dump_fields=True,
         gtol=1e-06,
+        logger=None,
         ):
     """
 
@@ -61,6 +62,9 @@ def simulate_crack_front(
     def trust_radius_from_x(radius):
         if np.max(radius) < pulloff_radius:
             raise RadiusTooLowError
+        # TODO: because the trust region is defined using a 2-norm, this condition is not sufficient to exclude negative radii.
+        # I think the easiest solution is simply to artificially add a region of high work of adhesion near the center
+        # otherwise, all that remains left is to use a constrained CG.
         return np.min((trust_radius, 0.9 * np.min(radius)))
 
     try:
@@ -74,7 +78,8 @@ def simulate_crack_front(
                                                                     penetration=penetration),
                     trust_radius_from_x=trust_radius_from_x,
                     maxiter=1000000,
-                    gtol=gtol  # he has issues to reach the gtol at small values of a
+                    gtol=gtol,  # he has issues to reach the gtol at small values of a
+                    logger=logger
                     )
             except RadiusTooLowError:
                 print("lost contact")

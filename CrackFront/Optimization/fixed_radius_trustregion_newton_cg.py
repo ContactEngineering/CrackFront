@@ -29,7 +29,9 @@ import numpy as np
 
 def trustregion_newton_cg(x0, gradient, hessian=None, hessian_product=None,
                           trust_radius=0.5, gtol=1e-6, maxiter=1000,
-                          trust_radius_from_x=None):
+                          trust_radius_from_x=None,
+                          logger=None
+                          ):
     r"""
     minimizes the function having the given gradient and hessian
     In other words it finds only roots of gradient where the hessian
@@ -93,6 +95,10 @@ def trustregion_newton_cg(x0, gradient, hessian=None, hessian_product=None,
                                  hessp=wrapped_hessian_product
                                  if hessian_product is not None else None)
         max_r = np.max(abs(m.jac))
+
+        if logger:
+            logger.st(["newt. it.", "njev", "nfev", "max. residual"], [nit, njev, nhev, max_r])
+
         # print(f"max(|r|)= {max_r}")
         if max_r < gtol:
             result = OptimizeResult(
