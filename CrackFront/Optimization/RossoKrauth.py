@@ -48,12 +48,27 @@ class linear_interpolated_pinning_field:
 
 class linear_interpolated_pinning_field_equaly_spaced:
     def __init__(self, values, kinks):
+        """
+        Linearly interpolates the pinning field in crack propagation direction
+
+        Parameters:
+        -----------
+        values: np.ndarray of shape (npx_front, npx_propagation)
+            values of the pinning field at the kinks
+        kinks: np.ndarray of shape (npx_propagation)
+            equidistantly spaced points representing the grid of the piecewise linear interpolation
+
+        """
         L, Lx = values.shape
         self.npx_front = L
         self.npx_propagation = Lx
         self.grid_spacing = kinks[1] - kinks[0]
         self.period = Lx * self.grid_spacing
         self.values = values
+        self.integral_values = np.zeros_like(values)
+        increments = self.grid_spacing * self.values[:, :-1] \
+                        + self.grid_spacing / 2 * (self.values[:, 1:] - self.values[:, :-1])
+        self.integral_values[:, 1:] = np.cumsum(increments, axis=-1)
 
         self.a_below = np.zeros(L, dtype=int)
         self.a_above = np.zeros(L, dtype=int)
@@ -61,12 +76,10 @@ class linear_interpolated_pinning_field_equaly_spaced:
         self.indexes = np.arange(L, dtype=int)
 
     def __call__(self, a, der="0"):
-        np.floor(a, out=self.a_below, casting="unsafe").reshape(-1)
-        np.ceil(a, out=self.a_above, casting="unsafe").reshape(-1)
 
-        # Wrapping periodic boundary conditions
-        self.a_below[self.a_below >= self.npx_propagation] = self.a_below[self.a_below >= self.npx_propagation] - self.npx_propagation
-        self.a_above[self.a_above >= self.npx_propagation] = self.a_above[self.a_above >= self.npx_propagation] - self.npx_propagation
+        self.a_above = np.searchsorted(self.kinks, a, side="right")
+        self.a_below = self.a_above -1
+        # TODO:  Wrapping periodic boundary conditions
 
         # print(a_below)
 
@@ -79,6 +92,11 @@ class linear_interpolated_pinning_field_equaly_spaced:
             return value_below + slope * (a - self.kinks[self.a_below])
         elif der == "1":
             return slope
+        elif der == "-1":
+            return self.integral_values[self.indexes, self.a_below] \
+                   + value_below * (a - self.kinks[self.a_below]) \
+                   + slope * (a - self.kinks[self.a_below]) ** 2 / 2
+
 
 def brute_rosso_krauth(a, driving_a, line, gtol=1e-4, maxit=10000, direction=1, logger=None):
     r"""
