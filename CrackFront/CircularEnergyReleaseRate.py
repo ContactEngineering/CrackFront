@@ -1,5 +1,7 @@
 import numpy as np
 from Adhesion.ReferenceSolutions import JKR
+from NuMPI.IO.NetCDF import NCStructuredGrid
+
 from CrackFront.Circular import SphereCrackFrontPenetrationBase, NegativeRadiusError, RadiusTooLowError
 from scipy.optimize import OptimizeResult
 
@@ -714,3 +716,34 @@ class SphereCFPenetrationEnergyConstGcPiecewiseLinearField(SphereCrackFrontERRPe
             'nit': nit,
             })
         return result
+
+    def propagate_rosso_krauth(self, penetrations, gtol=1e-6, maxit=10000, file="data.nc",  logger=None, ):
+        """
+        Convenience function that computes a force penetration curve
+        # Reference, legacy implementation of rosso_krauth propagation
+        """
+
+
+        nc = NCStructuredGrid(file, "w", (self.npx,))
+
+        minimum_radius = self.piecewise_linear_w_radius.kinks[0]
+        a = np.ones(self.npx) * (minimum_radius+1e-14)
+        penetration_prev = - 10
+
+        for j, penetration in enumerate(penetrations):
+            print(penetration)
+            try:
+                sol = self.rosso_krauth(a, penetration, gtol=gtol, maxit=maxit,
+                                      direction=1 if penetration > penetration_prev else -1,
+                                      logger=logger)
+            except RadiusTooLowError:
+                print("lost contact")
+                break
+            assert sol.success
+            a = sol.x
+            assert (a > minimum_radius).all()
+            penetration_prev = penetration
+            self.dump(nc[j], penetration, a, dump_fields=True)
+            nc[j].nit = sol.nit
+            nc.sync()
+
