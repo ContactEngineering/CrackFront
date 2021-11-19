@@ -32,14 +32,13 @@ def penetrations(dpen, max_pen):
         yield pen
 
 
-def propagate_rosso_krauth(piecewise_linear_w,
+def propagate_rosso_krauth(piecewise_linear_w_radius,
                            gtol,
                            penetration_increment,
                            max_penetration,
                            initial_a,  # can also be an initial configuration from a restart
                            wm=1/np.pi,
                            dump_fields=True,
-                           simulation_type="pulling parabolic potential",
                            maxit=10000,
                            logger=None,
                            disable_cuda=False,
@@ -47,6 +46,7 @@ def propagate_rosso_krauth(piecewise_linear_w,
                            handle_signals=False,
                            restart=False,
                            **kwargs):
+    # TODO: rethink a good function signature.
     there_is_enough_time_left = True
     if handle_signals:
         import signal
@@ -55,17 +55,17 @@ def propagate_rosso_krauth(piecewise_linear_w,
             there_is_enough_time_left = False
 
         signal.signal(signal.SIGUSR1, recieve_signal)
-    n_pixels = piecewise_linear_w.npx_front
+    n_pixels = piecewise_linear_w_radius.npx_front
 
     # axev.axhline(2 * np.pi / structural_length)  # no disorder limit of the smallest eigenvalue
 
-    line = SphereCFPenetrationEnergyConstGcPiecewiseLinearField(piecewise_linear_w, wm=wm)
+    line = SphereCFPenetrationEnergyConstGcPiecewiseLinearField(piecewise_linear_w_radius, wm=wm)
 
     npx_front = line.npx
 
-    values = line.piecewise_linear_w.values
-    grid_spacing = line.piecewise_linear_w.grid_spacing
-    min_radius = line.piecewise_linear_w.kinks[0]
+    values = line.piecewise_linear_w_radius.values
+    grid_spacing = line.piecewise_linear_w_radius.grid_spacing
+    min_radius = line.piecewise_linear_w_radius.kinks[0]
 
     slopes = (np.roll(values, -1, axis=-1) - values) / grid_spacing
 
