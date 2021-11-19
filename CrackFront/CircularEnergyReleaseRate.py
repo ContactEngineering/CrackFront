@@ -330,13 +330,20 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
                 raise ValueError
 
             def w_radius(radius, angles):
-                return w(radius, angles) * radius
+                return w(radius, angles) * radius * 2 * np.pi / self.npx
 
             def dw_radius(radius, angles):
-                return w(radius, angles) + radius * self.dw(radius, angles)
+                return (w(radius, angles) + radius * self.dw(radius, angles)) * 2 * np.pi / self.npx
 
         elif dkc is not None or kc is not None:
             raise ValueError
+        elif w is not None or dw is not None:
+            raise ValueError
+        else:
+            def w(radius, angles):
+                return w_radius(radius, angles) / (radius * 2 * np.pi / self.npx)
+            def dw(radius, angles):
+                raise NotImplementedError
 
         self.w = w
         self.dw = dw
@@ -367,7 +374,7 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
 
     def energy(self, contact_radius, penetration):
         return self.elastic_energy(contact_radius, penetration) \
-            + 2 * np.pi / self.npx * np.sum(self.w_radius_integral(contact_radius, self.angles))
+            + np.sum(self.w_radius_integral(contact_radius, self.angles))
 
     @property
     def elastic_jacobian(self):
@@ -468,8 +475,8 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
                 radius * eerr_j
                 + eerr_0 * self.elastic_hessp(radius)
                 + 0.5 * deerr_da_0 * self._n_an_2(radius)
-                - self.w_radius(radius, self.angles)
-        )
+            ) \
+            - self.w_radius(radius, self.angles)
 
     def hessian(self, radius, penetration):
         raise NotImplementedError
@@ -500,16 +507,21 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
         elHa = self.elastic_hessp(radius)
 
         return 2 * np.pi / self.npx * (
-            (eerr_j + deerr_da_j * radius) * p
-            + 1 / self.npx * deerr_da_0 * (np.sum(elHa * p) + elHa * np.sum(p))
-            + eerr_0 * self.elastic_hessp(p)
-            + 0.5 / self.npx * deerr_da2_0 * self._n_an_2(radius) * p
+                (eerr_j + deerr_da_j * radius) * p
+                + 1 / self.npx * deerr_da_0 * (np.sum(elHa * p) + elHa * np.sum(p))
+                + eerr_0 * self.elastic_hessp(p)
+                + 0.5 / self.npx * deerr_da2_0 * self._n_an_2(radius) * p
+            ) \
             - self.dw_radius(radius, self.angles) * p
-        )
 
 
 class SphereCrackFrontERRPenetrationEnergyConstGc(SphereCrackFrontERRPenetrationEnergy):
-    def __init__(self, npx, w=None, dw=None, kc=None, dkc=None, wm=1/np.pi):
+    def __init__(self,
+                 npx,
+                 w=None, dw=None,
+                 kc=None, dkc=None,
+                 w_radius_integral=None, w_radius=None, dw_radius=None,
+                 wm=1/np.pi):
         r"""
 
         Simplification where the prefactor of the deformation energy term is approximated constant
@@ -525,7 +537,8 @@ class SphereCrackFrontERRPenetrationEnergyConstGc(SphereCrackFrontERRPenetration
 
         # TODO: enable to provide the integral of the work of adhesion field
         self.wm = wm
-        super().__init__(npx, w, dw, kc, dkc)
+        super().__init__(npx, w, dw, kc, dkc,
+                         w_radius=w_radius, dw_radius=dw_radius, w_radius_integral=w_radius_integral)
 
     def elastic_energy(self, contact_radius, penetration):
         # factors for the fourier space scalar product with rfft
@@ -550,8 +563,8 @@ class SphereCrackFrontERRPenetrationEnergyConstGc(SphereCrackFrontERRPenetration
         return 2 * np.pi / self.npx * (
                 radius * eerr_j
                 + self.wm * self.elastic_hessp(radius)
-                - self.w_radius(radius, self.angles)
-            )
+            ) \
+            - self.w_radius(radius, self.angles)
 
     def elastic_gradient(self, radius, penetration):
         if (radius <= 0).any():
@@ -577,29 +590,26 @@ class SphereCrackFrontERRPenetrationEnergyConstGc(SphereCrackFrontERRPenetration
 
         return 2 * np.pi / self.npx * (
             (eerr_j + deerr_da_j * radius) * p
-            + self.wm * self.elastic_hessp(p)
+            + self.wm * self.elastic_hessp(p)) \
             - self.dw_radius(radius, self.angles) * p
-        )
 
 
 class SphereCFPenetrationEnergyConstGcPiecewiseLinearField(SphereCrackFrontERRPenetrationEnergyConstGc):
-    def __init__(self, piecewise_linear_w, wm=1/np.pi):
-        npx_front = piecewise_linear_w.npx_front
-        self.piecewise_linear_w = piecewise_linear_w
+    def __init__(self, piecewise_linear_w_radius, wm=1 / np.pi):
+        npx_front = piecewise_linear_w_radius.npx_front
+        self.piecewise_linear_w_radius = piecewise_linear_w_radius
 
         # Note that we still provide the function w and dw, directly,
         # which is useful for postprocessing purposes or using the trust_region_solver.
         super().__init__(
             npx=npx_front,
-            w=lambda x, angles:
-                piecewise_linear_w(x, der="0")
-                / (x * 2 * np.pi / npx_front),
-            dw=lambda x, angles:
-                piecewise_linear_w(x, der="1")
-                / (x * 2 * np.pi / npx_front)
-                - piecewise_linear_w(x, der="0")
-                / (x ** 2 * 2 * np.pi / npx_front), wm=wm)
-        # piecewise_linear_w returns a d\theta w is linearly interpolated, not w
+            w_radius_integral=lambda x, angles:
+            piecewise_linear_w_radius(x, der="-1"),
+            w_radius=lambda x, angles:
+            piecewise_linear_w_radius(x, der="0"),
+            dw_radius=lambda x, angles:
+            piecewise_linear_w_radius(x, der="1"), wm=wm)
+        # piecewise_linear_w_radius returns a d\theta w is linearly interpolated, not w
         # We have to compensate for that because the gradient and hessian product for the trust region solver
         # is implemented using w and dw.
 
@@ -614,16 +624,17 @@ class SphereCFPenetrationEnergyConstGcPiecewiseLinearField(SphereCrackFrontERRPe
         a_test[0] = 1
         line_stiffness_individual = 2 * np.pi / self.npx * self.wm * self.elastic_hessp(a_test)[0]
 
-        indexes = self.piecewise_linear_w.indexes
-        kinks = self.piecewise_linear_w.kinks
-        values = self.piecewise_linear_w.values
-        grid_spacing = self.piecewise_linear_w.grid_spacing
+        indexes = self.piecewise_linear_w_radius.indexes
+        kinks = self.piecewise_linear_w_radius.kinks
+        values = self.piecewise_linear_w_radius.values
+        grid_spacing = self.piecewise_linear_w_radius.grid_spacing
 
         # index of the next (higher radius) kink of the piecewise linear work of adhesion
         colloc_point_above = np.searchsorted(kinks, a, side="right")
 
-        pinning_field_slope = (values[indexes, colloc_point_above] - values[indexes, colloc_point_above - 1]) \
-            / grid_spacing
+        pinning_field_slope = (
+            values[indexes, colloc_point_above] - values[indexes, colloc_point_above - 1]
+            ) / grid_spacing
         grad = self.elastic_gradient(a, penetration) \
             - values[indexes, colloc_point_above - 1] \
             - pinning_field_slope * (a - kinks[colloc_point_above - 1])
@@ -687,7 +698,7 @@ class SphereCFPenetrationEnergyConstGcPiecewiseLinearField(SphereCrackFrontERRPe
             if (colloc_point_above < 1).any():
                 raise RadiusTooLowError
 
-            if (colloc_point_above >= self.piecewise_linear_w.npx_propagation).any():
+            if (colloc_point_above >= self.piecewise_linear_w_radius.npx_propagation).any():
                 raise Exception
 
             nit += 1
