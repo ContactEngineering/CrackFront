@@ -310,7 +310,7 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
 
     """
 
-    def __init__(self, npx, w=None, dw=None, kc=None, dkc=None):
+    def __init__(self, npx, w=None, dw=None, kc=None, dkc=None, w_radius_integral=None, w_radius=None, dw_radius=None):
 
         # TODO: enable to provide the integral of the work of adhesion field
         self.npx = npx
@@ -319,20 +319,31 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
 
         self._elastic_jacobian = None
 
-        if w is None and dw is None:
+        if w_radius is None and dw_radius is None:
             if dkc is not None and kc is not None:
                 def w(radius, angle):
                     return kc(radius, angle) ** 2 / (2 * Es)
 
                 def dw(radius, angle):
                     return dkc(radius, angle) * kc(radius, angle) / Es
-            else:
+            elif w is None or dw is None:
                 raise ValueError
+
+            def w_radius(radius, angles):
+                return w(radius, angles) * radius
+
+            def dw_radius(radius, angles):
+                return w(radius, angles) + radius * self.dw(radius, angles)
+
         elif dkc is not None or kc is not None:
             raise ValueError
 
         self.w = w
         self.dw = dw
+
+        self.w_radius_integral = w_radius_integral
+        self.w_radius = w_radius
+        self.dw_radius = dw_radius
 
     @staticmethod
     def _n_an_2(contact_radius):
@@ -353,6 +364,10 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
             + np.pi * JKR.nonequilibrium_elastic_energy_release_rate(penetration=penetration,
                                                                      contact_radius=a0) \
             * self._n_an_2(contact_radius)
+
+    def energy(self, contact_radius, penetration):
+        return self.elastic_energy(contact_radius, penetration) \
+            + 2 * np.pi / self.npx * np.sum(self.w_radius_integral(contact_radius, self.angles))
 
     @property
     def elastic_jacobian(self):
@@ -453,7 +468,7 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
                 radius * eerr_j
                 + eerr_0 * self.elastic_hessp(radius)
                 + 0.5 * deerr_da_0 * self._n_an_2(radius)
-                - self.w(radius, self.angles) * radius
+                - self.w_radius(radius, self.angles)
         )
 
     def hessian(self, radius, penetration):
@@ -489,7 +504,7 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
             + 1 / self.npx * deerr_da_0 * (np.sum(elHa * p) + elHa * np.sum(p))
             + eerr_0 * self.elastic_hessp(p)
             + 0.5 / self.npx * deerr_da2_0 * self._n_an_2(radius) * p
-            - (self.w(radius, self.angles) + radius * self.dw(radius, self.angles)) * p
+            - self.dw_radius(radius, self.angles) * p
         )
 
 
@@ -535,7 +550,8 @@ class SphereCrackFrontERRPenetrationEnergyConstGc(SphereCrackFrontERRPenetration
         return 2 * np.pi / self.npx * (
                 radius * eerr_j
                 + self.wm * self.elastic_hessp(radius)
-                - self.w(radius, self.angles) * radius)
+                - self.w_radius(radius, self.angles)
+            )
 
     def elastic_gradient(self, radius, penetration):
         if (radius <= 0).any():
@@ -562,7 +578,7 @@ class SphereCrackFrontERRPenetrationEnergyConstGc(SphereCrackFrontERRPenetration
         return 2 * np.pi / self.npx * (
             (eerr_j + deerr_da_j * radius) * p
             + self.wm * self.elastic_hessp(p)
-            - (self.w(radius, self.angles) + radius * self.dw(radius, self.angles)) * p
+            - self.dw_radius(radius, self.angles) * p
         )
 
 
