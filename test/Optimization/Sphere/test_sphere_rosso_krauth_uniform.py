@@ -67,4 +67,5 @@ def test_JKR_curve():
 
     nc = NCStructuredGrid("RK_numpy.nc")
     np.testing.assert_allclose(nc.mean_radius,
-                               [JKR.contact_radius(penetration=nc.penetration[i]) for i in range(len(nc))])
+                               [JKR.contact_radius(penetration=nc.penetration[i]) for i in range(len(nc))],
+                               rtol=1e-7)

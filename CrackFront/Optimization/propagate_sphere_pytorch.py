@@ -83,7 +83,10 @@ def propagate_rosso_krauth(piecewise_linear_w_radius,
     kwargs_array_creation = dict(device=accelerator)
 
     indexes = torch.arange(npx_front, dtype=int)
-    grid_spacing = torch.tensor(grid_spacing, dtype=torch.double)
+
+    grid_spacing_cpu = grid_spacing
+
+    grid_spacing = torch.tensor(grid_spacing_cpu, dtype=torch.double)
     values_and_slopes = torch.from_numpy(np.stack([values, slopes], axis=2)).to(device=accelerator)
 
     nq_front_rfft = torch.fft.rfftfreq(npx_front, 1, **kwargs_array_creation)
@@ -99,8 +102,8 @@ def propagate_rosso_krauth(piecewise_linear_w_radius,
     # TODO: move to GPU
 
     colloc_point_above = np.zeros_like(initial_a, dtype=int)
-    colloc_point_above = np.ceil(initial_a / grid_spacing, casting="unsafe", out=colloc_point_above)
-    colloc_point_above += colloc_point_above == initial_a
+    colloc_point_above = np.ceil((initial_a - min_radius) / grid_spacing_cpu, casting="unsafe", out=colloc_point_above)
+    colloc_point_above += colloc_point_above * grid_spacing_cpu + min_radius == initial_a
     colloc_point_above = torch.from_numpy(colloc_point_above).to(**kwargs_array_creation)
 
     a = torch.from_numpy(initial_a).to(**kwargs_array_creation)
