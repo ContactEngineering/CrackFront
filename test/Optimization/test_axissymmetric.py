@@ -92,8 +92,12 @@ def test_axissymmetric_sinewave_linear_interp():
         fig, ax = plt.subplots()
 
         a = np.linspace(0.001, 2, 300)
-        ax.plot(JKR.penetration(contact_radius=a, work_of_adhesion=local_w(a)), JKR.force(contact_radius=a, work_of_adhesion=local_w(a)), "-k")
-        ax.plot(JKR.penetration(contact_radius=a, work_of_adhesion=w), JKR.force(contact_radius=a, work_of_adhesion=w), "--k")
+        ax.plot(JKR.penetration(contact_radius=a, work_of_adhesion=local_w(a)),
+                JKR.force(contact_radius=a, work_of_adhesion=local_w(a)),
+                "-k")
+        ax.plot(JKR.penetration(contact_radius=a, work_of_adhesion=w),
+                JKR.force(contact_radius=a, work_of_adhesion=w),
+                "--k")
 
         nc_interp = NCStructuredGrid("trust_lin_interp.nc")
         nc_direct = NCStructuredGrid("trust_direct.nc")
