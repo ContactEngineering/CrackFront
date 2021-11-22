@@ -85,21 +85,27 @@ def test_axissymmetric_sinewave_linear_interp():
         )
 
     # %%
-    import matplotlib.pyplot as plt
-    fig, ax = plt.subplots()
 
-    a = np.linspace(0.001, 2, 300)
-    ax.plot(JKR.penetration(contact_radius=a, work_of_adhesion=local_w(a)), JKR.force(contact_radius=a, work_of_adhesion=local_w(a)), "-k")
-    ax.plot(JKR.penetration(contact_radius=a, work_of_adhesion=w), JKR.force(contact_radius=a, work_of_adhesion=w), "--k")
+    if False:
 
-    nc_interp = NCStructuredGrid("trust_lin_interp.nc")
-    nc_direct = NCStructuredGrid("trust_direct.nc")
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots()
 
-    ax.plot(nc_interp.penetration, nc_interp.force, "+", label="lin. interp")
-    ax.plot(nc_direct.penetration, nc_direct.force, "x", label="analytical")
+        a = np.linspace(0.001, 2, 300)
+        ax.plot(JKR.penetration(contact_radius=a, work_of_adhesion=local_w(a)), JKR.force(contact_radius=a, work_of_adhesion=local_w(a)), "-k")
+        ax.plot(JKR.penetration(contact_radius=a, work_of_adhesion=w), JKR.force(contact_radius=a, work_of_adhesion=w), "--k")
 
-    plt.show()
+        nc_interp = NCStructuredGrid("trust_lin_interp.nc")
+        nc_direct = NCStructuredGrid("trust_direct.nc")
 
+        ax.plot(nc_interp.penetration, nc_interp.force, "+", label="lin. interp")
+        ax.plot(nc_direct.penetration, nc_direct.force, "x", label="analytical")
+
+        plt.show()
+
+
+    # %% TODO, eventually
+    # I can check bicubic vs. linear that almost all penetrations are nearly equal
 
 
 
