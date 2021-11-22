@@ -644,16 +644,21 @@ class SphereCFPenetrationEnergyConstGcPiecewiseLinearField(SphereCrackFrontERRPe
             print("WARNING: Starting Configuration is not purely advancing or receding")
 
         nit = 0
-        while (np.max(abs(grad)) > gtol) and nit < maxit:
-            if logger:
-                logger.st(["it", "max. residual"], [nit, np.max(abs(grad))])
-
+        while nit < maxit:
             # Nullify the force on each pixel
             pinning_field_slope = (values[indexes, colloc_point_above] - values[indexes, colloc_point_above - 1]) \
                 / grid_spacing
             grad = self.elastic_gradient(a, penetration) \
                 - values[indexes, colloc_point_above - 1] \
                 - pinning_field_slope * (a - kinks[colloc_point_above - 1])
+
+            max_abs_grad = np.max(abs(grad))
+
+            if max_abs_grad < gtol:
+                break
+
+            if logger:
+                logger.st(["it", "max. residual"], [nit, max_abs_grad])
 
             eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
                 contact_radius=a,

@@ -89,7 +89,7 @@ def propagate_rosso_krauth(piecewise_linear_w_radius,
     grid_spacing = torch.tensor(grid_spacing_cpu, dtype=torch.double)
     values_and_slopes = torch.from_numpy(np.stack([values, slopes], axis=2)).to(device=accelerator)
 
-    nq_front_rfft = torch.fft.rfftfreq(npx_front, 1, **kwargs_array_creation)
+    nq_front_rfft = torch.fft.rfftfreq(npx_front, 1 / npx_front, **kwargs_array_creation)
 
     #qk = 2 * np.pi / structural_length
     #a_test = torch.zeros(npx_front, **kwargs_array_creation)
