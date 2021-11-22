@@ -722,7 +722,13 @@ class SphereCFPenetrationEnergyConstGcPiecewiseLinearField(SphereCrackFrontERRPe
             })
         return result
 
-    def propagate_rosso_krauth(self, penetrations, gtol=1e-6, maxit=10000, file="data.nc",  logger=None, ):
+    def propagate_rosso_krauth(self,
+                               penetrations,
+                               gtol=1e-6,
+                               maxit=10000,
+                               file="data.nc",
+                               logger=None,
+                               dump_fields=False):
         """
         Convenience function that computes a force penetration curve
         # Reference, legacy implementation of rosso_krauth propagation
@@ -748,7 +754,7 @@ class SphereCFPenetrationEnergyConstGcPiecewiseLinearField(SphereCrackFrontERRPe
             a = sol.x
             assert (a > minimum_radius).all()
             penetration_prev = penetration
-            self.dump(nc[j], penetration, a, dump_fields=True)
+            self.dump(nc[j], penetration, a, dump_fields=dump_fields)
             nc[j].nit = sol.nit
             nc.sync()
 
