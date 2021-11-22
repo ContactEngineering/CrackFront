@@ -1,6 +1,7 @@
 import numpy as np
 from Adhesion.ReferenceSolutions import JKR
 from NuMPI.IO.NetCDF import NCStructuredGrid
+from SurfaceTopography.Generation import fourier_synthesis
 
 from CrackFront.Circular import SphereCrackFrontPenetrationBase, NegativeRadiusError, RadiusTooLowError
 from scipy.optimize import OptimizeResult
@@ -9,6 +10,7 @@ from scipy.optimize import OptimizeResult
 Es = 3 / 4
 w = 1 / np.pi
 R = 1.
+maugis_K = 1.
 
 _jkrkwargs = dict(contact_modulus=Es, radius=R)
 
@@ -758,3 +760,37 @@ class SphereCFPenetrationEnergyConstGcPiecewiseLinearField(SphereCrackFrontERRPe
             nc[j].nit = sol.nit
             nc.sync()
 
+
+def generate_random_work_of_adhesion(
+    pixel_size,
+    n_pixels,
+    shortcut_wavelength,
+    seed,
+    rms,
+    n_pixels_fourier_interpolation=None,
+    **kwargs):
+    """
+
+    Generates topography with average `w = 1 / np.pi` and rms fluctuations `rms * w`.
+
+    it is white noise fourier filtered at wavelengths below `shortcut_wavelength`
+
+    """
+
+    if n_pixels_fourier_interpolation is None:
+        n_pixels_fourier_interpolation = n_pixels
+
+    np.random.seed(seed)
+
+    w_landscape = fourier_synthesis(
+        (n_pixels, n_pixels),
+        [n_pixels * pixel_size] * 2,
+        long_cutoff=shortcut_wavelength,
+        hurst=.5,  # doesn't matter
+        short_cutoff=shortcut_wavelength,
+        c0=1.
+        ).interpolate_fourier((n_pixels_fourier_interpolation, n_pixels_fourier_interpolation))
+
+    w_landscape = w_landscape.scale(w * rms / w_landscape.rms_height_from_area()).squeeze()
+    w_landscape._heights += w
+    return w_landscape

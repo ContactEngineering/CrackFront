@@ -68,7 +68,7 @@ import time
 def test_restart():
 
     params = dict(
-        line_length=256,  # starting from 8000 pix numpy starts to slower then cuda
+        line_length=256,
         propagation_length=256,
         rms=.1,
         structural_length=64,

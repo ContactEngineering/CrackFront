@@ -67,7 +67,7 @@ nit_numpy = []
 
 line_lengths = []
 
-for refine  in [1, 2, 4, 8, 16]:
+for refine in [1, 2, 4, 8, 16]:
 
     params = dict(
             # pixel_size_radial=0.1,
@@ -157,7 +157,6 @@ for refine  in [1, 2, 4, 8, 16]:
         disable_cuda=False
     )
     time_gpu.append(time.time() - start_time)
-
 
     nc = NCStructuredGrid("torch_gpu.nc")
     nit_gpu.append(np.sum(nc.nit[:]))

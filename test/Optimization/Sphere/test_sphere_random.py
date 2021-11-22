@@ -17,38 +17,7 @@ from CrackFront.Optimization.RossoKrauth import linear_interpolated_pinning_fiel
 from CrackFront.Optimization.propagate_sphere_pytorch import propagate_rosso_krauth
 from CrackFront.Optimization.propagate_sphere_trust_region import penetrations_generator, simulate_crack_front
 
-# nondimensional units following Maugis Book:
-Es = 3 / 4
-w = 1 / np.pi
-R = 1.
-maugis_K = 1.
-mean_Kc = np.sqrt(2 * Es * w)
-
-def generate_random_field(
-    pixel_size,
-    n_pixels,
-    shortcut_wavelength,
-    seed,
-    rms,
-    n_pixels_fourier_interpolation=None,
-    **kwargs):
-    if n_pixels_fourier_interpolation is None:
-        n_pixels_fourier_interpolation = n_pixels
-
-    np.random.seed(seed)
-
-    w_landscape = fourier_synthesis(
-        (n_pixels, n_pixels),
-        [n_pixels * pixel_size] * 2,
-        long_cutoff=shortcut_wavelength,
-        hurst=.5,  # doesn't matter
-        short_cutoff=shortcut_wavelength,
-        c0=1.
-        ).interpolate_fourier((n_pixels_fourier_interpolation, n_pixels_fourier_interpolation))
-
-    w_landscape = w_landscape.scale(w *  rms / w_landscape.rms_height_from_area()).squeeze()
-    w_landscape._heights += w
-    return w_landscape
+from CrackFront.CircularEnergyReleaseRate import Es, w, R, maugis_K, generate_random_work_of_adhesion
 
 
 def test_random_linear_interp():
@@ -85,7 +54,7 @@ def test_random_linear_interp():
     sample_radii = np.arange(n_pixels_radial) * params["pixel_size_radial"] + minimum_radius
     cf_angles = np.arange(params["n_pixels_front"]) * 2 * np.pi / npx_front
 
-    w_topography = generate_random_field(**params)
+    w_topography = generate_random_work_of_adhesion(**params)
 
     interpolator = Interpolator(w_topography)
 
@@ -185,7 +154,7 @@ def test_random_rosso_krauth():
     sample_radii = np.arange(n_pixels_radial) * params["pixel_size_radial"] + minimum_radius
     cf_angles = np.arange(params["n_pixels_front"]) * 2 * np.pi / npx_front
 
-    w_topography = generate_random_field(**params)
+    w_topography = generate_random_work_of_adhesion(**params)
 
     interpolator = Interpolator(w_topography)
 

@@ -113,8 +113,12 @@ def propagate_rosso_krauth(piecewise_linear_w_radius,
     integer_penetration = 0
     direction = 1
     if i > 0: # It is a restart and the direction is not yet clear
-        raise NotImplementedError("TODO")
-        # I think I can deduce it from the previous penetrations
+        # simply go thrue all previous iterations to find again what the previous penetration was.
+        for j in range(i):
+            penetration_cpu = integer_penetration * penetration_increment
+            if penetration_cpu >= max_penetration:
+                direction = -1
+            integer_penetration += direction
     else:
         direction = 1
 
