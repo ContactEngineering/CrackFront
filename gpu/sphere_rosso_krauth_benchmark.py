@@ -1,6 +1,14 @@
+# %%
 import time
 import numpy as np
 import matplotlib.pyplot as plt
+import sys, os
+sys.path.insert(0, os.path.abspath("../")) # Use local code and not the one in the singularity image
+from CrackFront.Optimization.propagate_elastic_line_pytorch import propagate_rosso_krauth
+
+import CrackFront
+CrackFront.__file__
+
 
 # %%
 
@@ -49,7 +57,6 @@ def generate_random_field(
 
 
 # %%
-
 time_gpu = []
 time_cpu = []
 time_numpy = []
@@ -78,6 +85,7 @@ for refine  in [1, 2, 4, 8, 16]:
             # n_pixels_fourier_interpolation=128,
             pixel_size=0.02 / refine,
         )
+    print("############ npx_front: ", npx_frontnt)
     npx_front = params["n_pixels_front"]
     assert params["shortcut_wavelength"] > 2 * params["pixel_size"]
     params.update(dict(pixel_size_radial=params["shortcut_wavelength"] / 16))
@@ -120,7 +128,6 @@ for refine  in [1, 2, 4, 8, 16]:
         )
     time_numpy.append(time.time() - start_time)
 
-    # %% Pytorch Rosso-Krauth implementation, CPU execution
     print("Pytorch implementation of Rosso-Krauth")
     start_time = time.time()
     propagate_rosso_krauth(
@@ -136,7 +143,6 @@ for refine  in [1, 2, 4, 8, 16]:
     )
     time_cpu.append(time.time() - start_time)
 
-    # %% Pytorch Rosso-Krauth implementation, GPU execution
     print("Pytorch implementation of Rosso-Krauth")
     start_time = time.time()
     propagate_rosso_krauth(
@@ -160,6 +166,7 @@ for refine  in [1, 2, 4, 8, 16]:
     nc = NCStructuredGrid("numpy.nc")
     nit_numpy.append(np.sum(nc.nit[:]))
 
+# %%
 import matplotlib.pyplot as plt
 fig, ax = plt.subplots()
 
@@ -186,3 +193,11 @@ ax.set_ylabel("time per iteration")
 ax.set_xlabel("line length")
 ax.set_xscale("log")
 ax.set_yscale("log")
+
+# %%
+print(line_lengths[-1])
+
+# %% [markdown]
+# ## Conclusion: 
+#
+# The crossover in performance, where gpu gets faster than numpy, is similar than for the straight line.
