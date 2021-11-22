@@ -120,7 +120,7 @@ for refine  in [1, 2, 4, 8, 16]:
     torch.cuda.reset_peak_memory_stats()
     start_time = time.time()
     propagate_rosso_krauth(
-        cf.piecewise_linear_w_radius,
+        cf,
         penetration_increment=params["penetration_increment"],
         max_penetration=params["max_penetration"],
         initial_a=np.ones(cf.npx) * (cf.piecewise_linear_w_radius.kinks[0]),

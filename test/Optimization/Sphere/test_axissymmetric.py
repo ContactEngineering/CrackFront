@@ -187,7 +187,7 @@ def test_axissymmetric_sinewave_rosso_krauth():
     # %% Pytorch Rosso-Krauth implementation
 
     propagate_rosso_krauth(
-        cf.piecewise_linear_w_radius,
+        cf,
         penetration_increment=penetration_increment,
         max_penetration=max_penetration,
         initial_a=np.ones(cf.npx) * cf.piecewise_linear_w_radius.kinks[0],

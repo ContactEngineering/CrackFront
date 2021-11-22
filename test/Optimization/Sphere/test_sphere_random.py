@@ -212,7 +212,7 @@ def test_random_rosso_krauth():
     # %% Pytorch Rosso-Krauth implementation
     print("Pytorch implementation of Rosso-Krauth")
     propagate_rosso_krauth(
-        cf.piecewise_linear_w_radius,
+        cf,
         penetration_increment=params["penetration_increment"],
         max_penetration=params["max_penetration"],
         initial_a=np.ones(cf.npx) * (cf.piecewise_linear_w_radius.kinks[0]),

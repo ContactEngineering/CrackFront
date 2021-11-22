@@ -35,7 +35,7 @@ def test_JKR_curve():
     cf = SphereCFPenetrationEnergyConstGcPiecewiseLinearField(piecewise_linear_w, wm=w)
 
     propagate_rosso_krauth(
-        cf.piecewise_linear_w_radius,
+        cf,
         penetration_increment=0.1,
         max_penetration=0.5,
         initial_a=np.ones(cf.npx) * cf.piecewise_linear_w_radius.kinks[0],
@@ -98,7 +98,7 @@ def test_restart():
     cf = SphereCFPenetrationEnergyConstGcPiecewiseLinearField(piecewise_linear_w, wm=w)
 
     propagate_rosso_krauth(
-        cf.piecewise_linear_w_radius,
+        cf,
         initial_a=np.ones(cf.npx) * (cf.piecewise_linear_w_radius.kinks[0]),
         dump_fields=False,
         filename="uninterupted.nc",
@@ -119,7 +119,7 @@ def test_restart():
 
     # simulate until interrupted by signal
     assert not propagate_rosso_krauth(
-        cf.piecewise_linear_w_radius,
+        cf,
         initial_a=np.ones(cf.npx) * (cf.piecewise_linear_w_radius.kinks[0]),
         dump_fields=False,
         filename="interupted.nc",
@@ -137,7 +137,7 @@ def test_restart():
 
         # restart and finish simulation
         not_yet_finished = not propagate_rosso_krauth(
-            cf.piecewise_linear_w_radius,
+            cf,
             dump_fields=False,
             initial_a=np.load("restart_position.npy"),
             filename="interupted.nc",

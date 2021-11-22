@@ -32,12 +32,11 @@ def penetrations(dpen, max_pen):
         yield pen
 
 
-def propagate_rosso_krauth(piecewise_linear_w_radius,
+def propagate_rosso_krauth(line,
                            gtol,
                            penetration_increment,
                            max_penetration,
                            initial_a,  # can also be an initial configuration from a restart
-                           wm=1/np.pi,
                            dump_fields=True,
                            maxit=10000,
                            logger=None,
@@ -55,11 +54,6 @@ def propagate_rosso_krauth(piecewise_linear_w_radius,
             there_is_enough_time_left = False
 
         signal.signal(signal.SIGUSR1, recieve_signal)
-    n_pixels = piecewise_linear_w_radius.npx_front
-
-    # axev.axhline(2 * np.pi / structural_length)  # no disorder limit of the smallest eigenvalue
-
-    line = SphereCFPenetrationEnergyConstGcPiecewiseLinearField(piecewise_linear_w_radius, wm=wm)
 
     npx_front = line.npx
 
@@ -113,7 +107,7 @@ def propagate_rosso_krauth(piecewise_linear_w_radius,
     integer_penetration = 0
     direction = 1
     if i > 0: # It is a restart and the direction is not yet clear
-        # simply go thrue all previous iterations to find again what the previous penetration was.
+        # simply go through all previous iterations to find again what the previous penetration was.
         for j in range(i):
             penetration_cpu = integer_penetration * penetration_increment
             if penetration_cpu >= max_penetration:
@@ -143,7 +137,8 @@ def propagate_rosso_krauth(piecewise_linear_w_radius,
                 outer_eastic_stifness = 2 * np.pi / npx_front * eerr_j
 
                 grad = a * outer_eastic_stifness
-                grad.add_(2 * np.pi / npx_front * wm * torch.fft.irfft(nq_front_rfft * torch.fft.rfft(a), n=npx_front))
+                grad.add_(2 * np.pi / npx_front * line.wm * torch.fft.irfft(nq_front_rfft * torch.fft.rfft(a), n=npx_front))
+                # TODO: I have some scalars here that live on CPU, but it doesn't seem to make a big difference.
 
                 # Note: here we have the opposite sign compared to the elastic line code because values is the work of adhesion
                 grad.add_(- current_value_and_slope[:, 0])
@@ -156,7 +151,6 @@ def propagate_rosso_krauth(piecewise_linear_w_radius,
 
                 if logger:
                     logger.st(["it", "max. residual"], [nit, max_abs_grad])
-
 
                 # strictly speaking I should take into account that this is nonlinear
                 # But in practice with a fine discretisation the stiffness associated
