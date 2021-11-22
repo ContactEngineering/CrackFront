@@ -1,12 +1,13 @@
+
+import numpy as np
+import matplotlib.pyplot as plt
+
 from CrackFront.Roughness import (
     straight_crack_sif_from_roughness,
     circular_crack_sif_from_roughness,
     circular_crack_sif_from_roughness_memory_friendly
     )
 from SurfaceTopography import Topography
-
-import numpy as np
-import matplotlib.pyplot as plt
 
 import pytest
 
