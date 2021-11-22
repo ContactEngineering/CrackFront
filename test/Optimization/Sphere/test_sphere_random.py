@@ -65,12 +65,12 @@ def test_random_linear_interp():
         gtol=1e-8,
         maxit=10000000,
         n_pixels=256,
-        #n_pixels_fourier_interpolation=128,
+        # n_pixels_fourier_interpolation=128,
         pixel_size=0.02,
     )
     npx_front = params["n_pixels_front"]
     assert params["shortcut_wavelength"] > 2 * params["pixel_size"]
-    params.update(dict(pixel_size_radial = params["shortcut_wavelength"] / 16) )
+    params.update(dict(pixel_size_radial=params["shortcut_wavelength"] / 16))
     pulloff_radius = (np.pi * w * R ** 2 / 6 * maugis_K) ** (1 / 3)
 
     minimum_radius = pulloff_radius / 10
@@ -130,21 +130,25 @@ def test_random_linear_interp():
 
     # %%
 
-    if True:
+    nc_interp = NCStructuredGrid("trust_lin_interp.nc")
+    nc_direct = NCStructuredGrid("trust_direct.nc")
 
+    if False:
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
 
         a = np.linspace(0.001, 2, 300)
         ax.plot(JKR.penetration(contact_radius=a, work_of_adhesion=w), JKR.force(contact_radius=a, work_of_adhesion=w), "--k")
-
-        nc_interp = NCStructuredGrid("trust_lin_interp.nc")
-        nc_direct = NCStructuredGrid("trust_direct.nc")
-
         ax.plot(nc_interp.penetration, nc_interp.force, "+", label="lin. interp")
         ax.plot(nc_direct.penetration, nc_direct.force, "x", label="analytical")
 
         plt.show()
+
+    np.testing.assert_allclose(nc_interp.penetration, nc_direct.penetration)
+
+    # we need a certain tolerance because discrepancies have to be expected due to the different interpolation.
+    np.testing.assert_allclose(nc_interp.force, nc_direct.force, rtol=1e-2)
+    np.testing.assert_allclose(nc_interp.mean_radius, nc_direct.mean_radius, rtol=1e-2)
 
 
 def test_random_rosso_krauth():
