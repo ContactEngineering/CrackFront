@@ -52,6 +52,7 @@ def propagate_rosso_krauth(line,
         def recieve_signal(signum, stack):
             nonlocal there_is_enough_time_left
             there_is_enough_time_left = False
+            print("Recieved signal, interupting simulation at the next penetration step")
 
         signal.signal(signal.SIGUSR1, recieve_signal)
 
@@ -208,6 +209,7 @@ def propagate_rosso_krauth(line,
 
             if not there_is_enough_time_left:
                 # if not dump_fields: # this is actually useless when we dumpfields, but who cares ?
+                print("Saving front position for restart")
                 np.save("restart_position.npy", a_cpu)
                 break
 
