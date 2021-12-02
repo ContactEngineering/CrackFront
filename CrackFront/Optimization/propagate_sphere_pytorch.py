@@ -21,7 +21,7 @@ _jkrkwargs = dict(contact_modulus=Es, radius=R)
 
 
 class LinearInterpolatedPinningFieldUniformFromFile:
-    def __init__(self, filename, minimum_radius, grid_spacing, accelerator):
+    def __init__(self, filename, min_radius, grid_spacing, accelerator):
         """
         Linearly interpolates the pinning field in crack propagation direction
 
@@ -47,7 +47,7 @@ class LinearInterpolatedPinningFieldUniformFromFile:
         self.npx_propagation = Lx
 
         self.grid_spacing = grid_spacing
-        self.minimum_radius = minimum_radius
+        self.min_radius = min_radius
         self.indexes = np.arange(L, dtype=int)
 
     def kink_position(self, collocation_point):
@@ -153,11 +153,7 @@ def propagate_rosso_krauth(line,
 
     npx_front = line.npx
 
-    values = line.piecewise_linear_w_radius.values
     grid_spacing = line.piecewise_linear_w_radius.grid_spacing
-    min_radius = line.piecewise_linear_w_radius.kinks[0]
-
-    slopes = (np.roll(values, -1, axis=-1) - values) / grid_spacing
 
     # TORCH code starts here
     if torch.cuda.is_available() and not disable_cuda:
@@ -176,9 +172,6 @@ def propagate_rosso_krauth(line,
 
     grid_spacing_cpu = grid_spacing
 
-    grid_spacing = torch.tensor(grid_spacing_cpu, dtype=torch.double)
-    values_and_slopes = torch.from_numpy(np.stack([values, slopes], axis=2)).to(device=accelerator)
-
     nq_front_rfft = torch.fft.rfftfreq(npx_front, 1 / npx_front, **kwargs_array_creation)
 
     #qk = 2 * np.pi / structural_length
@@ -192,11 +185,15 @@ def propagate_rosso_krauth(line,
     # TODO: move to GPU
 
     colloc_point_above = np.zeros_like(initial_a, dtype=int)
-    colloc_point_above = np.ceil((initial_a - min_radius) / grid_spacing_cpu, casting="unsafe", out=colloc_point_above)
-    colloc_point_above += colloc_point_above * grid_spacing_cpu + min_radius == initial_a
+    colloc_point_above = np.ceil((initial_a - line.piecewise_linear_w_radius.min_radius) / grid_spacing_cpu, casting="unsafe", out=colloc_point_above)
+    colloc_point_above += colloc_point_above * grid_spacing_cpu + line.piecewise_linear_w_radius.min_radius == initial_a
     colloc_point_above = torch.from_numpy(colloc_point_above).to(**kwargs_array_creation)
 
+    # Simply load all data, for now.
+    line.piecewise_linear_w_radius.load_data(0, line.piecewise_linear_w_radius.npx_propagation)
+
     a = torch.from_numpy(initial_a).to(**kwargs_array_creation)
+
 
     nc = NCStructuredGrid(filename, "a" if restart else "w", (npx_front,))
     i = len(nc)
@@ -222,9 +219,7 @@ def propagate_rosso_krauth(line,
             while nit < maxit:
                 # Nullify the force on each pixel
 
-
-                ########## TODO: MEM
-                current_value_and_slope = values_and_slopes[indexes, (colloc_point_above - 1), :]
+                current_value_and_slope = line.piecewise_linear_w_radius.values_and_slopes(colloc_point_above - 1)
 
                 # grad = line.elastic_gradient(a, penetration) \
                 eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
@@ -239,7 +234,7 @@ def propagate_rosso_krauth(line,
 
                 # Note: here we have the opposite sign compared to the elastic line code because values is the work of adhesion
                 grad.add_(- current_value_and_slope[:, 0])
-                grad.add_(- current_value_and_slope[:, 1] * (a - (min_radius + grid_spacing * (colloc_point_above - 1))))
+                grad.add_(- current_value_and_slope[:, 1] * (a - line.piecewise_linear_w_radius.kink_position(colloc_point_above - 1)))
 
                 max_abs_grad = torch.max(torch.abs(grad))
                 # TODO: Optimization: I don't need to evaluate this every iteration
@@ -268,8 +263,11 @@ def propagate_rosso_krauth(line,
                     # Additionally, when the curvature is negative, the increment is negative
                     # but the front should actually move forward.
                     # In this case as well we advance the front until the edge of the next pixel
-                    mask_new_pixel = torch.logical_or(a_new >= min_radius + colloc_point_above * grid_spacing, mask_negative_stiffness)
-                    a_new = torch.where(mask_new_pixel, min_radius + grid_spacing * colloc_point_above, a_new)
+                    mask_new_pixel = torch.logical_or(
+                        a_new >= line.piecewise_linear_w_radius.kink_position(colloc_point_above),
+                        mask_negative_stiffness)
+                    a_new = torch.where(mask_new_pixel,
+                                        line.piecewise_linear_w_radius.kink_position(colloc_point_above).to(torch.float64), a_new)
 
                     colloc_point_above.add_(mask_new_pixel)
 
@@ -278,9 +276,11 @@ def propagate_rosso_krauth(line,
                     # We just make sure these points do not move backwards
                     a = torch.maximum(a_new, a)
                 elif direction == -1:
-                    mask_new_pixel = torch.logical_or(a_new <= min_radius + grid_spacing * (colloc_point_above - 1),
-                                                      mask_negative_stiffness)
-                    a_new = torch.where(mask_new_pixel, min_radius + grid_spacing * (colloc_point_above - 1), a_new)
+                    mask_new_pixel = torch.logical_or(
+                        a_new <= line.piecewise_linear_w_radius.kink_position(colloc_point_above - 1).to(torch.float64),
+                        mask_negative_stiffness)
+                    a_new = torch.where(mask_new_pixel,
+                                        line.piecewise_linear_w_radius.kink_position(colloc_point_above - 1).to(torch.float64), a_new)
 
                     colloc_point_above.add_(mask_new_pixel, alpha=-1)
                     # Why not just -= ? -> -= is not allowed for boolean arrays

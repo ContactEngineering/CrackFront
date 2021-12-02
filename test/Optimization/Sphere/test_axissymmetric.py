@@ -1,6 +1,7 @@
 
 import numpy as np
 import pytest
+import torch
 from Adhesion.ReferenceSolutions import JKR
 from ContactMechanics.Tools.Logger import Logger
 from NuMPI.IO.NetCDF import NCStructuredGrid
@@ -13,7 +14,10 @@ from CrackFront.CircularEnergyReleaseRate import (
     SphereCrackFrontERRPenetrationLin
     )
 from CrackFront.Optimization.RossoKrauth import linear_interpolated_pinning_field_equaly_spaced
-from CrackFront.Optimization.propagate_sphere_pytorch import propagate_rosso_krauth
+from CrackFront.Optimization.propagate_sphere_pytorch import (
+    propagate_rosso_krauth,
+    LinearInterpolatedPinningFieldUniformFromFile
+    )
 from CrackFront.Optimization.propagate_sphere_trust_region import penetrations_generator, simulate_crack_front
 
 # nondimensional units following Maugis Book:
@@ -133,8 +137,9 @@ def test_axissymmetric_sinewave_rosso_krauth():
 
     w_values = local_w(sample_radii.reshape(1, -1)) * np.ones((npx_front, 1))
 
-    piecewise_linear_w_radius = linear_interpolated_pinning_field_equaly_spaced(
-        w_values * sample_radii * 2 * np.pi / npx_front, sample_radii)
+    w_radius_values = w_values * sample_radii * 2 * np.pi / npx_front
+
+    piecewise_linear_w_radius = linear_interpolated_pinning_field_equaly_spaced(w_radius_values, sample_radii)
 
     penetration_increment = wavelength / 4
     max_penetration = 1.
@@ -186,11 +191,24 @@ def test_axissymmetric_sinewave_rosso_krauth():
 
     # %% Pytorch Rosso-Krauth implementation
 
+    grid_spacing = sample_radii[1] - sample_radii[0]
+    LinearInterpolatedPinningFieldUniformFromFile.save_values_and_slopes_to_file(
+        np.ascontiguousarray(w_radius_values.T),
+        grid_spacing,
+        filename="values_and_slopes.npy")
+
+    cf.piecewise_linear_w_radius = LinearInterpolatedPinningFieldUniformFromFile(
+        filename="values_and_slopes.npy",
+        min_radius=sample_radii[0],
+        grid_spacing=grid_spacing,
+        accelerator=torch.device("cpu")
+        )
+
     propagate_rosso_krauth(
         cf,
         penetration_increment=penetration_increment,
         max_penetration=max_penetration,
-        initial_a=np.ones(cf.npx) * cf.piecewise_linear_w_radius.kinks[0],
+        initial_a=np.ones(cf.npx) * sample_radii[0],
         gtol=1e-08,
         dump_fields=True,
         filename="RK_torch.nc"
@@ -213,7 +231,6 @@ def test_axissymmetric_sinewave_rosso_krauth():
         a = np.linspace(0.001, 2, 300)
         ax.plot(JKR.penetration(contact_radius=a, work_of_adhesion=local_w(a)), JKR.force(contact_radius=a, work_of_adhesion=local_w(a)), "-k")
         ax.plot(JKR.penetration(contact_radius=a, work_of_adhesion=w), JKR.force(contact_radius=a, work_of_adhesion=w), "--k")
-
 
         ax.plot(nc_direct.penetration, nc_direct.force, "o", label="analytical")
         ax.plot(nc_interp.penetration, nc_interp.force, "+", label="lin. interp")
