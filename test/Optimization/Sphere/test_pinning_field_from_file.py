@@ -38,7 +38,7 @@ def test_pinning_field_from_file():
     pf = LinearInterpolatedPinningFieldUniformFromFile(
         filename="values_and_slopes.npy",
         grid_spacing=grid_spacing,
-        minimum_radius=minimum_radius,
+        min_radius=minimum_radius,
         accelerator=accelerator
         )
 
