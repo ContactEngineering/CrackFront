@@ -5,6 +5,8 @@ import numpy as np
 from Adhesion.ReferenceSolutions import JKR
 from NuMPI.IO.NetCDF import NCStructuredGrid
 import sys
+from NuMPI.IO import load_npy, make_mpi_file_view
+from NuMPI import MPI
 
 from CrackFront.Circular import RadiusTooLowError
 from CrackFront.CircularEnergyReleaseRate import SphereCFPenetrationEnergyConstGcPiecewiseLinearField
@@ -16,6 +18,99 @@ w = 1 / np.pi
 R = 1.
 
 _jkrkwargs = dict(contact_modulus=Es, radius=R)
+
+
+class LinearInterpolatedPinningFieldUniformFromFile:
+    def __init__(self, filename, minimum_radius, grid_spacing, accelerator):
+        """
+        Linearly interpolates the pinning field in crack propagation direction
+
+        Parameters:
+        -----------
+        values: np.ndarray of shape (npx_front, npx_propagation)
+            values of the pinning field at the kinks
+        kinks: np.ndarray of shape (npx_propagation)
+            equidistantly spaced points representing the grid of the piecewise linear interpolation
+
+        """
+
+        self.filename = filename
+        self.accelerator = accelerator
+
+        self.file = make_mpi_file_view(filename, MPI.COMM_SELF,
+                                            format="npy")
+
+        Lx, L = self.file.nb_grid_pts
+        L = L // 2
+
+        self.npx_front = L
+        self.npx_propagation = Lx
+
+        self.grid_spacing = grid_spacing
+        self.minimum_radius = minimum_radius
+        self.indexes = np.arange(L, dtype=int)
+
+    def kink_position(self, collocation_point):
+        # TODO: should I shift these guys to the accelerator ?
+        return self.min_radius + self.grid_spacing * collocation_point
+
+    def kinks(self):
+        return self.kink_position(np.arange(self.npx_propagation))
+
+    def values_and_slopes(self, collocation_point):
+        r"""
+        Parameters:
+        -----------
+        collocation_point: np.array(size=npx_front, dtype=int )
+            index of the outmost collocation point within the contact area
+        Returns:
+        --------
+        values_and_slopes: np.array(size=(npx_front, 2), dtype=float)
+           array containing for collocation_point the pinning force value and the slope towards the next outward pixel.
+        """
+        local_indexes = collocation_point - self.subdomain[0]
+        return self.subdomain_data[local_indexes, self.indexes, :]
+
+    @property
+    def nb_subdomain_grid_pts(self):
+        return self.subdomain[1] - self.subdomain[0], self.npx_front, 2
+
+    @property
+    def subdomain_locations(self):
+        return self.subdomain[0], 0, 0
+
+    @property
+    def nb_domain_grid_pts(self):
+        return self.npx_propagation, self.npx_front, 2
+
+    def load_data(self, colloc_min, colloc_max):
+        self.subdomain = torch.from_numpy(np.array([colloc_min, colloc_max])).to(device=self.accelerator)
+        n_subdomain = int(self.subdomain[1] - self.subdomain[0])
+        self.subdomain_data = torch.from_numpy(
+            self.file.read([int(self.subdomain[0]), 0],
+                           (n_subdomain, self.npx_front * 2),
+                           ).reshape(n_subdomain, self.npx_front, 2)).to(device=self.accelerator)
+
+    @staticmethod
+    def save_values_and_slopes_to_file(values, grid_spacing, filename="values_and_slopes.npy"):
+        """
+        Parameters:
+        -----------
+        values: np.array(size=(npx_propagation, npx_front))
+        """
+
+        slopes = (np.roll(values, -1, axis=0) - values) / grid_spacing
+
+        # Workaround because NuMPI has no 3D data support
+        values_and_slopes = np.zeros((values.shape[0], values.shape[1] * 2))
+        values_and_slopes[:, ::2] = values
+        values_and_slopes[:, 1::2] = slopes
+
+        # [[values[0,0], slope[0,0], value[0,1], slope[0,1]]]
+        # [[values[1,0], slope[1,0], value[1,1], slope[1,1]]]
+        # [[values[2,0], slope[2,0], value[2,1], slope[2,1]]]
+
+        np.save(filename, values_and_slopes)
 
 
 def penetrations(dpen, max_pen):
@@ -107,7 +202,7 @@ def propagate_rosso_krauth(line,
     i = len(nc)
     integer_penetration = 0
     direction = 1
-    if i > 0: # It is a restart and the direction is not yet clear
+    if i > 0:  # It is a restart and the direction is not yet clear
         # simply go through all previous iterations to find again what the previous penetration was.
         for j in range(i):
             penetration_cpu = integer_penetration * penetration_increment
@@ -116,7 +211,6 @@ def propagate_rosso_krauth(line,
             integer_penetration += direction
     else:
         direction = 1
-
 
     try:
         while True:
@@ -128,6 +222,8 @@ def propagate_rosso_krauth(line,
             while nit < maxit:
                 # Nullify the force on each pixel
 
+
+                ########## TODO: MEM
                 current_value_and_slope = values_and_slopes[indexes, (colloc_point_above - 1), :]
 
                 # grad = line.elastic_gradient(a, penetration) \
