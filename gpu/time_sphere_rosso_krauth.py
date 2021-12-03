@@ -182,7 +182,9 @@ cf = SphereCFPenetrationEnergyConstGcPiecewiseLinearField(
 # I run it once "for nothing" to awaken the GPU. Otherwise the first GPU operation might seem extremely slow. 
 propagate_rosso_krauth(cf, initial_a=initial_a.copy(),filename="torch_timing.nc",**params,)
 
+torch.cuda.reset_peak_memory_stats()
 # %lprun -f propagate_rosso_krauth -T line_profile_sphere_rosso_krauth.txt propagate_rosso_krauth(cf, initial_a=initial_a.copy(),filename="torch_timing.nc",**params,)
+print("max_memory_allocated:", torch.cuda.max_memory_allocated())
 # -
 
 # Full
@@ -201,6 +203,7 @@ propagate_rosso_krauth(cf, initial_a=initial_a.copy(),filename="torch_timing.nc"
 
 # ### GPU, but pinning field array on CPU
 
+# +
 cf = SphereCFPenetrationEnergyConstGcPiecewiseLinearField(
     piecewise_linear_w_radius=LinearInterpolatedPinningFieldUniformFromFile(
             filename="values_and_slopes.npy",
@@ -210,7 +213,11 @@ cf = SphereCFPenetrationEnergyConstGcPiecewiseLinearField(
             data_device=cpu,
             ),      
     wm=w)
+
+torch.cuda.reset_peak_memory_stats()
 # %lprun -f propagate_rosso_krauth -T line_profile_sphere_rosso_krauth.txt propagate_rosso_krauth(cf, initial_a=initial_a.copy(),filename="torch_timing.nc",**params,)
+print("max_memory_allocated:", torch.cuda.max_memory_allocated())
+# -
 
 # Full
 
@@ -241,11 +248,11 @@ ax.set_ylabel(r"Normal Force $F^* $")
 
 # +
 # %%writefile time_sphere_rosso_krauth_job.sh
-#MSUB -l walltime=00:25:00
+#MSUB -l walltime=02:00:00
 #MSUB -m ea                                                                    
 #MSUB -q gpu
 #MSUB -l nodes=1:ppn=1:gpus=1 
-#MSUB -l pmem=20G
+#MSUB -l pmem=32G
 
 set -e
 

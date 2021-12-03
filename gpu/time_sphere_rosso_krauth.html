@@ -14975,7 +14975,7 @@ lost contact
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain">
 <pre>Timer unit: 1e-06 s
 
-Total time: 216.026 s
+Total time: 217.892 s
 File: /work/ws/nemo/fr_as1412-2110_cf_gpu-0/CrackFront/CrackFront/Optimization/propagate_sphere_pytorch.py
 Function: propagate_rosso_krauth at line 154
 
@@ -14996,7 +14996,7 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    166                                                                      **kwargs):
    167                                               # TODO: rethink a good function signature.
    168         1          5.0      5.0      0.0      there_is_enough_time_left = True
-   169         1          2.0      2.0      0.0      if handle_signals:
+   169         1          3.0      3.0      0.0      if handle_signals:
    170                                                   import signal
    171                                                   def recieve_signal(signum, stack):
    172                                                       nonlocal there_is_enough_time_left
@@ -15010,50 +15010,50 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    180         1          3.0      3.0      0.0      grid_spacing = line.piecewise_linear_w_radius.grid_spacing
    181                                           
    182                                               # TORCH code starts here
-   183         1         38.0     38.0      0.0      if torch.cuda.is_available() and not disable_cuda:
+   183         1         37.0     37.0      0.0      if torch.cuda.is_available() and not disable_cuda:
    184                                                   accelerator = torch.device(&#34;cuda&#34;)
    185                                                   print(&#34;CUDA detected, using CUDA&#34;)
    186                                               else:
    187         1          2.0      2.0      0.0          if not disable_cuda:
    188                                                       print(&#34;CUDA not available, fall back to torch on CPU&#34;)
    189                                                   else:
-   190         1        319.0    319.0      0.0              print(&#34;CUDA disabled, use CPU&#34;)
+   190         1        330.0    330.0      0.0              print(&#34;CUDA disabled, use CPU&#34;)
    191         1         25.0     25.0      0.0          accelerator = torch.device(&#34;cpu&#34;)
    192                                           
    193         1          3.0      3.0      0.0      kwargs_array_creation = dict(device=accelerator)
    194                                           
-   195         1     115358.0 115358.0      0.1      indexes = torch.arange(npx_front, dtype=int)
+   195         1     118002.0 118002.0      0.1      indexes = torch.arange(npx_front, dtype=int)
    196                                           
-   197         1          3.0      3.0      0.0      grid_spacing_cpu = grid_spacing
+   197         1          4.0      4.0      0.0      grid_spacing_cpu = grid_spacing
    198                                           
-   199         1      58650.0  58650.0      0.0      nq_front_rfft = torch.fft.rfftfreq(npx_front, 1 / npx_front, **kwargs_array_creation)
+   199         1      58666.0  58666.0      0.0      nq_front_rfft = torch.fft.rfftfreq(npx_front, 1 / npx_front, **kwargs_array_creation)
    200                                           
    201                                               #qk = 2 * np.pi / structural_length
    202                                               #a_test = torch.zeros(npx_front, **kwargs_array_creation)
    203                                               #a_test[0] = 1
    204                                               #elastic_stiffness_individual = torch.fft.irfft(q_front_rfft * torch.fft.rfft(a_test), n=npx_front)[0] + qk
    205                                           
-   206         1         24.0     24.0      0.0      a_test = np.zeros(line.npx)
-   207         1          4.0      4.0      0.0      a_test[0] = 1
-   208         1        279.0    279.0      0.0      line_stiffness_individual = 2 * np.pi / line.npx * line.wm * line.elastic_hessp(a_test)[0]
+   206         1         36.0     36.0      0.0      a_test = np.zeros(line.npx)
+   207         1          6.0      6.0      0.0      a_test[0] = 1
+   208         1        421.0    421.0      0.0      line_stiffness_individual = 2 * np.pi / line.npx * line.wm * line.elastic_hessp(a_test)[0]
    209                                               # TODO: move to GPU
    210                                           
-   211         1         32.0     32.0      0.0      colloc_point_above = np.zeros_like(initial_a, dtype=int)
-   212         1         48.0     48.0      0.0      colloc_point_above = np.ceil((initial_a - line.piecewise_linear_w_radius.min_radius) / grid_spacing_cpu, casting=&#34;unsafe&#34;, out=colloc_point_above)
-   213         1         30.0     30.0      0.0      colloc_point_above += colloc_point_above * grid_spacing_cpu + line.piecewise_linear_w_radius.min_radius == initial_a
-   214         1      11863.0  11863.0      0.0      colloc_point_above = torch.from_numpy(colloc_point_above).to(**kwargs_array_creation)
+   211         1         47.0     47.0      0.0      colloc_point_above = np.zeros_like(initial_a, dtype=int)
+   212         1         68.0     68.0      0.0      colloc_point_above = np.ceil((initial_a - line.piecewise_linear_w_radius.min_radius) / grid_spacing_cpu, casting=&#34;unsafe&#34;, out=colloc_point_above)
+   213         1         47.0     47.0      0.0      colloc_point_above += colloc_point_above * grid_spacing_cpu + line.piecewise_linear_w_radius.min_radius == initial_a
+   214         1      10230.0  10230.0      0.0      colloc_point_above = torch.from_numpy(colloc_point_above).to(**kwargs_array_creation)
    215                                           
    216                                               # Simply load all data, for now.
-   217         1   24077631.0 24077631.0     11.1      line.piecewise_linear_w_radius.load_data(0, line.piecewise_linear_w_radius.npx_propagation)
+   217         1   26348215.0 26348215.0     12.1      line.piecewise_linear_w_radius.load_data(0, line.piecewise_linear_w_radius.npx_propagation)
    218                                           
-   219         1          9.0      9.0      0.0      a = torch.from_numpy(initial_a).to(**kwargs_array_creation)
+   219         1         10.0     10.0      0.0      a = torch.from_numpy(initial_a).to(**kwargs_array_creation)
    220                                           
    221                                           
-   222         1     115413.0 115413.0      0.1      nc = NCStructuredGrid(filename, &#34;a&#34; if restart else &#34;w&#34;, (npx_front,))
-   223         1         15.0     15.0      0.0      i = len(nc)
+   222         1      86688.0  86688.0      0.0      nc = NCStructuredGrid(filename, &#34;a&#34; if restart else &#34;w&#34;, (npx_front,))
+   223         1         12.0     12.0      0.0      i = len(nc)
    224         1          3.0      3.0      0.0      integer_penetration = 0
-   225         1          3.0      3.0      0.0      direction = 1
-   226         1          3.0      3.0      0.0      if i &gt; 0:  # It is a restart and the direction is not yet clear
+   225         1          2.0      2.0      0.0      direction = 1
+   226         1          2.0      2.0      0.0      if i &gt; 0:  # It is a restart and the direction is not yet clear
    227                                                   # simply go through all previous iterations to find again what the previous penetration was.
    228                                                   for j in range(i):
    229                                                       penetration_cpu = integer_penetration * penetration_increment
@@ -15061,55 +15061,55 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    231                                                           direction = -1
    232                                                       integer_penetration += direction
    233                                               else:
-   234         1          3.0      3.0      0.0          direction = 1
+   234         1          2.0      2.0      0.0          direction = 1
    235                                           
-   236         1          3.0      3.0      0.0      try:
+   236         1          2.0      2.0      0.0      try:
    237                                                   while True:
-   238        16         34.0      2.1      0.0              penetration_cpu = integer_penetration * penetration_increment
-   239        16       4983.0    311.4      0.0              print(&#34;penetation:&#34;, penetration_cpu)
-   240        16        575.0     35.9      0.0              penetration = torch.tensor(penetration_cpu).to(device=accelerator)
+   238        16         29.0      1.8      0.0              penetration_cpu = integer_penetration * penetration_increment
+   239        16       4452.0    278.2      0.0              print(&#34;penetation:&#34;, penetration_cpu)
+   240        16        486.0     30.4      0.0              penetration = torch.tensor(penetration_cpu).to(device=accelerator)
    241                                           
-   242        16         35.0      2.2      0.0              nit = 0
-   243    142826     205193.0      1.4      0.1              while nit &lt; maxit:
+   242        16         27.0      1.7      0.0              nit = 0
+   243    142826     201907.0      1.4      0.1              while nit &lt; maxit:
    244                                                           # Nullify the force on each pixel
    245                                           
-   246    142826   24036752.0    168.3     11.1                  current_value_and_slope = line.piecewise_linear_w_radius.values_and_slopes(colloc_point_above - 1).to(device=accelerator)
+   246    142826   23996169.0    168.0     11.0                  current_value_and_slope = line.piecewise_linear_w_radius.values_and_slopes(colloc_point_above - 1).to(device=accelerator)
    247                                           
    248                                                           # grad = line.elastic_gradient(a, penetration) \
-   249    428478    5815660.0     13.6      2.7                  eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
-   250    142826     192619.0      1.3      0.1                      contact_radius=a,
-   251    142826     187043.0      1.3      0.1                      penetration=penetration,
-   252    142826     192098.0      1.3      0.1                      **_jkrkwargs)
-   253    142826     970856.0      6.8      0.4                  outer_eastic_stifness = 2 * np.pi / npx_front * eerr_j
+   249    428478    5768619.0     13.5      2.6                  eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
+   250    142826     190610.0      1.3      0.1                      contact_radius=a,
+   251    142826     185232.0      1.3      0.1                      penetration=penetration,
+   252    142826     192711.0      1.3      0.1                      **_jkrkwargs)
+   253    142826     972611.0      6.8      0.4                  outer_eastic_stifness = 2 * np.pi / npx_front * eerr_j
    254                                           
-   255    142826     840869.0      5.9      0.4                  grad = a * outer_eastic_stifness
-   256    142826  111502462.0    780.7     51.6                  grad.add_(2 * np.pi / npx_front * line.wm * torch.fft.irfft(nq_front_rfft * torch.fft.rfft(a), n=npx_front))
+   255    142826     876028.0      6.1      0.4                  grad = a * outer_eastic_stifness
+   256    142826  111285003.0    779.2     51.1                  grad.add_(2 * np.pi / npx_front * line.wm * torch.fft.irfft(nq_front_rfft * torch.fft.rfft(a), n=npx_front))
    257                                                           # TODO: I have some scalars here that live on CPU, but it doesn&#39;t seem to make a big difference.
    258                                           
    259                                                           # Note: here we have the opposite sign compared to the elastic line code because values is the work of adhesion
-   260    142826    2676928.0     18.7      1.2                  grad.add_(- current_value_and_slope[:, 0])
-   261    142826    9435752.0     66.1      4.4                  grad.add_(- current_value_and_slope[:, 1] * (a - line.piecewise_linear_w_radius.kink_position(colloc_point_above - 1)))
+   260    142826    2677935.0     18.7      1.2                  grad.add_(- current_value_and_slope[:, 0])
+   261    142826    9361728.0     65.5      4.3                  grad.add_(- current_value_and_slope[:, 1] * (a - line.piecewise_linear_w_radius.kink_position(colloc_point_above - 1)))
    262                                           
-   263    142826    2030905.0     14.2      0.9                  max_abs_grad = torch.max(torch.abs(grad))
+   263    142826    2010077.0     14.1      0.9                  max_abs_grad = torch.max(torch.abs(grad))
    264                                                           # TODO: Optimization: I don&#39;t need to evaluate this every iteration
-   265    142826    1141504.0      8.0      0.5                  if max_abs_grad &lt; gtol:
+   265    142826    1133276.0      7.9      0.5                  if max_abs_grad &lt; gtol:
    266        15         22.0      1.5      0.0                      break
    267                                           
-   268    142811     204698.0      1.4      0.1                  if logger:
+   268    142811     204058.0      1.4      0.1                  if logger:
    269                                                               logger.st([&#34;it&#34;, &#34;max. residual&#34;], [nit, max_abs_grad])
    270                                           
    271                                                           # strictly speaking I should take into account that this is nonlinear
    272                                                           # But in practice with a fine discretisation the stiffness associated
    273                                                           # with moving one pixel leads to contact area increments small enough so that this nonlinearity
    274                                                           # doesn&#39;t matter
-   275    142811    3584109.0     25.1      1.7                  stiffness = - current_value_and_slope[:, 1] + outer_eastic_stifness + line_stiffness_individual
+   275    142811    3580319.0     25.1      1.6                  stiffness = - current_value_and_slope[:, 1] + outer_eastic_stifness + line_stiffness_individual
    276                                           
-   277    142811    1608223.0     11.3      0.7                  increment = - grad / stiffness
+   277    142811    1625206.0     11.4      0.7                  increment = - grad / stiffness
    278                                           
-   279    142811     867208.0      6.1      0.4                  a_new = a + increment
-   280    142811    2107083.0     14.8      1.0                  mask_negative_stiffness = stiffness &lt;= 0
+   279    142811     859611.0      6.0      0.4                  a_new = a + increment
+   280    142811    2095094.0     14.7      1.0                  mask_negative_stiffness = stiffness &lt;= 0
    281                                           
-   282    142811     219024.0      1.5      0.1                  if direction == 1:
+   282    142811     218271.0      1.5      0.1                  if direction == 1:
    283                                                               # We let the line advance only until the boundary to the next pixel.
    284                                                               # This is because the step length was based on the pinning curvature
    285                                                               # which is erroneous as soon as we meet the next pixel
@@ -15117,64 +15117,64 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    287                                                               # Additionally, when the curvature is negative, the increment is negative
    288                                                               # but the front should actually move forward.
    289                                                               # In this case as well we advance the front until the edge of the next pixel
-   290     94006     634097.0      6.7      0.3                      mask_new_pixel = torch.logical_or(
-   291     47003    1801420.0     38.3      0.8                          a_new &gt;= line.piecewise_linear_w_radius.kink_position(colloc_point_above),
-   292     47003      69778.0      1.5      0.0                          mask_negative_stiffness)
-   293     94006     927770.0      9.9      0.4                      a_new = torch.where(mask_new_pixel,
-   294     47003    1406379.0     29.9      0.7                                          line.piecewise_linear_w_radius.kink_position(colloc_point_above).to(torch.float64), a_new)
+   290     94006     632629.0      6.7      0.3                      mask_new_pixel = torch.logical_or(
+   291     47003    1794847.0     38.2      0.8                          a_new &gt;= line.piecewise_linear_w_radius.kink_position(colloc_point_above),
+   292     47003      67959.0      1.4      0.0                          mask_negative_stiffness)
+   293     94006     933878.0      9.9      0.4                      a_new = torch.where(mask_new_pixel,
+   294     47003    1407706.0     29.9      0.6                                          line.piecewise_linear_w_radius.kink_position(colloc_point_above).to(torch.float64), a_new)
    295                                           
-   296     47003     790859.0     16.8      0.4                      colloc_point_above.add_(mask_new_pixel)
+   296     47003     791229.0     16.8      0.4                      colloc_point_above.add_(mask_new_pixel)
    297                                           
    298                                                               # because of numerical errors it can be that the gradient points in the wrong
    299                                                               # direction on some pixels, but is very small.
    300                                                               # We just make sure these points do not move backwards
-   301     47003     347848.0      7.4      0.2                      a = torch.maximum(a_new, a)
-   302     95808     133327.0      1.4      0.1                  elif direction == -1:
-   303    191616    1283574.0      6.7      0.6                      mask_new_pixel = torch.logical_or(
-   304     95808    4764113.0     49.7      2.2                          a_new &lt;= line.piecewise_linear_w_radius.kink_position(colloc_point_above - 1).to(torch.float64),
-   305     95808     145559.0      1.5      0.1                          mask_negative_stiffness)
-   306    191616    1636544.0      8.5      0.8                      a_new = torch.where(mask_new_pixel,
-   307     95808    3775097.0     39.4      1.7                                          line.piecewise_linear_w_radius.kink_position(colloc_point_above - 1).to(torch.float64), a_new)
+   301     47003     339969.0      7.2      0.2                      a = torch.maximum(a_new, a)
+   302     95808     132569.0      1.4      0.1                  elif direction == -1:
+   303    191616    1272933.0      6.6      0.6                      mask_new_pixel = torch.logical_or(
+   304     95808    4733893.0     49.4      2.2                          a_new &lt;= line.piecewise_linear_w_radius.kink_position(colloc_point_above - 1).to(torch.float64),
+   305     95808     140716.0      1.5      0.1                          mask_negative_stiffness)
+   306    191616    1650428.0      8.6      0.8                      a_new = torch.where(mask_new_pixel,
+   307     95808    3726272.0     38.9      1.7                                          line.piecewise_linear_w_radius.kink_position(colloc_point_above - 1).to(torch.float64), a_new)
    308                                           
-   309     95808    1709301.0     17.8      0.8                      colloc_point_above.add_(mask_new_pixel, alpha=-1)
+   309     95808    1718871.0     17.9      0.8                      colloc_point_above.add_(mask_new_pixel, alpha=-1)
    310                                                               # Why not just -= ? -&gt; -= is not allowed for boolean arrays
    311                                           
-   312     95808     692619.0      7.2      0.3                      a = torch.minimum(a_new, a)
+   312     95808     703457.0      7.3      0.3                      a = torch.minimum(a_new, a)
    313                                           
-   314    142811    3234023.0     22.6      1.5                  if (colloc_point_above &lt; 1).any():
-   315         1         12.0     12.0      0.0                      raise RadiusTooLowError
+   314    142811    3250879.0     22.8      1.5                  if (colloc_point_above &lt; 1).any():
+   315         1         10.0     10.0      0.0                      raise RadiusTooLowError
    316                                           
-   317    142810     236481.0      1.7      0.1                  nit += 1
-   318        15         19.0      1.3      0.0              assert nit &lt; maxit
+   317    142810     228254.0      1.6      0.1                  nit += 1
+   318        15         23.0      1.5      0.0              assert nit &lt; maxit
    319                                           
-   320        15      13053.0    870.2      0.0              nc[i].nit = nit
-   321        15       4989.0    332.6      0.0              print(&#34;nit: {}&#34;.format(nit))
+   320        15       5864.0    390.9      0.0              nc[i].nit = nit
+   321        15       5078.0    338.5      0.0              print(&#34;nit: {}&#34;.format(nit))
    322                                                       # pinning_field_values_cpu = a_cpu = a.to(device=torch.device(&#34;cpu&#34;)).numpy()
-   323        15        242.0     16.1      0.0              a_cpu = a.to(device=torch.device(&#34;cpu&#34;)).numpy()
+   323        15        238.0     15.9      0.0              a_cpu = a.to(device=torch.device(&#34;cpu&#34;)).numpy()
    324                                                       # if compute_smallest_eigenvalue:
    325                                                       #     eigval, eigvec = line.eigenvalues(a)
    326                                                       #     nc[i].eigenvalue = eigval
    327                                                       #     if dump_fields:
    328                                                       #         nc[i].eigenvector = eigvec
-   329        15     122998.0   8199.9      0.1              line.dump(nc[i], penetration_cpu, a_cpu, dump_fields=dump_fields)
+   329        15     192856.0  12857.1      0.1              line.dump(nc[i], penetration_cpu, a_cpu, dump_fields=dump_fields)
    330                                           
-   331        15         35.0      2.3      0.0              if not there_is_enough_time_left:
+   331        15         30.0      2.0      0.0              if not there_is_enough_time_left:
    332                                                           # if not dump_fields: # this is actually useless when we dumpfields, but who cares ?
    333                                                           print(&#34;Saving front position for restart&#34;)
    334                                                           np.save(&#34;restart_position.npy&#34;, a_cpu)
    335                                                           break
    336                                           
-   337        15      66816.0   4454.4      0.0              nc.sync()
-   338        15      23523.0   1568.2      0.0              sys.stdout.flush()
-   339        15         43.0      2.9      0.0              if penetration_cpu &gt;= max_penetration:
+   337        15      65485.0   4365.7      0.0              nc.sync()
+   338        15      20850.0   1390.0      0.0              sys.stdout.flush()
+   339        15         38.0      2.5      0.0              if penetration_cpu &gt;= max_penetration:
    340         1          2.0      2.0      0.0                  direction = -1
-   341        15         33.0      2.2      0.0              integer_penetration += direction
-   342        15         32.0      2.1      0.0              i += 1
-   343         1          2.0      2.0      0.0      except RadiusTooLowError:
-   344         1        535.0    535.0      0.0          print(&#34;lost contact&#34;)
+   341        15         27.0      1.8      0.0              integer_penetration += direction
+   342        15         27.0      1.8      0.0              i += 1
+   343         1          1.0      1.0      0.0      except RadiusTooLowError:
+   344         1        508.0    508.0      0.0          print(&#34;lost contact&#34;)
    345                                           
-   346         1        935.0    935.0      0.0      nc.close()
-   347         1          2.0      2.0      0.0      return there_is_enough_time_left</pre>
+   346         1      12373.0  12373.0      0.0      nc.close()
+   347         1          1.0      1.0      0.0      return there_is_enough_time_left</pre>
 </div>
 </div>
 
@@ -15214,9 +15214,9 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
 
 
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain">
-<pre>   217         1   24077631.0 24077631.0     11.1      line.piecewise_linear_w_radius.load_data(0, line.piecewise_linear_w_radius.npx_propagation)
-   246    142826   24036752.0    168.3     11.1                  current_value_and_slope = line.piecewise_linear_w_radius.values_and_slopes(colloc_point_above - 1).to(device=accelerator)
-   256    142826  111502462.0    780.7     51.6                  grad.add_(2 * np.pi / npx_front * line.wm * torch.fft.irfft(nq_front_rfft * torch.fft.rfft(a), n=npx_front))
+<pre>   217         1   26348215.0 26348215.0     12.1      line.piecewise_linear_w_radius.load_data(0, line.piecewise_linear_w_radius.npx_propagation)
+   246    142826   23996169.0    168.0     11.0                  current_value_and_slope = line.piecewise_linear_w_radius.values_and_slopes(colloc_point_above - 1).to(device=accelerator)
+   256    142826  111285003.0    779.2     51.1                  grad.add_(2 * np.pi / npx_front * line.wm * torch.fft.irfft(nq_front_rfft * torch.fft.rfft(a), n=npx_front))
 </pre>
 </div>
 </div>
@@ -15269,7 +15269,9 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
 <span class="c1"># I run it once &quot;for nothing&quot; to awaken the GPU. Otherwise the first GPU operation might seem extremely slow. </span>
 <span class="n">propagate_rosso_krauth</span><span class="p">(</span><span class="n">cf</span><span class="p">,</span> <span class="n">initial_a</span><span class="o">=</span><span class="n">initial_a</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span><span class="n">filename</span><span class="o">=</span><span class="s2">&quot;torch_timing.nc&quot;</span><span class="p">,</span><span class="o">**</span><span class="n">params</span><span class="p">,)</span>
 
+<span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">reset_peak_memory_stats</span><span class="p">()</span>
 <span class="o">%</span><span class="k">lprun</span> -f propagate_rosso_krauth -T line_profile_sphere_rosso_krauth.txt propagate_rosso_krauth(cf, initial_a=initial_a.copy(),filename=&quot;torch_timing.nc&quot;,**params,)
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;max_memory_allocated:&quot;</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">max_memory_allocated</span><span class="p">())</span>
 </pre></div>
 
      </div>
@@ -15357,6 +15359,7 @@ penetation: -1.0
 lost contact
 
 *** Profile printout saved to text file &#39;line_profile_sphere_rosso_krauth.txt&#39;. 
+max_memory_allocated: 2101429248
 </pre>
 </div>
 </div>
@@ -15399,7 +15402,7 @@ lost contact
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain">
 <pre>Timer unit: 1e-06 s
 
-Total time: 123.961 s
+Total time: 121.04 s
 File: /work/ws/nemo/fr_as1412-2110_cf_gpu-0/CrackFront/CrackFront/Optimization/propagate_sphere_pytorch.py
 Function: propagate_rosso_krauth at line 154
 
@@ -15419,7 +15422,7 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    165                                                                      restart=False,
    166                                                                      **kwargs):
    167                                               # TODO: rethink a good function signature.
-   168         1          2.0      2.0      0.0      there_is_enough_time_left = True
+   168         1          3.0      3.0      0.0      there_is_enough_time_left = True
    169         1          1.0      1.0      0.0      if handle_signals:
    170                                                   import signal
    171                                                   def recieve_signal(signum, stack):
@@ -15429,14 +15432,14 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    175                                           
    176                                                   signal.signal(signal.SIGUSR1, recieve_signal)
    177                                           
-   178         1          2.0      2.0      0.0      npx_front = line.npx
+   178         1          1.0      1.0      0.0      npx_front = line.npx
    179                                           
-   180         1          1.0      1.0      0.0      grid_spacing = line.piecewise_linear_w_radius.grid_spacing
+   180         1          2.0      2.0      0.0      grid_spacing = line.piecewise_linear_w_radius.grid_spacing
    181                                           
    182                                               # TORCH code starts here
-   183         1         13.0     13.0      0.0      if torch.cuda.is_available() and not disable_cuda:
+   183         1          4.0      4.0      0.0      if torch.cuda.is_available() and not disable_cuda:
    184         1          6.0      6.0      0.0          accelerator = torch.device(&#34;cuda&#34;)
-   185         1        120.0    120.0      0.0          print(&#34;CUDA detected, using CUDA&#34;)
+   185         1        116.0    116.0      0.0          print(&#34;CUDA detected, using CUDA&#34;)
    186                                               else:
    187                                                   if not disable_cuda:
    188                                                       print(&#34;CUDA not available, fall back to torch on CPU&#34;)
@@ -15444,13 +15447,13 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    190                                                       print(&#34;CUDA disabled, use CPU&#34;)
    191                                                   accelerator = torch.device(&#34;cpu&#34;)
    192                                           
-   193         1          3.0      3.0      0.0      kwargs_array_creation = dict(device=accelerator)
+   193         1          2.0      2.0      0.0      kwargs_array_creation = dict(device=accelerator)
    194                                           
-   195         1         40.0     40.0      0.0      indexes = torch.arange(npx_front, dtype=int)
+   195         1         29.0     29.0      0.0      indexes = torch.arange(npx_front, dtype=int)
    196                                           
    197         1          1.0      1.0      0.0      grid_spacing_cpu = grid_spacing
    198                                           
-   199         1         42.0     42.0      0.0      nq_front_rfft = torch.fft.rfftfreq(npx_front, 1 / npx_front, **kwargs_array_creation)
+   199         1         46.0     46.0      0.0      nq_front_rfft = torch.fft.rfftfreq(npx_front, 1 / npx_front, **kwargs_array_creation)
    200                                           
    201                                               #qk = 2 * np.pi / structural_length
    202                                               #a_test = torch.zeros(npx_front, **kwargs_array_creation)
@@ -15462,22 +15465,22 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    208         1        198.0    198.0      0.0      line_stiffness_individual = 2 * np.pi / line.npx * line.wm * line.elastic_hessp(a_test)[0]
    209                                               # TODO: move to GPU
    210                                           
-   211         1         42.0     42.0      0.0      colloc_point_above = np.zeros_like(initial_a, dtype=int)
-   212         1         39.0     39.0      0.0      colloc_point_above = np.ceil((initial_a - line.piecewise_linear_w_radius.min_radius) / grid_spacing_cpu, casting=&#34;unsafe&#34;, out=colloc_point_above)
-   213         1         29.0     29.0      0.0      colloc_point_above += colloc_point_above * grid_spacing_cpu + line.piecewise_linear_w_radius.min_radius == initial_a
-   214         1         40.0     40.0      0.0      colloc_point_above = torch.from_numpy(colloc_point_above).to(**kwargs_array_creation)
+   211         1         39.0     39.0      0.0      colloc_point_above = np.zeros_like(initial_a, dtype=int)
+   212         1         36.0     36.0      0.0      colloc_point_above = np.ceil((initial_a - line.piecewise_linear_w_radius.min_radius) / grid_spacing_cpu, casting=&#34;unsafe&#34;, out=colloc_point_above)
+   213         1         31.0     31.0      0.0      colloc_point_above += colloc_point_above * grid_spacing_cpu + line.piecewise_linear_w_radius.min_radius == initial_a
+   214         1         41.0     41.0      0.0      colloc_point_above = torch.from_numpy(colloc_point_above).to(**kwargs_array_creation)
    215                                           
    216                                               # Simply load all data, for now.
-   217         1   25762882.0 25762882.0     20.8      line.piecewise_linear_w_radius.load_data(0, line.piecewise_linear_w_radius.npx_propagation)
+   217         1   24537367.0 24537367.0     20.3      line.piecewise_linear_w_radius.load_data(0, line.piecewise_linear_w_radius.npx_propagation)
    218                                           
-   219         1        111.0    111.0      0.0      a = torch.from_numpy(initial_a).to(**kwargs_array_creation)
+   219         1        113.0    113.0      0.0      a = torch.from_numpy(initial_a).to(**kwargs_array_creation)
    220                                           
    221                                           
-   222         1      35981.0  35981.0      0.0      nc = NCStructuredGrid(filename, &#34;a&#34; if restart else &#34;w&#34;, (npx_front,))
-   223         1          9.0      9.0      0.0      i = len(nc)
+   222         1      12376.0  12376.0      0.0      nc = NCStructuredGrid(filename, &#34;a&#34; if restart else &#34;w&#34;, (npx_front,))
+   223         1          7.0      7.0      0.0      i = len(nc)
    224         1          2.0      2.0      0.0      integer_penetration = 0
-   225         1          2.0      2.0      0.0      direction = 1
-   226         1          3.0      3.0      0.0      if i &gt; 0:  # It is a restart and the direction is not yet clear
+   225         1          3.0      3.0      0.0      direction = 1
+   226         1          2.0      2.0      0.0      if i &gt; 0:  # It is a restart and the direction is not yet clear
    227                                                   # simply go through all previous iterations to find again what the previous penetration was.
    228                                                   for j in range(i):
    229                                                       penetration_cpu = integer_penetration * penetration_increment
@@ -15485,55 +15488,55 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    231                                                           direction = -1
    232                                                       integer_penetration += direction
    233                                               else:
-   234         1          2.0      2.0      0.0          direction = 1
+   234         1          3.0      3.0      0.0          direction = 1
    235                                           
    236         1          2.0      2.0      0.0      try:
    237                                                   while True:
-   238        16         37.0      2.3      0.0              penetration_cpu = integer_penetration * penetration_increment
-   239        16       4933.0    308.3      0.0              print(&#34;penetation:&#34;, penetration_cpu)
-   240        16       1073.0     67.1      0.0              penetration = torch.tensor(penetration_cpu).to(device=accelerator)
+   238        16         28.0      1.8      0.0              penetration_cpu = integer_penetration * penetration_increment
+   239        16       4275.0    267.2      0.0              print(&#34;penetation:&#34;, penetration_cpu)
+   240        16       1005.0     62.8      0.0              penetration = torch.tensor(penetration_cpu).to(device=accelerator)
    241                                           
-   242        16         35.0      2.2      0.0              nit = 0
-   243    142826     206035.0      1.4      0.2              while nit &lt; maxit:
+   242        16         36.0      2.2      0.0              nit = 0
+   243    142826     204286.0      1.4      0.2              while nit &lt; maxit:
    244                                                           # Nullify the force on each pixel
    245                                           
-   246    142826   13649265.0     95.6     11.0                  current_value_and_slope = line.piecewise_linear_w_radius.values_and_slopes(colloc_point_above - 1).to(device=accelerator)
+   246    142826   13504475.0     94.6     11.2                  current_value_and_slope = line.piecewise_linear_w_radius.values_and_slopes(colloc_point_above - 1).to(device=accelerator)
    247                                           
    248                                                           # grad = line.elastic_gradient(a, penetration) \
-   249    428478    8552445.0     20.0      6.9                  eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
-   250    142826     196128.0      1.4      0.2                      contact_radius=a,
-   251    142826     189084.0      1.3      0.2                      penetration=penetration,
-   252    142826     193946.0      1.4      0.2                      **_jkrkwargs)
-   253    142826    1570676.0     11.0      1.3                  outer_eastic_stifness = 2 * np.pi / npx_front * eerr_j
+   249    428478    8367610.0     19.5      6.9                  eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
+   250    142826     192844.0      1.4      0.2                      contact_radius=a,
+   251    142826     187268.0      1.3      0.2                      penetration=penetration,
+   252    142826     194808.0      1.4      0.2                      **_jkrkwargs)
+   253    142826    1528996.0     10.7      1.3                  outer_eastic_stifness = 2 * np.pi / npx_front * eerr_j
    254                                           
-   255    142826    1279203.0      9.0      1.0                  grad = a * outer_eastic_stifness
-   256    142826   13293841.0     93.1     10.7                  grad.add_(2 * np.pi / npx_front * line.wm * torch.fft.irfft(nq_front_rfft * torch.fft.rfft(a), n=npx_front))
+   255    142826    1262501.0      8.8      1.0                  grad = a * outer_eastic_stifness
+   256    142826   13247589.0     92.8     10.9                  grad.add_(2 * np.pi / npx_front * line.wm * torch.fft.irfft(nq_front_rfft * torch.fft.rfft(a), n=npx_front))
    257                                                           # TODO: I have some scalars here that live on CPU, but it doesn&#39;t seem to make a big difference.
    258                                           
    259                                                           # Note: here we have the opposite sign compared to the elastic line code because values is the work of adhesion
-   260    142826    3404461.0     23.8      2.7                  grad.add_(- current_value_and_slope[:, 0])
-   261    142826    9818947.0     68.7      7.9                  grad.add_(- current_value_and_slope[:, 1] * (a - line.piecewise_linear_w_radius.kink_position(colloc_point_above - 1)))
+   260    142826    3352316.0     23.5      2.8                  grad.add_(- current_value_and_slope[:, 0])
+   261    142826    9644091.0     67.5      8.0                  grad.add_(- current_value_and_slope[:, 1] * (a - line.piecewise_linear_w_radius.kink_position(colloc_point_above - 1)))
    262                                           
-   263    142826    3496362.0     24.5      2.8                  max_abs_grad = torch.max(torch.abs(grad))
+   263    142826    3490625.0     24.4      2.9                  max_abs_grad = torch.max(torch.abs(grad))
    264                                                           # TODO: Optimization: I don&#39;t need to evaluate this every iteration
-   265    142826    4343535.0     30.4      3.5                  if max_abs_grad &lt; gtol:
-   266        15         28.0      1.9      0.0                      break
+   265    142826    4211450.0     29.5      3.5                  if max_abs_grad &lt; gtol:
+   266        15         31.0      2.1      0.0                      break
    267                                           
-   268    142811     230919.0      1.6      0.2                  if logger:
+   268    142811     224138.0      1.6      0.2                  if logger:
    269                                                               logger.st([&#34;it&#34;, &#34;max. residual&#34;], [nit, max_abs_grad])
    270                                           
    271                                                           # strictly speaking I should take into account that this is nonlinear
    272                                                           # But in practice with a fine discretisation the stiffness associated
    273                                                           # with moving one pixel leads to contact area increments small enough so that this nonlinearity
    274                                                           # doesn&#39;t matter
-   275    142811    5401875.0     37.8      4.4                  stiffness = - current_value_and_slope[:, 1] + outer_eastic_stifness + line_stiffness_individual
+   275    142811    5246112.0     36.7      4.3                  stiffness = - current_value_and_slope[:, 1] + outer_eastic_stifness + line_stiffness_individual
    276                                           
-   277    142811    2432163.0     17.0      2.0                  increment = - grad / stiffness
+   277    142811    2369313.0     16.6      2.0                  increment = - grad / stiffness
    278                                           
-   279    142811    1307983.0      9.2      1.1                  a_new = a + increment
-   280    142811    1796079.0     12.6      1.4                  mask_negative_stiffness = stiffness &lt;= 0
+   279    142811    1273529.0      8.9      1.1                  a_new = a + increment
+   280    142811    1741344.0     12.2      1.4                  mask_negative_stiffness = stiffness &lt;= 0
    281                                           
-   282    142811     226165.0      1.6      0.2                  if direction == 1:
+   282    142811     219643.0      1.5      0.2                  if direction == 1:
    283                                                               # We let the line advance only until the boundary to the next pixel.
    284                                                               # This is because the step length was based on the pinning curvature
    285                                                               # which is erroneous as soon as we meet the next pixel
@@ -15541,64 +15544,64 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    287                                                               # Additionally, when the curvature is negative, the increment is negative
    288                                                               # but the front should actually move forward.
    289                                                               # In this case as well we advance the front until the edge of the next pixel
-   290     94006     779671.0      8.3      0.6                      mask_new_pixel = torch.logical_or(
-   291     47003    1569149.0     33.4      1.3                          a_new &gt;= line.piecewise_linear_w_radius.kink_position(colloc_point_above),
-   292     47003      75131.0      1.6      0.1                          mask_negative_stiffness)
-   293     94006     662270.0      7.0      0.5                      a_new = torch.where(mask_new_pixel,
-   294     47003    1675696.0     35.7      1.4                                          line.piecewise_linear_w_radius.kink_position(colloc_point_above).to(torch.float64), a_new)
+   290     94006     775201.0      8.2      0.6                      mask_new_pixel = torch.logical_or(
+   291     47003    1511522.0     32.2      1.2                          a_new &gt;= line.piecewise_linear_w_radius.kink_position(colloc_point_above),
+   292     47003      71914.0      1.5      0.1                          mask_negative_stiffness)
+   293     94006     668174.0      7.1      0.6                      a_new = torch.where(mask_new_pixel,
+   294     47003    1644176.0     35.0      1.4                                          line.piecewise_linear_w_radius.kink_position(colloc_point_above).to(torch.float64), a_new)
    295                                           
-   296     47003     407528.0      8.7      0.3                      colloc_point_above.add_(mask_new_pixel)
+   296     47003     398543.0      8.5      0.3                      colloc_point_above.add_(mask_new_pixel)
    297                                           
    298                                                               # because of numerical errors it can be that the gradient points in the wrong
    299                                                               # direction on some pixels, but is very small.
    300                                                               # We just make sure these points do not move backwards
-   301     47003     498586.0     10.6      0.4                      a = torch.maximum(a_new, a)
-   302     95808     136156.0      1.4      0.1                  elif direction == -1:
-   303    191616    1517883.0      7.9      1.2                      mask_new_pixel = torch.logical_or(
-   304     95808    5356571.0     55.9      4.3                          a_new &lt;= line.piecewise_linear_w_radius.kink_position(colloc_point_above - 1).to(torch.float64),
-   305     95808     159428.0      1.7      0.1                          mask_negative_stiffness)
-   306    191616    1348648.0      7.0      1.1                      a_new = torch.where(mask_new_pixel,
-   307     95808    4212009.0     44.0      3.4                                          line.piecewise_linear_w_radius.kink_position(colloc_point_above - 1).to(torch.float64), a_new)
+   301     47003     478093.0     10.2      0.4                      a = torch.maximum(a_new, a)
+   302     95808     134336.0      1.4      0.1                  elif direction == -1:
+   303    191616    1527990.0      8.0      1.3                      mask_new_pixel = torch.logical_or(
+   304     95808    5202904.0     54.3      4.3                          a_new &lt;= line.piecewise_linear_w_radius.kink_position(colloc_point_above - 1).to(torch.float64),
+   305     95808     157868.0      1.6      0.1                          mask_negative_stiffness)
+   306    191616    1365480.0      7.1      1.1                      a_new = torch.where(mask_new_pixel,
+   307     95808    4101005.0     42.8      3.4                                          line.piecewise_linear_w_radius.kink_position(colloc_point_above - 1).to(torch.float64), a_new)
    308                                           
-   309     95808     960372.0     10.0      0.8                      colloc_point_above.add_(mask_new_pixel, alpha=-1)
+   309     95808     952620.0      9.9      0.8                      colloc_point_above.add_(mask_new_pixel, alpha=-1)
    310                                                               # Why not just -= ? -&gt; -= is not allowed for boolean arrays
    311                                           
-   312     95808    1030733.0     10.8      0.8                      a = torch.minimum(a_new, a)
+   312     95808     979155.0     10.2      0.8                      a = torch.minimum(a_new, a)
    313                                           
-   314    142811    5723734.0     40.1      4.6                  if (colloc_point_above &lt; 1).any():
+   314    142811    5563840.0     39.0      4.6                  if (colloc_point_above &lt; 1).any():
    315         1          9.0      9.0      0.0                      raise RadiusTooLowError
    316                                           
-   317    142810     272616.0      1.9      0.2                  nit += 1
-   318        15         23.0      1.5      0.0              assert nit &lt; maxit
+   317    142810     264694.0      1.9      0.2                  nit += 1
+   318        15         25.0      1.7      0.0              assert nit &lt; maxit
    319                                           
-   320        15       8205.0    547.0      0.0              nc[i].nit = nit
-   321        15       3868.0    257.9      0.0              print(&#34;nit: {}&#34;.format(nit))
+   320        15      12041.0    802.7      0.0              nc[i].nit = nit
+   321        15       3879.0    258.6      0.0              print(&#34;nit: {}&#34;.format(nit))
    322                                                       # pinning_field_values_cpu = a_cpu = a.to(device=torch.device(&#34;cpu&#34;)).numpy()
-   323        15       2916.0    194.4      0.0              a_cpu = a.to(device=torch.device(&#34;cpu&#34;)).numpy()
+   323        15       3656.0    243.7      0.0              a_cpu = a.to(device=torch.device(&#34;cpu&#34;)).numpy()
    324                                                       # if compute_smallest_eigenvalue:
    325                                                       #     eigval, eigvec = line.eigenvalues(a)
    326                                                       #     nc[i].eigenvalue = eigval
    327                                                       #     if dump_fields:
    328                                                       #         nc[i].eigenvector = eigvec
-   329        15      71825.0   4788.3      0.1              line.dump(nc[i], penetration_cpu, a_cpu, dump_fields=dump_fields)
+   329        15      83155.0   5543.7      0.1              line.dump(nc[i], penetration_cpu, a_cpu, dump_fields=dump_fields)
    330                                           
-   331        15         38.0      2.5      0.0              if not there_is_enough_time_left:
+   331        15         32.0      2.1      0.0              if not there_is_enough_time_left:
    332                                                           # if not dump_fields: # this is actually useless when we dumpfields, but who cares ?
    333                                                           print(&#34;Saving front position for restart&#34;)
    334                                                           np.save(&#34;restart_position.npy&#34;, a_cpu)
    335                                                           break
    336                                           
-   337        15      60326.0   4021.7      0.0              nc.sync()
-   338        15      20398.0   1359.9      0.0              sys.stdout.flush()
-   339        15         48.0      3.2      0.0              if penetration_cpu &gt;= max_penetration:
+   337        15      98959.0   6597.3      0.1              nc.sync()
+   338        15      19834.0   1322.3      0.0              sys.stdout.flush()
+   339        15         36.0      2.4      0.0              if penetration_cpu &gt;= max_penetration:
    340         1          1.0      1.0      0.0                  direction = -1
-   341        15         31.0      2.1      0.0              integer_penetration += direction
-   342        15         32.0      2.1      0.0              i += 1
-   343         1          1.0      1.0      0.0      except RadiusTooLowError:
-   344         1        303.0    303.0      0.0          print(&#34;lost contact&#34;)
+   341        15         27.0      1.8      0.0              integer_penetration += direction
+   342        15         26.0      1.7      0.0              i += 1
+   343         1          2.0      2.0      0.0      except RadiusTooLowError:
+   344         1        469.0    469.0      0.0          print(&#34;lost contact&#34;)
    345                                           
-   346         1      11766.0  11766.0      0.0      nc.close()
-   347         1          1.0      1.0      0.0      return there_is_enough_time_left</pre>
+   346         1       1726.0   1726.0      0.0      nc.close()
+   347         1          2.0      2.0      0.0      return there_is_enough_time_left</pre>
 </div>
 </div>
 
@@ -15638,9 +15641,9 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
 
 
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain">
-<pre>   217         1   25762882.0 25762882.0     20.8      line.piecewise_linear_w_radius.load_data(0, line.piecewise_linear_w_radius.npx_propagation)
-   246    142826   13649265.0     95.6     11.0                  current_value_and_slope = line.piecewise_linear_w_radius.values_and_slopes(colloc_point_above - 1).to(device=accelerator)
-   256    142826   13293841.0     93.1     10.7                  grad.add_(2 * np.pi / npx_front * line.wm * torch.fft.irfft(nq_front_rfft * torch.fft.rfft(a), n=npx_front))
+<pre>   217         1   24537367.0 24537367.0     20.3      line.piecewise_linear_w_radius.load_data(0, line.piecewise_linear_w_radius.npx_propagation)
+   246    142826   13504475.0     94.6     11.2                  current_value_and_slope = line.piecewise_linear_w_radius.values_and_slopes(colloc_point_above - 1).to(device=accelerator)
+   256    142826   13247589.0     92.8     10.9                  grad.add_(2 * np.pi / npx_front * line.wm * torch.fft.irfft(nq_front_rfft * torch.fft.rfft(a), n=npx_front))
 </pre>
 </div>
 </div>
@@ -15689,7 +15692,10 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
             <span class="n">data_device</span><span class="o">=</span><span class="n">cpu</span><span class="p">,</span>
             <span class="p">),</span>      
     <span class="n">wm</span><span class="o">=</span><span class="n">w</span><span class="p">)</span>
+
+<span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">reset_peak_memory_stats</span><span class="p">()</span>
 <span class="o">%</span><span class="k">lprun</span> -f propagate_rosso_krauth -T line_profile_sphere_rosso_krauth.txt propagate_rosso_krauth(cf, initial_a=initial_a.copy(),filename=&quot;torch_timing.nc&quot;,**params,)
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;max_memory_allocated:&quot;</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">max_memory_allocated</span><span class="p">())</span>
 </pre></div>
 
      </div>
@@ -15744,6 +15750,7 @@ penetation: -1.0
 lost contact
 
 *** Profile printout saved to text file &#39;line_profile_sphere_rosso_krauth.txt&#39;. 
+max_memory_allocated: 1051627008
 </pre>
 </div>
 </div>
@@ -15786,7 +15793,7 @@ lost contact
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain">
 <pre>Timer unit: 1e-06 s
 
-Total time: 162.174 s
+Total time: 160.903 s
 File: /work/ws/nemo/fr_as1412-2110_cf_gpu-0/CrackFront/CrackFront/Optimization/propagate_sphere_pytorch.py
 Function: propagate_rosso_krauth at line 154
 
@@ -15806,8 +15813,8 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    165                                                                      restart=False,
    166                                                                      **kwargs):
    167                                               # TODO: rethink a good function signature.
-   168         1          3.0      3.0      0.0      there_is_enough_time_left = True
-   169         1          2.0      2.0      0.0      if handle_signals:
+   168         1          2.0      2.0      0.0      there_is_enough_time_left = True
+   169         1          1.0      1.0      0.0      if handle_signals:
    170                                                   import signal
    171                                                   def recieve_signal(signum, stack):
    172                                                       nonlocal there_is_enough_time_left
@@ -15816,14 +15823,14 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    175                                           
    176                                                   signal.signal(signal.SIGUSR1, recieve_signal)
    177                                           
-   178         1          1.0      1.0      0.0      npx_front = line.npx
+   178         1          2.0      2.0      0.0      npx_front = line.npx
    179                                           
    180         1          2.0      2.0      0.0      grid_spacing = line.piecewise_linear_w_radius.grid_spacing
    181                                           
    182                                               # TORCH code starts here
-   183         1         23.0     23.0      0.0      if torch.cuda.is_available() and not disable_cuda:
+   183         1          4.0      4.0      0.0      if torch.cuda.is_available() and not disable_cuda:
    184         1         14.0     14.0      0.0          accelerator = torch.device(&#34;cuda&#34;)
-   185         1        168.0    168.0      0.0          print(&#34;CUDA detected, using CUDA&#34;)
+   185         1        166.0    166.0      0.0          print(&#34;CUDA detected, using CUDA&#34;)
    186                                               else:
    187                                                   if not disable_cuda:
    188                                                       print(&#34;CUDA not available, fall back to torch on CPU&#34;)
@@ -15833,37 +15840,37 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    192                                           
    193         1          2.0      2.0      0.0      kwargs_array_creation = dict(device=accelerator)
    194                                           
-   195         1         67.0     67.0      0.0      indexes = torch.arange(npx_front, dtype=int)
+   195         1         71.0     71.0      0.0      indexes = torch.arange(npx_front, dtype=int)
    196                                           
    197         1          2.0      2.0      0.0      grid_spacing_cpu = grid_spacing
    198                                           
-   199         1        111.0    111.0      0.0      nq_front_rfft = torch.fft.rfftfreq(npx_front, 1 / npx_front, **kwargs_array_creation)
+   199         1        106.0    106.0      0.0      nq_front_rfft = torch.fft.rfftfreq(npx_front, 1 / npx_front, **kwargs_array_creation)
    200                                           
    201                                               #qk = 2 * np.pi / structural_length
    202                                               #a_test = torch.zeros(npx_front, **kwargs_array_creation)
    203                                               #a_test[0] = 1
    204                                               #elastic_stiffness_individual = torch.fft.irfft(q_front_rfft * torch.fft.rfft(a_test), n=npx_front)[0] + qk
    205                                           
-   206         1         19.0     19.0      0.0      a_test = np.zeros(line.npx)
+   206         1         18.0     18.0      0.0      a_test = np.zeros(line.npx)
    207         1          2.0      2.0      0.0      a_test[0] = 1
-   208         1        273.0    273.0      0.0      line_stiffness_individual = 2 * np.pi / line.npx * line.wm * line.elastic_hessp(a_test)[0]
+   208         1        254.0    254.0      0.0      line_stiffness_individual = 2 * np.pi / line.npx * line.wm * line.elastic_hessp(a_test)[0]
    209                                               # TODO: move to GPU
    210                                           
-   211         1         44.0     44.0      0.0      colloc_point_above = np.zeros_like(initial_a, dtype=int)
+   211         1         49.0     49.0      0.0      colloc_point_above = np.zeros_like(initial_a, dtype=int)
    212         1         36.0     36.0      0.0      colloc_point_above = np.ceil((initial_a - line.piecewise_linear_w_radius.min_radius) / grid_spacing_cpu, casting=&#34;unsafe&#34;, out=colloc_point_above)
    213         1         29.0     29.0      0.0      colloc_point_above += colloc_point_above * grid_spacing_cpu + line.piecewise_linear_w_radius.min_radius == initial_a
-   214         1         78.0     78.0      0.0      colloc_point_above = torch.from_numpy(colloc_point_above).to(**kwargs_array_creation)
+   214         1         77.0     77.0      0.0      colloc_point_above = torch.from_numpy(colloc_point_above).to(**kwargs_array_creation)
    215                                           
    216                                               # Simply load all data, for now.
-   217         1   24996586.0 24996586.0     15.4      line.piecewise_linear_w_radius.load_data(0, line.piecewise_linear_w_radius.npx_propagation)
+   217         1   24495732.0 24495732.0     15.2      line.piecewise_linear_w_radius.load_data(0, line.piecewise_linear_w_radius.npx_propagation)
    218                                           
-   219         1        131.0    131.0      0.0      a = torch.from_numpy(initial_a).to(**kwargs_array_creation)
+   219         1        135.0    135.0      0.0      a = torch.from_numpy(initial_a).to(**kwargs_array_creation)
    220                                           
    221                                           
-   222         1      10042.0  10042.0      0.0      nc = NCStructuredGrid(filename, &#34;a&#34; if restart else &#34;w&#34;, (npx_front,))
-   223         1         16.0     16.0      0.0      i = len(nc)
+   222         1      12420.0  12420.0      0.0      nc = NCStructuredGrid(filename, &#34;a&#34; if restart else &#34;w&#34;, (npx_front,))
+   223         1          9.0      9.0      0.0      i = len(nc)
    224         1          3.0      3.0      0.0      integer_penetration = 0
-   225         1          4.0      4.0      0.0      direction = 1
+   225         1          3.0      3.0      0.0      direction = 1
    226         1          3.0      3.0      0.0      if i &gt; 0:  # It is a restart and the direction is not yet clear
    227                                                   # simply go through all previous iterations to find again what the previous penetration was.
    228                                                   for j in range(i):
@@ -15876,51 +15883,51 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    235                                           
    236         1          3.0      3.0      0.0      try:
    237                                                   while True:
-   238        16         31.0      1.9      0.0              penetration_cpu = integer_penetration * penetration_increment
-   239        16       4591.0    286.9      0.0              print(&#34;penetation:&#34;, penetration_cpu)
-   240        16       1071.0     66.9      0.0              penetration = torch.tensor(penetration_cpu).to(device=accelerator)
+   238        16         36.0      2.2      0.0              penetration_cpu = integer_penetration * penetration_increment
+   239        16       5531.0    345.7      0.0              print(&#34;penetation:&#34;, penetration_cpu)
+   240        16       1214.0     75.9      0.0              penetration = torch.tensor(penetration_cpu).to(device=accelerator)
    241                                           
-   242        16         37.0      2.3      0.0              nit = 0
-   243    142826     207365.0      1.5      0.1              while nit &lt; maxit:
+   242        16         41.0      2.6      0.0              nit = 0
+   243    142826     201829.0      1.4      0.1              while nit &lt; maxit:
    244                                                           # Nullify the force on each pixel
    245                                           
-   246    142826   43509406.0    304.6     26.8                  current_value_and_slope = line.piecewise_linear_w_radius.values_and_slopes(colloc_point_above - 1).to(device=accelerator)
+   246    142826   44407132.0    310.9     27.6                  current_value_and_slope = line.piecewise_linear_w_radius.values_and_slopes(colloc_point_above - 1).to(device=accelerator)
    247                                           
    248                                                           # grad = line.elastic_gradient(a, penetration) \
-   249    428478    8821811.0     20.6      5.4                  eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
-   250    142826     195773.0      1.4      0.1                      contact_radius=a,
-   251    142826     189108.0      1.3      0.1                      penetration=penetration,
-   252    142826     192866.0      1.4      0.1                      **_jkrkwargs)
-   253    142826    1572367.0     11.0      1.0                  outer_eastic_stifness = 2 * np.pi / npx_front * eerr_j
+   249    428478    8599714.0     20.1      5.3                  eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
+   250    142826     193400.0      1.4      0.1                      contact_radius=a,
+   251    142826     187183.0      1.3      0.1                      penetration=penetration,
+   252    142826     193447.0      1.4      0.1                      **_jkrkwargs)
+   253    142826    1532447.0     10.7      1.0                  outer_eastic_stifness = 2 * np.pi / npx_front * eerr_j
    254                                           
-   255    142826    1274624.0      8.9      0.8                  grad = a * outer_eastic_stifness
-   256    142826   13377099.0     93.7      8.2                  grad.add_(2 * np.pi / npx_front * line.wm * torch.fft.irfft(nq_front_rfft * torch.fft.rfft(a), n=npx_front))
+   255    142826    1258381.0      8.8      0.8                  grad = a * outer_eastic_stifness
+   256    142826   13207216.0     92.5      8.2                  grad.add_(2 * np.pi / npx_front * line.wm * torch.fft.irfft(nq_front_rfft * torch.fft.rfft(a), n=npx_front))
    257                                                           # TODO: I have some scalars here that live on CPU, but it doesn&#39;t seem to make a big difference.
    258                                           
    259                                                           # Note: here we have the opposite sign compared to the elastic line code because values is the work of adhesion
-   260    142826    3422870.0     24.0      2.1                  grad.add_(- current_value_and_slope[:, 0])
-   261    142826    9870350.0     69.1      6.1                  grad.add_(- current_value_and_slope[:, 1] * (a - line.piecewise_linear_w_radius.kink_position(colloc_point_above - 1)))
+   260    142826    3363175.0     23.5      2.1                  grad.add_(- current_value_and_slope[:, 0])
+   261    142826    9663021.0     67.7      6.0                  grad.add_(- current_value_and_slope[:, 1] * (a - line.piecewise_linear_w_radius.kink_position(colloc_point_above - 1)))
    262                                           
-   263    142826    3480337.0     24.4      2.1                  max_abs_grad = torch.max(torch.abs(grad))
+   263    142826    3470708.0     24.3      2.2                  max_abs_grad = torch.max(torch.abs(grad))
    264                                                           # TODO: Optimization: I don&#39;t need to evaluate this every iteration
-   265    142826   12808360.0     89.7      7.9                  if max_abs_grad &lt; gtol:
-   266        15         28.0      1.9      0.0                      break
+   265    142826   12907910.0     90.4      8.0                  if max_abs_grad &lt; gtol:
+   266        15         24.0      1.6      0.0                      break
    267                                           
-   268    142811     232684.0      1.6      0.1                  if logger:
+   268    142811     227378.0      1.6      0.1                  if logger:
    269                                                               logger.st([&#34;it&#34;, &#34;max. residual&#34;], [nit, max_abs_grad])
    270                                           
    271                                                           # strictly speaking I should take into account that this is nonlinear
    272                                                           # But in practice with a fine discretisation the stiffness associated
    273                                                           # with moving one pixel leads to contact area increments small enough so that this nonlinearity
    274                                                           # doesn&#39;t matter
-   275    142811    5439703.0     38.1      3.4                  stiffness = - current_value_and_slope[:, 1] + outer_eastic_stifness + line_stiffness_individual
+   275    142811    5274307.0     36.9      3.3                  stiffness = - current_value_and_slope[:, 1] + outer_eastic_stifness + line_stiffness_individual
    276                                           
-   277    142811    2441161.0     17.1      1.5                  increment = - grad / stiffness
+   277    142811    2383114.0     16.7      1.5                  increment = - grad / stiffness
    278                                           
-   279    142811    1302876.0      9.1      0.8                  a_new = a + increment
-   280    142811    1804233.0     12.6      1.1                  mask_negative_stiffness = stiffness &lt;= 0
+   279    142811    1272318.0      8.9      0.8                  a_new = a + increment
+   280    142811    1741873.0     12.2      1.1                  mask_negative_stiffness = stiffness &lt;= 0
    281                                           
-   282    142811     226457.0      1.6      0.1                  if direction == 1:
+   282    142811     218484.0      1.5      0.1                  if direction == 1:
    283                                                               # We let the line advance only until the boundary to the next pixel.
    284                                                               # This is because the step length was based on the pinning curvature
    285                                                               # which is erroneous as soon as we meet the next pixel
@@ -15928,64 +15935,64 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    287                                                               # Additionally, when the curvature is negative, the increment is negative
    288                                                               # but the front should actually move forward.
    289                                                               # In this case as well we advance the front until the edge of the next pixel
-   290     94006     778946.0      8.3      0.5                      mask_new_pixel = torch.logical_or(
-   291     47003    1573069.0     33.5      1.0                          a_new &gt;= line.piecewise_linear_w_radius.kink_position(colloc_point_above),
-   292     47003      75121.0      1.6      0.0                          mask_negative_stiffness)
-   293     94006     664172.0      7.1      0.4                      a_new = torch.where(mask_new_pixel,
-   294     47003    1680393.0     35.8      1.0                                          line.piecewise_linear_w_radius.kink_position(colloc_point_above).to(torch.float64), a_new)
+   290     94006     776344.0      8.3      0.5                      mask_new_pixel = torch.logical_or(
+   291     47003    1514038.0     32.2      0.9                          a_new &gt;= line.piecewise_linear_w_radius.kink_position(colloc_point_above),
+   292     47003      71436.0      1.5      0.0                          mask_negative_stiffness)
+   293     94006     666206.0      7.1      0.4                      a_new = torch.where(mask_new_pixel,
+   294     47003    1638839.0     34.9      1.0                                          line.piecewise_linear_w_radius.kink_position(colloc_point_above).to(torch.float64), a_new)
    295                                           
-   296     47003     408807.0      8.7      0.3                      colloc_point_above.add_(mask_new_pixel)
+   296     47003     399766.0      8.5      0.2                      colloc_point_above.add_(mask_new_pixel)
    297                                           
    298                                                               # because of numerical errors it can be that the gradient points in the wrong
    299                                                               # direction on some pixels, but is very small.
    300                                                               # We just make sure these points do not move backwards
-   301     47003     497405.0     10.6      0.3                      a = torch.maximum(a_new, a)
-   302     95808     137276.0      1.4      0.1                  elif direction == -1:
-   303    191616    1528511.0      8.0      0.9                      mask_new_pixel = torch.logical_or(
-   304     95808    5386162.0     56.2      3.3                          a_new &lt;= line.piecewise_linear_w_radius.kink_position(colloc_point_above - 1).to(torch.float64),
-   305     95808     160388.0      1.7      0.1                          mask_negative_stiffness)
-   306    191616    1360879.0      7.1      0.8                      a_new = torch.where(mask_new_pixel,
-   307     95808    4236320.0     44.2      2.6                                          line.piecewise_linear_w_radius.kink_position(colloc_point_above - 1).to(torch.float64), a_new)
+   301     47003     475670.0     10.1      0.3                      a = torch.maximum(a_new, a)
+   302     95808     135741.0      1.4      0.1                  elif direction == -1:
+   303    191616    1526621.0      8.0      0.9                      mask_new_pixel = torch.logical_or(
+   304     95808    5191656.0     54.2      3.2                          a_new &lt;= line.piecewise_linear_w_radius.kink_position(colloc_point_above - 1).to(torch.float64),
+   305     95808     156317.0      1.6      0.1                          mask_negative_stiffness)
+   306    191616    1360281.0      7.1      0.8                      a_new = torch.where(mask_new_pixel,
+   307     95808    4093443.0     42.7      2.5                                          line.piecewise_linear_w_radius.kink_position(colloc_point_above - 1).to(torch.float64), a_new)
    308                                           
-   309     95808     967133.0     10.1      0.6                      colloc_point_above.add_(mask_new_pixel, alpha=-1)
+   309     95808     958162.0     10.0      0.6                      colloc_point_above.add_(mask_new_pixel, alpha=-1)
    310                                                               # Why not just -= ? -&gt; -= is not allowed for boolean arrays
    311                                           
-   312     95808    1033216.0     10.8      0.6                      a = torch.minimum(a_new, a)
+   312     95808     977725.0     10.2      0.6                      a = torch.minimum(a_new, a)
    313                                           
-   314    142811    5834023.0     40.9      3.6                  if (colloc_point_above &lt; 1).any():
-   315         1         18.0     18.0      0.0                      raise RadiusTooLowError
+   314    142811    5680378.0     39.8      3.5                  if (colloc_point_above &lt; 1).any():
+   315         1         15.0     15.0      0.0                      raise RadiusTooLowError
    316                                           
-   317    142810     275634.0      1.9      0.2                  nit += 1
-   318        15         25.0      1.7      0.0              assert nit &lt; maxit
+   317    142810     265577.0      1.9      0.2                  nit += 1
+   318        15         19.0      1.3      0.0              assert nit &lt; maxit
    319                                           
-   320        15      11262.0    750.8      0.0              nc[i].nit = nit
-   321        15       4637.0    309.1      0.0              print(&#34;nit: {}&#34;.format(nit))
+   320        15      15255.0   1017.0      0.0              nc[i].nit = nit
+   321        15       4330.0    288.7      0.0              print(&#34;nit: {}&#34;.format(nit))
    322                                                       # pinning_field_values_cpu = a_cpu = a.to(device=torch.device(&#34;cpu&#34;)).numpy()
-   323        15        821.0     54.7      0.0              a_cpu = a.to(device=torch.device(&#34;cpu&#34;)).numpy()
+   323        15        792.0     52.8      0.0              a_cpu = a.to(device=torch.device(&#34;cpu&#34;)).numpy()
    324                                                       # if compute_smallest_eigenvalue:
    325                                                       #     eigval, eigvec = line.eigenvalues(a)
    326                                                       #     nc[i].eigenvalue = eigval
    327                                                       #     if dump_fields:
    328                                                       #         nc[i].eigenvector = eigvec
-   329        15      74382.0   4958.8      0.0              line.dump(nc[i], penetration_cpu, a_cpu, dump_fields=dump_fields)
+   329        15      78117.0   5207.8      0.0              line.dump(nc[i], penetration_cpu, a_cpu, dump_fields=dump_fields)
    330                                           
-   331        15         39.0      2.6      0.0              if not there_is_enough_time_left:
+   331        15         34.0      2.3      0.0              if not there_is_enough_time_left:
    332                                                           # if not dump_fields: # this is actually useless when we dumpfields, but who cares ?
    333                                                           print(&#34;Saving front position for restart&#34;)
    334                                                           np.save(&#34;restart_position.npy&#34;, a_cpu)
    335                                                           break
    336                                           
-   337        15      71694.0   4779.6      0.0              nc.sync()
-   338        15      21870.0   1458.0      0.0              sys.stdout.flush()
-   339        15         41.0      2.7      0.0              if penetration_cpu &gt;= max_penetration:
+   337        15      68378.0   4558.5      0.0              nc.sync()
+   338        15      22424.0   1494.9      0.0              sys.stdout.flush()
+   339        15         48.0      3.2      0.0              if penetration_cpu &gt;= max_penetration:
    340         1          2.0      2.0      0.0                  direction = -1
-   341        15         29.0      1.9      0.0              integer_penetration += direction
-   342        15         30.0      2.0      0.0              i += 1
+   341        15         36.0      2.4      0.0              integer_penetration += direction
+   342        15         32.0      2.1      0.0              i += 1
    343         1          2.0      2.0      0.0      except RadiusTooLowError:
-   344         1        598.0    598.0      0.0          print(&#34;lost contact&#34;)
+   344         1        540.0    540.0      0.0          print(&#34;lost contact&#34;)
    345                                           
-   346         1       8477.0   8477.0      0.0      nc.close()
-   347         1          3.0      3.0      0.0      return there_is_enough_time_left</pre>
+   346         1       5904.0   5904.0      0.0      nc.close()
+   347         1          2.0      2.0      0.0      return there_is_enough_time_left</pre>
 </div>
 </div>
 
@@ -16025,8 +16032,8 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
 
 
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain">
-<pre>   217         1   24996586.0 24996586.0     15.4      line.piecewise_linear_w_radius.load_data(0, line.piecewise_linear_w_radius.npx_propagation)
-   246    142826   43509406.0    304.6     26.8                  current_value_and_slope = line.piecewise_linear_w_radius.values_and_slopes(colloc_point_above - 1).to(device=accelerator)
+<pre>   217         1   24495732.0 24495732.0     15.2      line.piecewise_linear_w_radius.load_data(0, line.piecewise_linear_w_radius.npx_propagation)
+   246    142826   44407132.0    310.9     27.6                  current_value_and_slope = line.piecewise_linear_w_radius.values_and_slopes(colloc_point_above - 1).to(device=accelerator)
 </pre>
 </div>
 </div>
