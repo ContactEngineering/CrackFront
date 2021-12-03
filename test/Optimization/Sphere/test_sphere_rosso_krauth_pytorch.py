@@ -5,6 +5,7 @@ import signal
 import os
 import time
 
+import torch
 from ContactMechanics.Tools.Logger import Logger
 from NuMPI.IO.NetCDF import NCStructuredGrid
 from Adhesion.ReferenceSolutions import JKR
@@ -12,7 +13,10 @@ from Adhesion.ReferenceSolutions import JKR
 from CrackFront.Circular import Interpolator
 from CrackFront.CircularEnergyReleaseRate import SphereCFPenetrationEnergyConstGcPiecewiseLinearField
 from CrackFront.Optimization.RossoKrauth import linear_interpolated_pinning_field_equaly_spaced
-from CrackFront.Optimization.propagate_sphere_pytorch import propagate_rosso_krauth
+from CrackFront.Optimization.propagate_sphere_pytorch import (
+    propagate_rosso_krauth,
+    LinearInterpolatedPinningFieldUniformFromFile
+    )
 from CrackFront.CircularEnergyReleaseRate import Es, w, R, maugis_K, generate_random_work_of_adhesion
 
 
@@ -26,13 +30,24 @@ def test_JKR_curve():
 
     sample_radii = np.linspace(0.1, 2.5, 20)
 
-    values = w * np.ones((npx_front, len(sample_radii)))
+    values = w * np.ones((len(sample_radii), npx_front))
 
-    piecewise_linear_w = linear_interpolated_pinning_field_equaly_spaced(
-        values * sample_radii * 2 * np.pi / npx_front,
-        sample_radii)
+    w_radius_values = np.ascontiguousarray(values * sample_radii.reshape(-1, 1) * 2 * np.pi / npx_front)
 
-    cf = SphereCFPenetrationEnergyConstGcPiecewiseLinearField(piecewise_linear_w, wm=w)
+    grid_spacing = sample_radii[1] - sample_radii[0]
+    LinearInterpolatedPinningFieldUniformFromFile.save_values_and_slopes_to_file(
+        values=w_radius_values,
+        grid_spacing=grid_spacing,
+        filename="values_and_slopes.npy")
+
+    cf = SphereCFPenetrationEnergyConstGcPiecewiseLinearField(
+        piecewise_linear_w_radius=LinearInterpolatedPinningFieldUniformFromFile(
+            filename="values_and_slopes.npy",
+            min_radius=sample_radii[0],
+            grid_spacing=grid_spacing,
+            accelerator=torch.device("cpu")
+            ),
+        wm=w)
 
     propagate_rosso_krauth(
         cf,
@@ -89,17 +104,26 @@ def test_restart():
     w_topography = generate_random_work_of_adhesion(**params)
 
     interpolator = Interpolator(w_topography)
+    w_radius_values = np.ascontiguousarray(interpolator.field_polar(sample_radii.reshape(-1, 1), cf_angles.reshape(1, -1)) \
+                      * sample_radii.reshape(-1, 1) * 2 * np.pi / npx_front)
 
-    piecewise_linear_w = linear_interpolated_pinning_field_equaly_spaced(
-        interpolator.field_polar(sample_radii.reshape(1, -1),
-                                 cf_angles.reshape(-1, 1)) * sample_radii.reshape(1, -1) * 2 * np.pi / npx_front,
-        sample_radii)
+    LinearInterpolatedPinningFieldUniformFromFile.save_values_and_slopes_to_file(
+        w_radius_values,
+        params["pixel_size_radial"],
+        filename="values_and_slopes.npy")
 
-    cf = SphereCFPenetrationEnergyConstGcPiecewiseLinearField(piecewise_linear_w, wm=w)
+    cf = SphereCFPenetrationEnergyConstGcPiecewiseLinearField(
+        piecewise_linear_w_radius=LinearInterpolatedPinningFieldUniformFromFile(
+            filename="values_and_slopes.npy",
+            min_radius=sample_radii[0],
+            grid_spacing=params["pixel_size_radial"],
+            accelerator=torch.device("cpu")
+            ),
+        wm=w)
 
     propagate_rosso_krauth(
         cf,
-        initial_a=np.ones(cf.npx) * (cf.piecewise_linear_w_radius.kinks[0]),
+        initial_a=np.ones(cf.npx) * cf.piecewise_linear_w_radius.min_radius,
         dump_fields=False,
         filename="uninterupted.nc",
         **params,
@@ -120,7 +144,7 @@ def test_restart():
     # simulate until interrupted by signal
     assert not propagate_rosso_krauth(
         cf,
-        initial_a=np.ones(cf.npx) * (cf.piecewise_linear_w_radius.kinks[0]),
+        initial_a=np.ones(cf.npx) * cf.piecewise_linear_w_radius.min_radius,
         dump_fields=False,
         filename="interupted.nc",
         handle_signals=True,
