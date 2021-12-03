@@ -36,7 +36,7 @@ class LinearInterpolatedPinningFieldUniformFromFile:
 
         self.filename = filename
         self.accelerator = accelerator
-
+        self.data_device = torch.device("cpu")
         self.file = make_mpi_file_view(filename, MPI.COMM_SELF,
                                             format="npy")
 
@@ -58,7 +58,7 @@ class LinearInterpolatedPinningFieldUniformFromFile:
     def kinks(self):
         return self.kink_position(np.arange(self.npx_propagation))
 
-    def values_and_slopes(self, collocation_point):
+    def values_and_slopes(self, collocation_point, device=torch.device("cpu")):
         r"""
         Parameters:
         -----------
@@ -69,8 +69,8 @@ class LinearInterpolatedPinningFieldUniformFromFile:
         values_and_slopes: np.array(size=(npx_front, 2), dtype=float)
            array containing for collocation_point the pinning force value and the slope towards the next outward pixel.
         """
-        local_indexes = collocation_point - self.subdomain[0]
-        return self.subdomain_data[local_indexes, self.indexes, :]
+        local_indexes = collocation_point - int(self.subdomain[0])
+        return self.subdomain_data[local_indexes, self.indexes, :].to(device=device)
 
     @property
     def nb_subdomain_grid_pts(self):
@@ -85,12 +85,12 @@ class LinearInterpolatedPinningFieldUniformFromFile:
         return self.npx_propagation, self.npx_front, 2
 
     def load_data(self, colloc_min, colloc_max):
-        self.subdomain = torch.from_numpy(np.array([colloc_min, colloc_max])).to(device=self.accelerator)
+        self.subdomain = torch.from_numpy(np.array([colloc_min, colloc_max])).to(device=self.data_device)
         n_subdomain = int(self.subdomain[1] - self.subdomain[0])
         self.subdomain_data = torch.from_numpy(
             self.file.read([int(self.subdomain[0]), 0],
                            (n_subdomain, self.npx_front * 2),
-                           ).reshape(n_subdomain, self.npx_front, 2)).to(device=self.accelerator)
+                           ).reshape(n_subdomain, self.npx_front, 2)).to(device=self.data_device)
 
     @staticmethod
     def save_values_and_slopes_to_file(values, grid_spacing, filename="values_and_slopes.npy"):
@@ -320,6 +320,7 @@ def propagate_rosso_krauth(line,
 
             nc[i].nit = nit
             print("nit: {}".format(nit))
+            # pinning_field_values_cpu = a_cpu = a.to(device=torch.device("cpu")).numpy()
             a_cpu = a.to(device=torch.device("cpu")).numpy()
             # if compute_smallest_eigenvalue:
             #     eigval, eigvec = line.eigenvalues(a)
