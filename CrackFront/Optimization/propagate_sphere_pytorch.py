@@ -21,7 +21,7 @@ _jkrkwargs = dict(contact_modulus=Es, radius=R)
 
 
 class LinearInterpolatedPinningFieldUniformFromFile:
-    def __init__(self, filename, min_radius, grid_spacing, accelerator):
+    def __init__(self, filename, min_radius, grid_spacing, accelerator, data_device=torch.device("cpu")):
         """
         Linearly interpolates the pinning field in crack propagation direction
 
@@ -35,10 +35,9 @@ class LinearInterpolatedPinningFieldUniformFromFile:
         """
 
         self.filename = filename
-        self.accelerator = accelerator
-        self.data_device = torch.device("cpu")
-        self.file = make_mpi_file_view(filename, MPI.COMM_SELF,
-                                            format="npy")
+        self.accelerator = accelerator # TODO: this is actually never used. I think I will leave the transfer to the accelerator to the rosso Krauth script
+        self.data_device = data_device
+        self.file = make_mpi_file_view(filename, MPI.COMM_SELF, format="npy")
 
         Lx, L = self.file.nb_grid_pts
         L = L // 2
@@ -58,7 +57,7 @@ class LinearInterpolatedPinningFieldUniformFromFile:
     def kinks(self):
         return self.kink_position(np.arange(self.npx_propagation))
 
-    def values_and_slopes(self, collocation_point, device=torch.device("cpu")):
+    def values_and_slopes(self, collocation_point,):
         r"""
         Parameters:
         -----------
@@ -70,7 +69,7 @@ class LinearInterpolatedPinningFieldUniformFromFile:
            array containing for collocation_point the pinning force value and the slope towards the next outward pixel.
         """
         local_indexes = collocation_point - int(self.subdomain[0])
-        return self.subdomain_data[local_indexes, self.indexes, :].to(device=device)
+        return self.subdomain_data[local_indexes, self.indexes, :]
 
     @property
     def nb_subdomain_grid_pts(self):
@@ -121,7 +120,7 @@ class LinearInterpolatedPinningFieldUniformFromFile:
 
         # print(a_below)
 
-        values_and_slopes = self.values_and_slopes(a_below)
+        values_and_slopes = self.values_and_slopes(a_below).to(device=torch.device("cpu"))
 
         value_below = values_and_slopes[:, 0]
         slope = values_and_slopes[:, 1]
@@ -244,7 +243,7 @@ def propagate_rosso_krauth(line,
             while nit < maxit:
                 # Nullify the force on each pixel
 
-                current_value_and_slope = line.piecewise_linear_w_radius.values_and_slopes(colloc_point_above - 1)
+                current_value_and_slope = line.piecewise_linear_w_radius.values_and_slopes(colloc_point_above - 1).to(device=accelerator)
 
                 # grad = line.elastic_gradient(a, penetration) \
                 eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
