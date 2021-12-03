@@ -25,7 +25,7 @@ from CrackFront.Circular import Interpolator
 from CrackFront.CircularEnergyReleaseRate import SphereCFPenetrationEnergyConstGcPiecewiseLinearField
 from CrackFront.Optimization.RossoKrauth import linear_interpolated_pinning_field_equaly_spaced
 from CrackFront.Optimization.propagate_sphere_trust_region import penetrations_generator
-from CrackFront.Optimization.propagate_sphere_pytorch import propagate_rosso_krauth
+from CrackFront.Optimization.propagate_sphere_pytorch import propagate_rosso_krauth, LinearInterpolatedPinningFieldUniformFromFile
 
 
 Es = 3 / 4
@@ -67,7 +67,17 @@ def generate_random_field(
 
 # -
 
-refine = 16
+refine = 4
+
+# +
+if torch.cuda.is_available():
+    print("CUDA detected, using CUDA")
+    accelerator = torch.device("cuda")
+else:
+    print("CUDA not available or disabled, fall back to torch on CPU")
+    accelerator = torch.device("cpu")
+    
+cpu = torch.device("cpu")
 
 # +
 params = dict(
@@ -108,10 +118,16 @@ w_topography = generate_random_field(**params)
 
 interpolator = Interpolator(w_topography)
 
-piecewise_linear_w = linear_interpolated_pinning_field_equaly_spaced(
-    interpolator.field_polar(sample_radii.reshape(1, -1), cf_angles.reshape(-1, 1)) * sample_radii.reshape(1, -1) * 2 * np.pi / npx_front, sample_radii)
+w_radius_values = interpolator.field_polar(sample_radii.reshape(-1, 1), cf_angles.reshape(1, -1)) \
+                       * sample_radii.reshape(-1, 1) * 2 * np.pi / npx_front
 
-cf = SphereCFPenetrationEnergyConstGcPiecewiseLinearField(piecewise_linear_w, wm=w)
+LinearInterpolatedPinningFieldUniformFromFile.save_values_and_slopes_to_file(
+        values=w_radius_values,
+        grid_spacing=params["pixel_size_radial"],
+        filename="values_and_slopes.npy",
+)
+
+initial_a = np.ones(params["n_pixels_front"]) * sample_radii[0]
 
 # -
 
@@ -119,13 +135,76 @@ npx_front
 
 w_topography.rms_height_from_area()
 
-initial_a = np.ones(cf.npx) * (cf.piecewise_linear_w_radius.kinks[0])
-
 # %load_ext line_profiler
 
+# %lprun?
+
+# ### All cpu
+
+cf = SphereCFPenetrationEnergyConstGcPiecewiseLinearField(
+    piecewise_linear_w_radius=LinearInterpolatedPinningFieldUniformFromFile(
+            filename="values_and_slopes.npy",
+            min_radius=sample_radii[0],
+            grid_spacing=params["pixel_size_radial"],
+            accelerator=cpu, 
+            data_device=cpu,
+            ),      
+    wm=w)
+# %lprun -s -f propagate_rosso_krauth -T line_profile_sphere_rosso_krauth.txt propagate_rosso_krauth(cf, disable_cuda=True, initial_a=initial_a,filename="torch_timing.nc",**params,)
+
+# grep filtered output that shows only lines that have more then 10% time
+
+# !grep -E "^[[:space:]]+[0-9]+[[:space:]]+[0-9]+[[:space:]]+[0-9]+\.[0-9]+[[:space:]]+[0-9]+\.[0-9]+[[:space:]]+[0-9][0-9].[0-9]+[[:space:]]" line_profile_sphere_rosso_krauth.txt
+
+# grep filtered output that shows only lines that have more then 0% time
+
+# +
+# #!grep -v -E "^[[:space:]]+[0-9]+[[:space:]]+[0-9]+[[:space:]]+[0-9]+\.[0-9]+[[:space:]]+[0-9]+\.[0-9]+[[:space:]]+0.0[[:space:]]" line_profile_sphere_rosso_krauth.txt
+# -
+
+# ### All GPU
+
+cf = SphereCFPenetrationEnergyConstGcPiecewiseLinearField(
+    piecewise_linear_w_radius=LinearInterpolatedPinningFieldUniformFromFile(
+            filename="values_and_slopes.npy",
+            min_radius=sample_radii[0],
+            grid_spacing=params["pixel_size_radial"],
+            accelerator=accelerator, 
+            data_device=accelerator,
+            ),
+    wm=w)
 # %lprun -f propagate_rosso_krauth -T line_profile_sphere_rosso_krauth.txt propagate_rosso_krauth(cf, initial_a=initial_a,filename="torch_timing.nc",**params,)
 
-# !cat line_profile_sphere_rosso_krauth.txt
+# !grep -E "^[[:space:]]+[0-9]+[[:space:]]+[0-9]+[[:space:]]+[0-9]+\.[0-9]+[[:space:]]+[0-9]+\.[0-9]+[[:space:]]+[0-9][0-9].[0-9]+[[:space:]]" line_profile_sphere_rosso_krauth.txt
+
+# grep filtered output that shows only lines that have more then 0% time
+
+# +
+# #!grep -v -E "^[[:space:]]+[0-9]+[[:space:]]+[0-9]+[[:space:]]+[0-9]+\.[0-9]+[[:space:]]+[0-9]+\.[0-9]+[[:space:]]+0.0[[:space:]]" line_profile_sphere_rosso_krauth.txt
+# -
+
+# ### GPU, but pinning field array on CPU
+
+cf = SphereCFPenetrationEnergyConstGcPiecewiseLinearField(
+    piecewise_linear_w_radius=LinearInterpolatedPinningFieldUniformFromFile(
+            filename="values_and_slopes.npy",
+            min_radius=sample_radii[0],
+            grid_spacing=params["pixel_size_radial"],
+            accelerator=accelerator, 
+            data_device=cpu,
+            ),      
+    wm=w)
+# %lprun -f propagate_rosso_krauth -T line_profile_sphere_rosso_krauth.txt propagate_rosso_krauth(cf, initial_a=initial_a,filename="torch_timing.nc",**params,)
+
+# grep filtered output that shows only lines that have more then 10% time
+
+# !grep -E "^[[:space:]]+[0-9]+[[:space:]]+[0-9]+[[:space:]]+[0-9]+\.[0-9]+[[:space:]]+[0-9]+\.[0-9]+[[:space:]]+[0-9][0-9].[0-9]+[[:space:]]" line_profile_sphere_rosso_krauth.txt
+
+# grep filtered output that shows only lines that have more then 0% time
+
+# +
+# #!grep -v -E "^[[:space:]]+[0-9]+[[:space:]]+[0-9]+[[:space:]]+[0-9]+\.[0-9]+[[:space:]]+[0-9]+\.[0-9]+[[:space:]]+0.0[[:space:]]" line_profile_sphere_rosso_krauth.txt
+# -
 
 # ## How does the simulation look like ? 
 #
@@ -174,5 +253,4 @@ FILE=$WS/CrackFront/gpu/time_sphere_rosso_krauth.py
 
 singularity exec --nv --home=$WS --pwd $PWD -B $WS $IMAGE sh $WS/commandline/jupytext_to_html $FILE
 # -
-
 
