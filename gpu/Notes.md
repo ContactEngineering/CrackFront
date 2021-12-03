@@ -12,7 +12,7 @@ jupyter:
     name: python3
 ---
 
-<!-- #region -->
+<!-- #region tags=[] -->
 # Next steps:
 
 ## Singularity containers 
@@ -80,6 +80,10 @@ maybe also usefull to monitor memory usage
 
 https://pytorch.org/docs/stable/notes/cuda.html?highlight=device
 
+
+### Some bewnchmarks: 
+
+https://github.com/pytorch/pytorch/issues/44294
 
 #### Optional: compute smallest eigenvalue. 
 (but maybe I don't need it, anyway)

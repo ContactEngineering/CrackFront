@@ -67,7 +67,7 @@ def generate_random_field(
 
 # -
 
-refine = 4
+refine = 16
 
 # +
 if torch.cuda.is_available():
@@ -150,7 +150,11 @@ cf = SphereCFPenetrationEnergyConstGcPiecewiseLinearField(
             data_device=cpu,
             ),      
     wm=w)
-# %lprun -s -f propagate_rosso_krauth -T line_profile_sphere_rosso_krauth.txt propagate_rosso_krauth(cf, disable_cuda=True, initial_a=initial_a,filename="torch_timing.nc",**params,)
+# %lprun -f propagate_rosso_krauth -T line_profile_sphere_rosso_krauth.txt propagate_rosso_krauth(cf, disable_cuda=True, initial_a=initial_a.copy(),filename="torch_timing.nc",**params,)
+
+# Full
+
+# !cat line_profile_sphere_rosso_krauth.txt
 
 # grep filtered output that shows only lines that have more then 10% time
 
@@ -164,6 +168,7 @@ cf = SphereCFPenetrationEnergyConstGcPiecewiseLinearField(
 
 # ### All GPU
 
+# +
 cf = SphereCFPenetrationEnergyConstGcPiecewiseLinearField(
     piecewise_linear_w_radius=LinearInterpolatedPinningFieldUniformFromFile(
             filename="values_and_slopes.npy",
@@ -173,7 +178,18 @@ cf = SphereCFPenetrationEnergyConstGcPiecewiseLinearField(
             data_device=accelerator,
             ),
     wm=w)
-# %lprun -f propagate_rosso_krauth -T line_profile_sphere_rosso_krauth.txt propagate_rosso_krauth(cf, initial_a=initial_a,filename="torch_timing.nc",**params,)
+
+# I run it once "for nothing" to awaken the GPU. Otherwise the first GPU operation might seem extremely slow. 
+propagate_rosso_krauth(cf, initial_a=initial_a.copy(),filename="torch_timing.nc",**params,)
+
+# %lprun -f propagate_rosso_krauth -T line_profile_sphere_rosso_krauth.txt propagate_rosso_krauth(cf, initial_a=initial_a.copy(),filename="torch_timing.nc",**params,)
+# -
+
+# Full
+
+# !cat line_profile_sphere_rosso_krauth.txt
+
+# grep filtered showing only lines with more then 10%
 
 # !grep -E "^[[:space:]]+[0-9]+[[:space:]]+[0-9]+[[:space:]]+[0-9]+\.[0-9]+[[:space:]]+[0-9]+\.[0-9]+[[:space:]]+[0-9][0-9].[0-9]+[[:space:]]" line_profile_sphere_rosso_krauth.txt
 
@@ -194,7 +210,11 @@ cf = SphereCFPenetrationEnergyConstGcPiecewiseLinearField(
             data_device=cpu,
             ),      
     wm=w)
-# %lprun -f propagate_rosso_krauth -T line_profile_sphere_rosso_krauth.txt propagate_rosso_krauth(cf, initial_a=initial_a,filename="torch_timing.nc",**params,)
+# %lprun -f propagate_rosso_krauth -T line_profile_sphere_rosso_krauth.txt propagate_rosso_krauth(cf, initial_a=initial_a.copy(),filename="torch_timing.nc",**params,)
+
+# Full
+
+# !cat line_profile_sphere_rosso_krauth.txt
 
 # grep filtered output that shows only lines that have more then 10% time
 

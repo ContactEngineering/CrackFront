@@ -17,11 +17,18 @@ values_numpy
 
 values_cuda
 
+Ls = [256, 1024, 4096, 
+      16384, 
+      65536, 
+      262144
+     ]
+
+# +
 times_numpy = []
 times_torch = []
 times_cuda = []
 repeats=10
-Ls = [256, 1024, 4096, 16384, 65536, 262144]
+
 for L in Ls:
     values_numpy = np.random.normal(size=L)
     values_torch = torch.from_numpy(values_numpy)
@@ -72,7 +79,6 @@ times_cuda3 = []
 times_cuda2 = []
 times_cuda = []
 repeats=10
-Ls = [256, 1024, 4096, 16384, 65536, 262144]
 for L in Ls:
     values_numpy = np.random.normal(size=L)
     values_numpy2 = np.random.normal(size=L)
@@ -139,7 +145,7 @@ times_cuda3 = []
 times_cuda2 = []
 times_cuda = []
 repeats=10
-Ls = [256, 1024, 4096, 16384, 65536, 262144]
+
 for L in Ls:
     values_numpy = np.random.normal(size=L)
     values_numpy2 = np.random.normal(size=L)
@@ -202,7 +208,7 @@ times_cuda3 = []
 times_cuda2 = []
 times_cuda = []
 repeats=10
-Ls = [256, 1024, 4096, 16384, 65536, 262144]
+
 for L in Ls:
     values_numpy = np.random.normal(size=L)
     values_numpy2 = np.random.normal(size=L)
@@ -259,4 +265,67 @@ ax.set_yscale("log")
 ax.set_xlabel("vector length")
 ax.set_ylabel(f"time for {repeats} repeats")
 # -
+# ### rfftfreq is faster starting from 16000 pixels only.
+
+# +
+times_numpy = []
+times_torch = []
+times_cuda = []
+times_numpy_and_transfer = []
+repeats=10
+
+for L in Ls:
+    values_numpy = np.random.normal(size=L)
+    values_torch = torch.from_numpy(values_numpy)
+    values_cuda = values_torch.cuda()
+    
+    start_time = time.time()
+    for i in range(repeats):
+        r = np.fft.rfftfreq(L, 1/L)
+    times_numpy.append(time.time() - start_time)
+    
+    
+    start_time = time.time()
+    for i in range(repeats):
+        r = torch.fft.rfftfreq(L, 1/L, device=torch.device("cpu"))
+    times_torch.append(time.time() - start_time)
+    
+    start_time = time.time()
+    for i in range(repeats):
+        r = torch.fft.rfftfreq(L, 1/L, device=torch.device("cuda"))
+    times_cuda.append(time.time() - start_time)
+    start_time = time.time()
+    for i in range(repeats):
+        r = np.fft.rfftfreq(L, 1/L,)
+        r = torch.from_numpy(r).to(device=torch.device("cuda"))
+    times_numpy_and_transfer.append(time.time() - start_time)
+
+# +
+fig, ax = plt.subplots()
+
+
+ax.plot(Ls, times_numpy, "o", label="numpy")
+ax.plot(Ls, times_numpy_and_transfer, "s", label="numpy and transfer")
+
+ax.plot(Ls, times_torch, "+", label="torch, CPU")
+ax.plot(Ls, times_cuda, "x", label="torch, cuda")
+
+ax.legend()
+
+ax.set_xscale("log")
+ax.set_yscale("log")
+
+ax.set_xlabel("vector length")
+ax.set_ylabel(f"time for {repeats} repeats")
+
+# -
+
+Ls
+
+
+
+
+
+
+
 
