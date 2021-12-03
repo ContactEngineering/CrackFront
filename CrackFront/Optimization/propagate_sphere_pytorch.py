@@ -54,6 +54,7 @@ class LinearInterpolatedPinningFieldUniformFromFile:
         # TODO: should I shift these guys to the accelerator ?
         return self.min_radius + self.grid_spacing * collocation_point
 
+    @property
     def kinks(self):
         return self.kink_position(np.arange(self.npx_propagation))
 
@@ -111,6 +112,30 @@ class LinearInterpolatedPinningFieldUniformFromFile:
         # [[values[2,0], slope[2,0], value[2,1], slope[2,1]]]
 
         np.save(filename, values_and_slopes)
+
+    def __call__(self, a, der="0"):
+
+        a_above = np.searchsorted(self.kinks, a, side="right")
+        a_below = a_above - 1
+        # TODO:  Wrapping periodic boundary conditions
+
+        # print(a_below)
+
+        values_and_slopes = self.values_and_slopes(a_below)
+
+        value_below = values_and_slopes[:, 0]
+        slope = values_and_slopes[:, 1]
+
+        if der == "0":
+            ret = value_below + slope * (a - self.kink_position(a_below))
+        elif der == "1":
+            ret = slope
+
+        if isinstance(a, np.ndarray):
+            return ret.to(device=torch.device("cpu")).numpy()
+        else:
+            return ret
+
 
 
 def penetrations(dpen, max_pen):
