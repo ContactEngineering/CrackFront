@@ -73,7 +73,7 @@ refine = 16
 params = dict(
             # pixel_size_radial=0.1,
             n_pixels_front=512 * refine,
-            rms=.1,
+            rms=.4,
             max_penetration=1.,
             penetration_increment=0.2,
             shortcut_wavelength=0.08 / refine,
@@ -117,12 +117,62 @@ cf = SphereCFPenetrationEnergyConstGcPiecewiseLinearField(piecewise_linear_w, wm
 
 npx_front
 
+w_topography.rms_height_from_area()
+
 initial_a = np.ones(cf.npx) * (cf.piecewise_linear_w_radius.kinks[0])
 
 # %load_ext line_profiler
 
-# %lprun -f propagate_rosso_krauth -T line_profile_sphere_rosso_krauth.txt propagate_rosso_krauth(cf.piecewise_linear_w_radius, initial_a=initial_a,filename="torch_timing.nc",**params,)
+# %lprun -f propagate_rosso_krauth -T line_profile_sphere_rosso_krauth.txt propagate_rosso_krauth(cf, initial_a=initial_a,filename="torch_timing.nc",**params,)
 
 # !cat line_profile_sphere_rosso_krauth.txt
+
+# ## How does the simulation look like ? 
+#
+# this is meant to be a "real life" situation
+
+nc = NCStructuredGrid("torch_timing.nc")
+fig, ax = plt.subplots()
+ax.plot(nc.penetration, nc.force)
+ax.set_xlabel(r"Penetration $\Delta ^* $")
+ax.set_ylabel(r"Normal Force $F^* $")
+
+
+# ## Exectuting on a job and exporting as html: 
+
+# +
+# %%writefile time_sphere_rosso_krauth_job.sh
+#MSUB -l walltime=00:25:00
+#MSUB -m ea                                                                    
+#MSUB -q gpu
+#MSUB -l nodes=1:ppn=1:gpus=1 
+#MSUB -l pmem=20G
+
+set -e
+
+ml devel/cuda/11.3 
+ml tools/singularity/3.5
+
+PATH=$HOME/commandline:$PATH
+
+WS=/work/ws/nemo/fr_as1412-2110_cf_gpu-0
+IMAGE=$WS/gpu_jupyterlab.sif
+
+# cd $MOAB_SUBMITDIR
+
+# we expect that this script was copied in dataset/data and submitted from there
+
+export KMP_AFFINITY=compact,1,0
+export OMP_NUM_THREADS=1
+# Add local, up to date CrackFront installation on top of path.
+export PYTHONPATH=$WS/CrackFront:$PYTHONPATH
+
+FILE=$WS/CrackFront/gpu/time_sphere_rosso_krauth.py
+
+# --nv: for GPU
+# --home=PWD: for jupyter
+
+singularity exec --nv --home=$WS --pwd $PWD -B $WS $IMAGE sh $WS/commandline/jupytext_to_html $FILE
+# -
 
 
