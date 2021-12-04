@@ -163,8 +163,16 @@ def propagate_rosso_krauth(line,
                            filename="data.nc",
                            handle_signals=False,
                            restart=False,
+                           pinning_field_memory=None,
                            **kwargs):
+    """
+    Parameters:
+    -----------
+
+    """
+
     # TODO: rethink a good function signature.
+
     there_is_enough_time_left = True
     if handle_signals:
         import signal
@@ -198,10 +206,6 @@ def propagate_rosso_krauth(line,
 
     nq_front_rfft = torch.fft.rfftfreq(npx_front, 1 / npx_front, **kwargs_array_creation)
 
-    #qk = 2 * np.pi / structural_length
-    #a_test = torch.zeros(npx_front, **kwargs_array_creation)
-    #a_test[0] = 1
-    #elastic_stiffness_individual = torch.fft.irfft(q_front_rfft * torch.fft.rfft(a_test), n=npx_front)[0] + qk
 
     a_test = np.zeros(line.npx)
     a_test[0] = 1
@@ -234,16 +238,35 @@ def propagate_rosso_krauth(line,
         direction = 1
 
     try:
+        if pinning_field_memory is None:
+            # then we load all data, simply.
+            line.piecewise_linear_w_radius.load_data(0, line.piecewise_linear_w_radius.npx_propagation)
         while True:
             penetration_cpu = integer_penetration * penetration_increment
             print("penetation:", penetration_cpu)
             penetration = torch.tensor(penetration_cpu).to(device=accelerator)
 
+            if pinning_field_memory:
+                if direction == 1:
+                    if max_loaded_colloc_point < line.piecewise_linear_w_radius.npx_propagation - 1:
+                        # else we have already loaded all the data we need
+                        min_loaded_colloc_point = torch.min(colloc_point_above - 1)
+                        max_loaded_colloc_point = min(min_loaded_colloc_point + pinning_field_memory,
+                                                      line.piecewise_linear_w_radius.npx_propagation - 1)
+                        line.piecewise_linear_w_radius.load_data(min_loaded_colloc_point, max_loaded_colloc_point)
+                else:
+                    if min_loaded_colloc_point > 0:
+                        # else we have already loaded all the data we need
+                        max_loaded_colloc_point = torch.max(colloc_point_above)
+                        min_loaded_colloc_point = max(0, max_loaded_colloc_point - pinning_field_memory)
+                        line.piecewise_linear_w_radius.load_data(min_loaded_colloc_point, max_loaded_colloc_point)
+
             nit = 0
             while nit < maxit:
                 # Nullify the force on each pixel
 
-                current_value_and_slope = line.piecewise_linear_w_radius.values_and_slopes(colloc_point_above - 1).to(device=accelerator)
+                current_value_and_slope = line.piecewise_linear_w_radius.values_and_slopes(colloc_point_above - 1).to(
+                    device=accelerator)
 
                 # grad = line.elastic_gradient(a, penetration) \
                 eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
