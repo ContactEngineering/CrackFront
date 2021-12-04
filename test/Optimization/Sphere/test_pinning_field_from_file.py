@@ -143,7 +143,7 @@ def test_propagate_rosso_krauth_with_partial_data():
         initial_a=np.ones(cf.npx) * cf.piecewise_linear_w_radius.min_radius,
         dump_fields=False,
         filename="partial_loaded.nc",
-        pinning_field_memory=int(cf.piecewise_linear_w_radius.npx_propagation * 0.6),
+        pinning_field_memory=int(cf.piecewise_linear_w_radius.npx_propagation * 0.25),
         **params,
     )
 

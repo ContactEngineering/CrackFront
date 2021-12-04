@@ -246,27 +246,37 @@ def propagate_rosso_krauth(line,
             print("penetation:", penetration_cpu)
             penetration = torch.tensor(penetration_cpu).to(device=accelerator)
 
-            if pinning_field_memory:
-                if direction == 1:
-                    if max_loaded_colloc_point < line.piecewise_linear_w_radius.npx_propagation - 1:
-                        # else we have already loaded all the data we need
-                        min_loaded_colloc_point = torch.min(colloc_point_above - 1)
-                        max_loaded_colloc_point = min(min_loaded_colloc_point + pinning_field_memory,
-                                                      line.piecewise_linear_w_radius.npx_propagation - 1)
-                        line.piecewise_linear_w_radius.load_data(min_loaded_colloc_point, max_loaded_colloc_point)
-                else:
-                    if min_loaded_colloc_point > 0:
-                        # else we have already loaded all the data we need
-                        max_loaded_colloc_point = torch.max(colloc_point_above)
-                        min_loaded_colloc_point = max(0, max_loaded_colloc_point - pinning_field_memory)
-                        line.piecewise_linear_w_radius.load_data(min_loaded_colloc_point, max_loaded_colloc_point)
 
             nit = 0
             while nit < maxit:
-                # Nullify the force on each pixel
+
+                # load the needed pinning field values
+                if pinning_field_memory:
+                    if direction == 1:
+                        if max_loaded_colloc_point < line.piecewise_linear_w_radius.npx_propagation - 1:
+                            # else we have already loaded all the data we need
+
+                            # New collocation points exceed the range, we need to refresh the memory
+                            if torch.any((colloc_point_above - 1) >= max_loaded_colloc_point):
+
+                                min_loaded_colloc_point = torch.min(colloc_point_above - 1)
+                                max_loaded_colloc_point = min(min_loaded_colloc_point + pinning_field_memory,
+                                                              line.piecewise_linear_w_radius.npx_propagation - 1)
+                                line.piecewise_linear_w_radius.load_data(min_loaded_colloc_point, max_loaded_colloc_point)
+                    else:
+                        if min_loaded_colloc_point > 0:
+                            # else we have already loaded all the data we need
+
+                            # New collocation points exceed the range, we need to refresh the memory
+                            if torch.any((colloc_point_above - 1) <= min_loaded_colloc_point):
+                                max_loaded_colloc_point = torch.max(colloc_point_above)
+                                min_loaded_colloc_point = max(0, max_loaded_colloc_point - pinning_field_memory)
+                                line.piecewise_linear_w_radius.load_data(min_loaded_colloc_point, max_loaded_colloc_point)
 
                 current_value_and_slope = line.piecewise_linear_w_radius.values_and_slopes(colloc_point_above - 1).to(
                     device=accelerator)
+
+                # Nullify the force on each pixel
 
                 # grad = line.elastic_gradient(a, penetration) \
                 eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
