@@ -217,8 +217,6 @@ def propagate_rosso_krauth(line,
     colloc_point_above += colloc_point_above * grid_spacing_cpu + line.piecewise_linear_w_radius.min_radius == initial_a
     colloc_point_above = torch.from_numpy(colloc_point_above).to(**kwargs_array_creation)
 
-    # Simply load all data, for now.
-    line.piecewise_linear_w_radius.load_data(0, line.piecewise_linear_w_radius.npx_propagation)
 
     a = torch.from_numpy(initial_a).to(**kwargs_array_creation)
 
