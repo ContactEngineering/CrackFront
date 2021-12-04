@@ -84,7 +84,7 @@ class LinearInterpolatedPinningFieldUniformFromFile:
         return self.npx_propagation, self.npx_front, 2
 
     def load_data(self, colloc_min, colloc_max):
-        self.subdomain = torch.from_numpy(np.array([colloc_min, colloc_max])).to(device=self.data_device)
+        self.subdomain = torch.tensor([colloc_min, colloc_max], device=self.data_device)
         n_subdomain = int(self.subdomain[1] - self.subdomain[0])
         self.subdomain_data = torch.from_numpy(
             self.file.read([int(self.subdomain[0]), 0],
