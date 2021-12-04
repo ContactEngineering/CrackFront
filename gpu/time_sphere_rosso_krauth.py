@@ -248,11 +248,11 @@ ax.set_ylabel(r"Normal Force $F^* $")
 
 # +
 # %%writefile time_sphere_rosso_krauth_job.sh
-#MSUB -l walltime=02:00:00
+#MSUB -l walltime=00:25:00
 #MSUB -m ea                                                                    
 #MSUB -q gpu
 #MSUB -l nodes=1:ppn=1:gpus=1 
-#MSUB -l pmem=32G
+#MSUB -l pmem=20G
 
 set -e
 
