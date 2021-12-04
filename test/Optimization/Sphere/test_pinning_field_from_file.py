@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from Adhesion.ReferenceSolutions import JKR
 from NuMPI.IO.NetCDF import NCStructuredGrid
 from matplotlib import pyplot as plt
 
@@ -75,7 +76,7 @@ def test_pinning_field_from_file():
         (values_and_slopes_upper[:, 0] - values_and_slopes_from_part[:, 0]) / grid_spacing
         )
 
-def propagate_rosso_krauth_with_partial_data():
+def test_propagate_rosso_krauth_with_partial_data():
     params = dict(
         # pixel_size_radial=0.1,
         n_pixels_front=512,
@@ -97,7 +98,7 @@ def propagate_rosso_krauth_with_partial_data():
     params.update(dict(pixel_size_radial=params["shortcut_wavelength"] / 16))
     pulloff_radius = (np.pi * w * R ** 2 / 6 * maugis_K) ** (1 / 3)
 
-    minimum_radius = pulloff_radius / 10
+    minimum_radius = pulloff_radius / 3
 
     # maximum radius
     physical_sizes = params["pixel_size"] * params["n_pixels"]
@@ -125,12 +126,13 @@ def propagate_rosso_krauth_with_partial_data():
             filename="values_and_slopes.npy",
             min_radius=sample_radii[0],
             grid_spacing=params["pixel_size_radial"],
+            accelerator=torch.device("cpu")
             ),
         wm=w)
 
     propagate_rosso_krauth(
         cf,
-        initial_a=np.ones(cf.npx) * cf.piecewise_linear_w_radius.min_radius,
+        initial_a=np.ones(cf.npx) * JKR.contact_radius(penetration=0) * 0.5,
         dump_fields=False,
         filename="all_loaded.nc",
         **params,
@@ -141,7 +143,7 @@ def propagate_rosso_krauth_with_partial_data():
         initial_a=np.ones(cf.npx) * cf.piecewise_linear_w_radius.min_radius,
         dump_fields=False,
         filename="partial_loaded.nc",
-        pinning_field_memory=cf.piecewise_linear_w_radius.npx_propagation // 4,
+        pinning_field_memory=int(cf.piecewise_linear_w_radius.npx_propagation * 0.6),
         **params,
     )
 

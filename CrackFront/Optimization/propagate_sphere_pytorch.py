@@ -236,7 +236,7 @@ def propagate_rosso_krauth(line,
             integer_penetration += direction
     else:
         direction = 1
-
+    max_loaded_colloc_point = 0
     try:
         if pinning_field_memory is None:
             # then we load all data, simply.
