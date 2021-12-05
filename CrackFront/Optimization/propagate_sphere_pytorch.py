@@ -297,8 +297,11 @@ def propagate_rosso_krauth(line,
                     break
 
                 if logger:
-                    logger.st(["it", "max. residual"], [nit, max_abs_grad])
-
+                    #logger.st(["it", "max. residual"], [nit, max_abs_grad])
+                    # extended, expensive version: 
+                    logger.st(["it", "max. residual", "min. a", "mean a", "max. a", "min. collo", "max.collo"],
+                      [nit, max_abs_grad, torch.min(a), torch.mean(a), torch.max(a), torch.min(colloc_point_above), torch.max(colloc_point_above)])
+                    
                 # strictly speaking I should take into account that this is nonlinear
                 # But in practice with a fine discretisation the stiffness associated
                 # with moving one pixel leads to contact area increments small enough so that this nonlinearity
