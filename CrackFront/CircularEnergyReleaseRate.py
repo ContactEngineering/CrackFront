@@ -660,7 +660,9 @@ class SphereCFPenetrationEnergyConstGcPiecewiseLinearField(SphereCrackFrontERRPe
                 break
 
             if logger:
-                logger.st(["it", "max. residual"], [nit, max_abs_grad])
+                # logger.st(["it", "max. residual"], [nit, max_abs_grad])
+                logger.st(["it", "max. residual", "min. a", "mean a", "max. a", "min. collo", "max.collo"],
+                      [nit, max_abs_grad, np.min(a), np.mean(a), np.max(a), np.min(colloc_point_above), np.max(colloc_point_above)])
 
             eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
                 contact_radius=a,
