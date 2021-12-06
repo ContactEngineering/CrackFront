@@ -322,7 +322,7 @@ def propagate_rosso_krauth(line,
                     # but the front should actually move forward.
                     # In this case as well we advance the front until the edge of the next pixel
                     mask_new_pixel = torch.logical_or(
-                        a_new >= line.piecewise_linear_w_radius.kink_position(colloc_point_above),
+                        a_new >= line.piecewise_linear_w_radius.kink_position(colloc_point_above),  # TODO: this is not consistent with the same line during moving out.
                         mask_negative_stiffness)
                     a_new = torch.where(mask_new_pixel,
                                         line.piecewise_linear_w_radius.kink_position(colloc_point_above).to(torch.float64), a_new)

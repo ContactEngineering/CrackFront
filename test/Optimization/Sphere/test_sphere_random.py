@@ -125,6 +125,8 @@ def test_random_linear_interp():
 
 
 def test_random_rosso_krauth():
+    torch.set_default_dtype(torch.float64)
+
     params = dict(
         # pixel_size_radial=0.1,
         n_pixels_front=512,
@@ -246,7 +248,7 @@ def test_random_rosso_krauth():
     conv_data_np = np.loadtxt("RK_numpy.log")
 
 
-    if False:
+    if True:
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
         imax = np.argwhere(conv_data_RK[:, 0] == 1)[1] - 1
@@ -262,8 +264,9 @@ def test_random_rosso_krauth():
 
     # first penetration
     sl = slice(0, int(np.argwhere(conv_data_RK[:, 0] == 1)[1] - 1))
-    np.testing.assert_allclose(conv_data_RK[sl, 1], conv_data_np[sl, 1], rtol=1e-2)
-    # TODO: It is a bit strange that I needed to increase the rtol from 1e-7 to 1e-2
+    np.testing.assert_allclose(conv_data_RK[sl, 1], conv_data_np[sl, 1], rtol=1e-7)
+    # It is a bit strange that I needed to increase the rtol from 1e-7 to 1e-2
+    # My<
     # second penetration
     # It already runs away a little bit.
     #sl = slice(int(np.argwhere(conv_data_RK[:, 0] == 1)[1]), int(np.argwhere(conv_data_RK[:, 0] == 1)[2] - 1))
