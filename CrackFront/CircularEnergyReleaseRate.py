@@ -430,13 +430,27 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
 
     @staticmethod
     def evaluate_normal_force(contact_radius, penetration):
-        """
+        r"""
+        
+        Computes the normal force using (equ. (31) in sanner_crack_2022)
+
+        .. math ::
+
+            F({[a]}; \Delta)
+                =
+                \frac{1}{2\pi}\int \limits_{0}^{2\pi} \dif\theta \ F_\mathrm{JKR}(a(\theta), \Delta)
+                + \pi \frac{\partial G_\mathrm{{JKR}}(\tilde a_0, \Delta)}{\partial \Delta} \sum \limits_{{n \in \mathbf{Z}}} |n||\tilde a_n|^2.
+
+
         """
         return SphereCrackFrontERRPenetrationEnergy._evaluate_normal_force_naive(contact_radius, penetration) \
             + SphereCrackFrontERRPenetrationEnergy._evaluate_normal_force_correction(contact_radius, penetration)
 
     @staticmethod
     def _evaluate_normal_force_naive(contact_radius, penetration):
+        r"""
+            Computes the normal force using :math:`\left< F_\mathrm{JKR}( a(\theta) )\right>_\theta`
+        """
         return np.mean(JKR.force(contact_radius=contact_radius, penetration=penetration))
 
     @staticmethod
@@ -552,7 +566,16 @@ class SphereCrackFrontERRPenetrationEnergyConstGc(SphereCrackFrontERRPenetration
 
     @staticmethod
     def evaluate_normal_force(contact_radius, penetration):
-        """
+        r"""
+        Computes the normal force using :math:`\left< F_\mathrm{JKR}( a(\theta) )\right>_\theta`
+        
+        I show in the dataset  `f9c446ad-78ed-4cb0-82be-07b741cb102a` that using
+        :math:`\left< F_\mathrm{JKR}( a(\theta) )\right>_\theta`
+        is much better than
+        :math:` F_\mathrm{JKR}( \left<a(\theta)\right>_\theta)`
+        for large heterogeneities
+
+        For small heterogeneities it makes no difference.
         """
         return SphereCrackFrontERRPenetrationEnergy._evaluate_normal_force_naive(contact_radius, penetration)
 
