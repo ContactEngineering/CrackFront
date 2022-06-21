@@ -49,6 +49,7 @@ setup(
         'setuptools_scm>=3.5.0'
     ],
     install_requires=[
-        "Adhesion"
+        "Adhesion",
+        "torch"
     ]
 )
