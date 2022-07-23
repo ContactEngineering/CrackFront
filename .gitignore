@@ -1,12 +1,12 @@
 *~
 *.pyc
 *.cpython*.so
-__pycache__
 dist
 *egg-info
-.ipynb_checkpoints
-
+**/.ipynb_checkpoints
+**/__pycache__
 *.ipynb
 # since we are using jupytext
-
-
+venv
+**/build
+**/_build
