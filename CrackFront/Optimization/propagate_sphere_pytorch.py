@@ -136,6 +136,52 @@ class LinearInterpolatedPinningFieldUniformFromFile:
             return ret
 
 
+class LinearInterpolatedPinningFieldUniformFromFileWithEnergy(LinearInterpolatedPinningFieldUniformFromFile):
+
+    @staticmethod
+    def compute_integral_values(values, min_radius, grid_spacing):
+        """
+        Parameters:
+        -----------
+        values: np.array(size=(npx_propagation, npx_front))
+        """
+        return ( 1 /2 * values[0, :] * min_radius +  # contribution from the center to the first collocation, where we assume that the work of adhesion is constant
+          np.concatenate((np.zeros((1, values.shape[1])),
+                          0.5 * grid_spacing * np.cumsum(values[1:, :] + values[:-1, :], axis=0)), axis=0)
+                         )
+
+
+    def integral_values(self, collocation_points):
+        return self._integral_values[collocation_points, self.indexes]
+
+    def __call__(self, a, der="0"):
+        a_above = np.searchsorted(self.kinks, a, side="right")
+        a_below = a_above - 1
+        # TODO:  Wrapping periodic boundary conditions
+
+        # print(a_below)
+
+        values_and_slopes = self.values_and_slopes(a_below).to(device=torch.device("cpu"))
+
+        value_below = values_and_slopes[:, 0]
+        slope = values_and_slopes[:, 1]
+
+        if der == "0":
+            ret = value_below + slope * (a - self.kink_position(a_below))
+        elif der == "1":
+            ret = slope
+        elif der == "-1":
+            integral_below = self.integral_values(a_below) \
+                         + value_below * (a - a_below) \
+                         + 0.5 * slope * (a - a_below) ** 2
+
+
+        if isinstance(a, np.ndarray):
+            return ret.to(device=torch.device("cpu")).numpy()
+        else:
+            return ret
+
+
 
 def penetrations(dpen, max_pen):
     i = 0  # integer penetration value
@@ -168,7 +214,9 @@ def propagate_rosso_krauth(line,
     """
     Parameters:
     -----------
-
+    pinning_field_memory: default: None
+       Number of collocation points of the pinning field that we store in memory
+       if None the whole pinning field is loaded in memory
     """
 
     # TODO: rethink a good function signature.
