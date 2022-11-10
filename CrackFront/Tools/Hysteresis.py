@@ -23,6 +23,8 @@
 #
 import numpy as np
 
+# TODO: maybe there is some good stuff to transfer here: file:~/Repositories/PythonBib/PythonBib/ContactAnalysis/hysteresis.py
+
 def direction_change_index(displacements):
     """
     returns the index of the maximal displcacements
