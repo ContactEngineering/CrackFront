@@ -83,7 +83,22 @@ class LinearInterpolatedPinningFieldUniformFromFile:
     def nb_domain_grid_pts(self):
         return self.npx_propagation, self.npx_front, 2
 
-    def load_data(self, colloc_min, colloc_max):
+    def load_data(self, colloc_min=0, colloc_max=None):
+        """
+
+        If nothing ptovided loads all data
+
+        Parameters:
+        -----------
+        colloc_min: int
+        colloc_max: int
+           index of the collocation point with the greatest radius
+
+
+        """
+
+        if colloc_max is None:
+            colloc_max = self.npx_propagation
         self.subdomain = torch.tensor([colloc_min, colloc_max], device=self.data_device)
         n_subdomain = int(self.subdomain[1] - self.subdomain[0])
         self.subdomain_data = torch.from_numpy(
@@ -114,19 +129,19 @@ class LinearInterpolatedPinningFieldUniformFromFile:
 
     def __call__(self, a, der="0"):
 
-        a_above = np.searchsorted(self.kinks, a, side="right")
-        a_below = a_above - 1
+        index_a_above = np.searchsorted(self.kinks, a, side="right")
+        index_a_below = index_a_above - 1
         # TODO:  Wrapping periodic boundary conditions
 
-        # print(a_below)
+        # print(index_a_below)
 
-        values_and_slopes = self.values_and_slopes(a_below).to(device=torch.device("cpu"))
+        values_and_slopes = self.values_and_slopes(index_a_below).to(device=torch.device("cpu"))
 
         value_below = values_and_slopes[:, 0]
         slope = values_and_slopes[:, 1]
 
         if der == "0":
-            ret = value_below + slope * (a - self.kink_position(a_below))
+            ret = value_below + slope * (a - self.kink_position(index_a_below))
         elif der == "1":
             ret = slope
 
@@ -138,6 +153,10 @@ class LinearInterpolatedPinningFieldUniformFromFile:
 
 class LinearInterpolatedPinningFieldUniformFromFileWithEnergy(LinearInterpolatedPinningFieldUniformFromFile):
 
+    def __init__(self, filename, min_radius, grid_spacing, accelerator, data_device=torch.device("cpu"),
+                 filename_integral_values="integral_values.npy"):
+       super().__init__(filename, min_radius, grid_spacing, accelerator, data_device=torch.device("cpu"),)
+       self._integral_values = torch.from_numpy(np.load(filename_integral_values)).to(device=self.data_device)
     @staticmethod
     def compute_integral_values(values, min_radius, grid_spacing):
         """
@@ -150,30 +169,38 @@ class LinearInterpolatedPinningFieldUniformFromFileWithEnergy(LinearInterpolated
                           0.5 * grid_spacing * np.cumsum(values[1:, :] + values[:-1, :], axis=0)), axis=0)
                          )
 
+    @staticmethod
+    def save_integral_values_to_file(values, min_radius, grid_spacing,
+                                     filename="integral_values.npy"):
+
+        np.save(
+           filename,
+           LinearInterpolatedPinningFieldUniformFromFileWithEnergy.compute_integral_values(values, min_radius, grid_spacing)
+            )
 
     def integral_values(self, collocation_points):
         return self._integral_values[collocation_points, self.indexes]
 
     def __call__(self, a, der="0"):
-        a_above = np.searchsorted(self.kinks, a, side="right")
-        a_below = a_above - 1
+        index_a_above = np.searchsorted(self.kinks, a, side="right")
+        index_a_below = index_a_above - 1
         # TODO:  Wrapping periodic boundary conditions
 
-        # print(a_below)
+        # print(index_a_below)
 
-        values_and_slopes = self.values_and_slopes(a_below).to(device=torch.device("cpu"))
+        values_and_slopes = self.values_and_slopes(index_a_below).to(device=torch.device("cpu"))
 
         value_below = values_and_slopes[:, 0]
         slope = values_and_slopes[:, 1]
 
         if der == "0":
-            ret = value_below + slope * (a - self.kink_position(a_below))
+            ret = value_below + slope * (a - self.kink_position(index_a_below))
         elif der == "1":
             ret = slope
         elif der == "-1":
-            integral_below = self.integral_values(a_below) \
-                         + value_below * (a - a_below) \
-                         + 0.5 * slope * (a - a_below) ** 2
+            ret = self.integral_values(index_a_below) \
+                         + value_below * (a - self.kink_position(index_a_below)) \
+                         + 0.5 * slope * (a -  self.kink_position(index_a_below)) ** 2
 
 
         if isinstance(a, np.ndarray):
@@ -210,6 +237,7 @@ def propagate_rosso_krauth(line,
                            handle_signals=False,
                            restart=False,
                            pinning_field_memory=None,
+                           dump_energy=False,
                            **kwargs):
     """
     Parameters:
