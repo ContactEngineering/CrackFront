@@ -378,7 +378,10 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
 
     def energy(self, contact_radius, penetration):
         return self.elastic_energy(contact_radius, penetration) \
-            + np.sum(self.w_radius_integral(contact_radius, self.angles))
+            + self.adhesion_energy(contact_radius)
+
+    def surface_energy(self, contact_radius):
+        return - np.sum(self.w_radius_integral(contact_radius, self.angles))
 
     @property
     def elastic_jacobian(self):
@@ -395,7 +398,7 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
     def elastic_hessp(self, a):
         return np.fft.irfft(self.nq * np.fft.rfft(a), n=self.npx)
 
-    def dump(self, ncFrame, penetration, a, dump_fields=True):
+    def dump(self, ncFrame, penetration, a, dump_fields=True, dump_energy=False):
         """
         Writes the results of the current solution into the ncFrame
 
@@ -427,6 +430,11 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
         ncFrame.rms_radius = np.sqrt(np.mean((a - mean_radius) ** 2))
         ncFrame.min_radius = np.min(a)
         ncFrame.max_radius = np.max(a)
+
+        if dump_energy:
+            ncFrame.elastic_energy  = self.elastic_energy(a, penetration)
+            ncFrame.surface_energy = self.surface_energy(a)
+            ncFrame.energy = ncFrame.elastic_energy + ncFrame.surface_energy
 
     @staticmethod
     def evaluate_normal_force(contact_radius, penetration):

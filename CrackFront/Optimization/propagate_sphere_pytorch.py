@@ -144,19 +144,20 @@ class LinearInterpolatedPinningFieldUniformFromFile:
             ret = value_below + slope * (a - self.kink_position(index_a_below))
         elif der == "1":
             ret = slope
+        elif der == "-1":
+            ret = self.integral_values(index_a_below) \
+                         + value_below * (a - self.kink_position(index_a_below)) \
+                         + 0.5 * slope * (a -  self.kink_position(index_a_below)) ** 2
+
 
         if isinstance(a, np.ndarray):
             return ret.to(device=torch.device("cpu")).numpy()
         else:
             return ret
 
+    def load_integral_values(self, filename="integral_values.npy"):
+       self._integral_values = torch.from_numpy(np.load(filename)).to(device=self.data_device)
 
-class LinearInterpolatedPinningFieldUniformFromFileWithEnergy(LinearInterpolatedPinningFieldUniformFromFile):
-
-    def __init__(self, filename, min_radius, grid_spacing, accelerator, data_device=torch.device("cpu"),
-                 filename_integral_values="integral_values.npy"):
-       super().__init__(filename, min_radius, grid_spacing, accelerator, data_device=torch.device("cpu"),)
-       self._integral_values = torch.from_numpy(np.load(filename_integral_values)).to(device=self.data_device)
     @staticmethod
     def compute_integral_values(values, min_radius, grid_spacing):
         """
@@ -175,38 +176,13 @@ class LinearInterpolatedPinningFieldUniformFromFileWithEnergy(LinearInterpolated
 
         np.save(
            filename,
-           LinearInterpolatedPinningFieldUniformFromFileWithEnergy.compute_integral_values(values, min_radius, grid_spacing)
+           LinearInterpolatedPinningFieldUniformFromFile.compute_integral_values(values, min_radius, grid_spacing)
             )
 
     def integral_values(self, collocation_points):
         return self._integral_values[collocation_points, self.indexes]
 
-    def __call__(self, a, der="0"):
-        index_a_above = np.searchsorted(self.kinks, a, side="right")
-        index_a_below = index_a_above - 1
-        # TODO:  Wrapping periodic boundary conditions
 
-        # print(index_a_below)
-
-        values_and_slopes = self.values_and_slopes(index_a_below).to(device=torch.device("cpu"))
-
-        value_below = values_and_slopes[:, 0]
-        slope = values_and_slopes[:, 1]
-
-        if der == "0":
-            ret = value_below + slope * (a - self.kink_position(index_a_below))
-        elif der == "1":
-            ret = slope
-        elif der == "-1":
-            ret = self.integral_values(index_a_below) \
-                         + value_below * (a - self.kink_position(index_a_below)) \
-                         + 0.5 * slope * (a -  self.kink_position(index_a_below)) ** 2
-
-
-        if isinstance(a, np.ndarray):
-            return ret.to(device=torch.device("cpu")).numpy()
-        else:
-            return ret
 
 
 

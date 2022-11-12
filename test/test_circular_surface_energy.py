@@ -8,7 +8,7 @@ from CrackFront.CircularEnergyReleaseRate import (
     SphereCrackFrontERRPenetrationEnergyConstGc, SphereCrackFrontERRPenetrationFull
     )
 
-from CrackFront.Optimization.propagate_sphere_pytorch import LinearInterpolatedPinningFieldUniformFromFileWithEnergy
+from CrackFront.Optimization.propagate_sphere_pytorch import LinearInterpolatedPinningFieldUniformFromFile
 
 
 
@@ -24,7 +24,7 @@ def test_kink_integral_values():
 
     min_radius = a[0,0]
     grid_spacing = a[1, 0] - a[0,0]
-    integ = LinearInterpolatedPinningFieldUniformFromFileWithEnergy\
+    integ = LinearInterpolatedPinningFieldUniformFromFile\
         .compute_integral_values(values, min_radius, grid_spacing)
 
     np.testing.assert_allclose(integ, a**2 / 2 * w)
@@ -43,16 +43,16 @@ def test_interpolation():
 
     min_radius = a[0,0]
     grid_spacing = a[1, 0] - a[0,0]
-    LinearInterpolatedPinningFieldUniformFromFileWithEnergy\
+    LinearInterpolatedPinningFieldUniformFromFile\
         .save_integral_values_to_file(values, min_radius, grid_spacing)
-    LinearInterpolatedPinningFieldUniformFromFileWithEnergy\
+    LinearInterpolatedPinningFieldUniformFromFile\
         .save_values_and_slopes_to_file(values, grid_spacing, filename="values_and_slopes.npy")
 
     accelerator = torch.device("cpu")
 
 
 
-    interp = LinearInterpolatedPinningFieldUniformFromFileWithEnergy(
+    interp = LinearInterpolatedPinningFieldUniformFromFile(
                     filename="values_and_slopes.npy",
                     min_radius=min_radius ,
                     grid_spacing=grid_spacing,
@@ -60,11 +60,10 @@ def test_interpolation():
                     data_device=accelerator,
                     )
     interp.load_data()
+    interp.load_integral_values()
 
-    np.testing.assert_allclose(interp._integral_values,  LinearInterpolatedPinningFieldUniformFromFileWithEnergy
+    np.testing.assert_allclose(interp._integral_values,  LinearInterpolatedPinningFieldUniformFromFile
         .compute_integral_values(values, min_radius, grid_spacing))
-
-
 
     interp_points=a[10,:]+ 0.00000001
     integ = interp(interp_points, der="-1")
@@ -77,3 +76,6 @@ def test_interpolation():
     integ = interp(interp_points, der="-1")
 
     np.testing.assert_allclose(integ, interp_points**2 / 2 * w)
+
+
+# def test_energy():
