@@ -7,7 +7,7 @@ from CrackFront.CircularEnergyReleaseRate import (
     SphereCrackFrontERRPenetrationEnergyConstGc, SphereCrackFrontERRPenetrationFull
     )
 from CrackFront.Optimization import trustregion_newton_cg
-
+from Adhesion.ReferenceSolutions import JKR
 
 @pytest.mark.parametrize("cfclass", [
     SphereCrackFrontERRPenetrationLin,
@@ -61,6 +61,7 @@ def test_circular_front_vs_jkr(cfclass):
         assert abs(penetration - JKR.penetration(contact_radius, )) < 1e-10
 
         a = sol.x
+
 
 
 @pytest.mark.parametrize("penetration", [-0.4, 1.])
@@ -219,6 +220,72 @@ def test_hessian_product(cfclass):
     rms_errors = np.array(rms_errors)
     assert rms_errors[-1] / rms_errors[0] < 1.5 * (hs[-1] / hs[0]) ** 2
 
+@pytest.mark.parametrize("cfclass", [
+    SphereCrackFrontERRPenetrationEnergy,
+    SphereCrackFrontERRPenetrationEnergyConstGc
+    ])
+def test_jkr_elastic_energy(cfclass):
+    n = 8
+    w = 1 / np.pi
+    Es = 3. / 4
+
+    cf = cfclass(n,
+                 w_radius_integral=lambda a, theta: a**2 / 2 * w,
+                 w_radius=lambda a, theta: a * w,
+                 dw_radius=lambda a, theta: w, )
+
+    penetration = 1.
+    contact_radius = 0.6
+    np.testing.assert_allclose(
+        cf.elastic_energy(np.ones(n) * contact_radius, penetration),
+        JKR.nonequilibrium_elastic_energy(contact_radius=contact_radius, penetration=penetration)
+    )
+
+@pytest.mark.parametrize("n", (8, 15))
+@pytest.mark.parametrize("cfclass", [
+    SphereCrackFrontERRPenetrationEnergy,
+    SphereCrackFrontERRPenetrationEnergyConstGc
+    ])
+def test_surface_energy(cfclass, n):
+    w = 1 / np.pi
+    Es = 3. / 4
+
+    cf = cfclass(n,
+                 w_radius_integral=lambda a, theta: a**2 / 2 * w,
+                 w_radius=lambda a, theta: a * w,
+                 dw_radius=lambda a, theta: w, )
+
+    contact_radius = 0.6
+    np.testing.assert_allclose(
+        cf.surface_energy(np.ones(n) * contact_radius,),
+        - contact_radius ** 2 *w * np.pi)
+
+
+@pytest.mark.parametrize("cfclass", [
+    SphereCrackFrontERRPenetrationEnergy,
+    SphereCrackFrontERRPenetrationEnergyConstGc
+    ])
+def test_total_energy(cfclass):
+    n = 8
+    w = 1 / np.pi
+    Es = 3. / 4
+
+    cf = cfclass(n,
+                 w_radius_integral=lambda a, theta: a**2 / 2 * w,
+                 w_radius=lambda a, theta: a * w,
+                 dw_radius=lambda a, theta: w, )
+
+    penetration = 1.
+    contact_radius = 0.6
+    np.testing.assert_allclose(
+        cf.energy(np.ones(n) * contact_radius, penetration),
+        - contact_radius ** 2 *w * np.pi
+        + JKR.nonequilibrium_elastic_energy(contact_radius=contact_radius, penetration=penetration)
+    )
+
+
+
+#def test_circular_front_vs_jkr(cfclass):
 
 def test_energy_vs_gradient():
     pass  # TODO: need to implement the surface energy term before.

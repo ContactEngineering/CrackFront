@@ -78,4 +78,35 @@ def test_interpolation():
     np.testing.assert_allclose(integ, interp_points**2 / 2 * w)
 
 
-# def test_energy():
+def test_energy():
+    # Test the interpolation
+    #
+    n = 8
+    w = 1 / np.pi
+    Es = 3. / 4
+
+    a = np.linspace
+
+    a = np.linspace(0.1, 1.5).reshape(-1, 1) * np.ones((1, n))
+    values =  a * w
+
+    min_radius = a[0,0]
+    grid_spacing = a[1, 0] - a[0,0]
+    LinearInterpolatedPinningFieldUniformFromFile\
+        .save_integral_values_to_file(values, min_radius, grid_spacing)
+    LinearInterpolatedPinningFieldUniformFromFile\
+        .save_values_and_slopes_to_file(values, grid_spacing, filename="values_and_slopes.npy")
+
+    accelerator = torch.device("cpu")
+
+
+
+    interp = LinearInterpolatedPinningFieldUniformFromFile(
+                    filename="values_and_slopes.npy",
+                    min_radius=min_radius ,
+                    grid_spacing=grid_spacing,
+                    accelerator=accelerator,
+                    data_device=accelerator,
+                    )
+    interp.load_data()
+    interp.load_integral_values()

@@ -378,10 +378,10 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
 
     def energy(self, contact_radius, penetration):
         return self.elastic_energy(contact_radius, penetration) \
-            + self.adhesion_energy(contact_radius)
+            + self.surface_energy(contact_radius)
 
     def surface_energy(self, contact_radius):
-        return - np.sum(self.w_radius_integral(contact_radius, self.angles))
+        return - np.sum(self.w_radius_integral(contact_radius, self.angles)) * 2 * np.pi / self.npx
 
     @property
     def elastic_jacobian(self):
