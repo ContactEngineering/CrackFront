@@ -230,9 +230,9 @@ def test_jkr_elastic_energy(cfclass):
     Es = 3. / 4
 
     cf = cfclass(n,
-                 w_radius_integral=lambda a, theta: a**2 / 2 * w,
-                 w_radius=lambda a, theta: a * w,
-                 dw_radius=lambda a, theta: w, )
+                 w_radius_integral=lambda a, theta: a**2 / 2 * w * 2 * np.pi / n,
+                 w_radius=lambda a, theta: a * w * 2 * np.pi / n,
+                 dw_radius=lambda a, theta: w * 2 * np.pi / n, )
 
     penetration = 1.
     contact_radius = 0.6
@@ -251,10 +251,9 @@ def test_surface_energy(cfclass, n):
     Es = 3. / 4
 
     cf = cfclass(n,
-                 w_radius_integral=lambda a, theta: a**2 / 2 * w,
-                 w_radius=lambda a, theta: a * w,
-                 dw_radius=lambda a, theta: w, )
-
+                 w_radius_integral=lambda a, theta: a**2 / 2 * w * 2 * np.pi / n,
+                 w_radius=lambda a, theta: a * w * 2 * np.pi / n,
+                 dw_radius=lambda a, theta: w * 2 * np.pi / n, )
     contact_radius = 0.6
     np.testing.assert_allclose(
         cf.surface_energy(np.ones(n) * contact_radius,),
@@ -271,10 +270,9 @@ def test_total_energy(cfclass):
     Es = 3. / 4
 
     cf = cfclass(n,
-                 w_radius_integral=lambda a, theta: a**2 / 2 * w,
-                 w_radius=lambda a, theta: a * w,
-                 dw_radius=lambda a, theta: w, )
-
+                 w_radius_integral=lambda a, theta: a**2 / 2 * w * 2 * np.pi / n,
+                 w_radius=lambda a, theta: a * w * 2 * np.pi / n,
+                 dw_radius=lambda a, theta: w * 2 * np.pi / n, )
     penetration = 1.
     contact_radius = 0.6
     np.testing.assert_allclose(

@@ -315,7 +315,11 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
     """
 
     def __init__(self, npx, w=None, dw=None, kc=None, dkc=None, w_radius_integral=None, w_radius=None, dw_radius=None):
+        """
+        w_radius:
+        surface energy in a pixel: w radius delta_angle
 
+        """
         # TODO: enable to provide the integral of the work of adhesion field
         self.npx = npx
         self.angles = np.arange(npx) * 2 * np.pi / npx
@@ -381,7 +385,7 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
             + self.surface_energy(contact_radius)
 
     def surface_energy(self, contact_radius):
-        return - np.sum(self.w_radius_integral(contact_radius, self.angles)) * 2 * np.pi / self.npx
+        return - np.sum(self.w_radius_integral(contact_radius, self.angles))
 
     @property
     def elastic_jacobian(self):
@@ -434,6 +438,7 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
         if dump_energy:
             ncFrame.elastic_energy  = self.elastic_energy(a, penetration)
             ncFrame.surface_energy = self.surface_energy(a)
+            print("test energy",  ncFrame.surface_energy, self.surface_energy(a))
             ncFrame.energy = ncFrame.elastic_energy + ncFrame.surface_energy
 
     @staticmethod
