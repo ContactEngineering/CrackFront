@@ -1,5 +1,5 @@
 #
-# Copyright 2020 Antoine Sanner
+# Copyright 2020-2021 Antoine Sanner
 #
 # ### MIT license
 #
