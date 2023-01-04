@@ -117,6 +117,10 @@ def circular_crack_sif_from_roughness_memory_friendly(roughness, radius, angle, 
 
 def circular_crack_sif_from_roughness_via_bicubic(roughness, radius, angle, nb_grid_pts_fourier_interp, Es=1, verbose=0):
 
+    # TODO: There is no bicubic interpolation here !
+    #
+    # Did I mean to implement this : dtool_item_by_name $FRCT/de0f0c45-51f9-49a3-96ad-b8b8d3c218b5 comparison_lc0.2.html ?
+    # And this is just a copy paste from above ? (computational complexity seems to be N4)
     nx, ny = roughness.nb_grid_pts
     sx, sy = roughness.physical_sizes
     dx, dy = roughness.pixel_size
@@ -143,7 +147,7 @@ def circular_crack_sif_from_roughness_via_bicubic(roughness, radius, angle, nb_g
         q_propagation = qx * np.cos(_angle) + qy * np.sin(_angle)
         kernel = Es / np.sqrt(2) * np.sqrt(abs(q_front) + 1j * q_propagation)
         kernel[0, 0] = 0
-        for idx_radius in range(len(_radius)):
+        for idx_radius in range(len(_radius)): # TODO: Can this be made without a for loop ?
             SIF[idx_angle, idx_radius] = - 1 / (nx * ny) * np.sum((heights_fourier * kernel
                                                                    * np.exp(1j * (q_propagation * _radius[idx_radius]))
                                                                    ).real, axis=(0, 1))
