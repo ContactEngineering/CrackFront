@@ -79,7 +79,7 @@ def generate_random_field(
 
 # -
 
-refine = 16
+refine = 32
 
 # +
 if torch.cuda.is_available():
@@ -306,3 +306,6 @@ FILE=$WS/CrackFront/gpu/time_sphere_rosso_krauth_large_systems.py
 # --home=PWD: for jupyter
 
 singularity exec --nv --home=$WS --pwd $PWD -B $WS -B $TMPDIR:/tmp $IMAGE sh $WS/commandline/jupytext_to_html $FILE
+# -
+
+
