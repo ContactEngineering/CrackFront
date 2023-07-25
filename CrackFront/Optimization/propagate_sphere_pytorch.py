@@ -352,7 +352,7 @@ def propagate_rosso_krauth(line,
                 # Nullify the force on each pixel
 
                 # grad = line.elastic_gradient(a, penetration) \
-                eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
+                eerr_j = JKR.elastic_energy_release_rate(
                     contact_radius=a,
                     penetration=penetration,
                     **_jkrkwargs)
