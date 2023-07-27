@@ -398,7 +398,7 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
         # factors for the fourier space scalar product with rfft
 
         a0 = np.mean(contact_radius)
-        return np.mean(JKR.nonequilibrium_elastic_energy(contact_radius=contact_radius, penetration=penetration)) \
+        return np.mean(JKR.elastic_energy(contact_radius=contact_radius, penetration=penetration)) \
             + np.pi * JKR.elastic_energy_release_rate(penetration=penetration,
                                                                      contact_radius=a0) \
             * self._n_an_2(contact_radius)
@@ -597,7 +597,7 @@ class SphereCrackFrontERRPenetrationEnergyConstGc(SphereCrackFrontERRPenetration
     def elastic_energy(self, contact_radius, penetration):
         # factors for the fourier space scalar product with rfft
 
-        return np.mean(JKR.nonequilibrium_elastic_energy(contact_radius=contact_radius, penetration=penetration)) \
+        return np.mean(JKR.elastic_energy(contact_radius=contact_radius, penetration=penetration)) \
             + np.pi * self.wm * self._n_an_2(contact_radius)
 
     @staticmethod

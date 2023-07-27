@@ -261,7 +261,7 @@ def test_jkr_elastic_energy(cfclass):
     contact_radius = 0.6
     np.testing.assert_allclose(
         cf.elastic_energy(np.ones(n) * contact_radius, penetration),
-        JKR.nonequilibrium_elastic_energy(contact_radius=contact_radius, penetration=penetration)
+        JKR.elastic_energy(contact_radius=contact_radius, penetration=penetration)
     )
 
 @pytest.mark.parametrize("n", (8, 15))
@@ -301,7 +301,7 @@ def test_total_energy(cfclass):
     np.testing.assert_allclose(
         cf.energy(np.ones(n) * contact_radius, penetration),
         - contact_radius ** 2 *w * np.pi
-        + JKR.nonequilibrium_elastic_energy(contact_radius=contact_radius, penetration=penetration)
+        + JKR.elastic_energy(contact_radius=contact_radius, penetration=penetration)
     )
 
 

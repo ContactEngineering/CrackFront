@@ -15076,7 +15076,7 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    246    142826   23996169.0    168.0     11.0                  current_value_and_slope = line.piecewise_linear_w_radius.values_and_slopes(colloc_point_above - 1).to(device=accelerator)
    247                                           
    248                                                           # grad = line.elastic_gradient(a, penetration) \
-   249    428478    5768619.0     13.5      2.6                  eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
+   249    428478    5768619.0     13.5      2.6                  eerr_j = JKR.elastic_energy_release_rate(
    250    142826     190610.0      1.3      0.1                      contact_radius=a,
    251    142826     185232.0      1.3      0.1                      penetration=penetration,
    252    142826     192711.0      1.3      0.1                      **_jkrkwargs)
@@ -15503,7 +15503,7 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    246    142826   13504475.0     94.6     11.2                  current_value_and_slope = line.piecewise_linear_w_radius.values_and_slopes(colloc_point_above - 1).to(device=accelerator)
    247                                           
    248                                                           # grad = line.elastic_gradient(a, penetration) \
-   249    428478    8367610.0     19.5      6.9                  eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
+   249    428478    8367610.0     19.5      6.9                  eerr_j = JKR.elastic_energy_release_rate(
    250    142826     192844.0      1.4      0.2                      contact_radius=a,
    251    142826     187268.0      1.3      0.2                      penetration=penetration,
    252    142826     194808.0      1.4      0.2                      **_jkrkwargs)
@@ -15894,7 +15894,7 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    246    142826   44407132.0    310.9     27.6                  current_value_and_slope = line.piecewise_linear_w_radius.values_and_slopes(colloc_point_above - 1).to(device=accelerator)
    247                                           
    248                                                           # grad = line.elastic_gradient(a, penetration) \
-   249    428478    8599714.0     20.1      5.3                  eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
+   249    428478    8599714.0     20.1      5.3                  eerr_j = JKR.elastic_energy_release_rate(
    250    142826     193400.0      1.4      0.1                      contact_radius=a,
    251    142826     187183.0      1.3      0.1                      penetration=penetration,
    252    142826     193447.0      1.4      0.1                      **_jkrkwargs)
