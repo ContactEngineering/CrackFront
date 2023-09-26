@@ -383,16 +383,21 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
         self.w_radius = w_radius
         self.dw_radius = dw_radius
 
+    # @staticmethod
+    # def _n_an_2(contact_radius):
+    #     npx = len(contact_radius)
+    #     nq = np.fft.rfftfreq(npx, 1 / npx)
+    #     fourier_scalar_prod_factors = np.ones(npx // 2 + 1) * 2
+    #     fourier_scalar_prod_factors[0] = 1
+    #     if npx % 2 == 0:
+    #         fourier_scalar_prod_factors[-1] == 1
+    #     a_fourier = np.fft.rfft(contact_radius, norm="forward")
+    #     return np.vdot(a_fourier * nq * fourier_scalar_prod_factors, a_fourier).real
     @staticmethod
-    def _n_an_2(contact_radius):
-        npx = len(contact_radius)
-        nq = np.fft.rfftfreq(npx, 1 / npx)
-        fourier_scalar_prod_factors = np.ones(npx // 2 + 1) * 2
-        fourier_scalar_prod_factors[0] = 1
-        if npx % 2 == 0:
-            fourier_scalar_prod_factors[-1] == 1
-        a_fourier = np.fft.rfft(contact_radius, norm="forward")
-        return np.vdot(a_fourier * nq * fourier_scalar_prod_factors, a_fourier).real
+    def _n_an_2(a):
+        k = np.fft.fftfreq(len(a), 1 / len(a))
+        ak = np.fft.fft(a, norm="forward")
+        return np.sum((abs(k) * ak * ak.conj())).real
 
     def elastic_energy(self, contact_radius, penetration):
         # factors for the fourier space scalar product with rfft
