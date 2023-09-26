@@ -309,9 +309,66 @@ def test_total_energy(cfclass):
 #def test_circular_front_vs_jkr(cfclass):
 
 def test_energy_vs_gradient():
-    pass  # TODO: need to implement the surface energy term before.
+    n = 8
+    w = 1 / np.pi
+    Es = 3. / 4
+    cf = SphereCrackFrontERRPenetrationEnergy(n,
+                                              w_radius_integral=lambda a, theta: a ** 2 / 2 * w * 2 * np.pi / n,
+                                              w_radius=lambda a, theta: a * w * 2 * np.pi / n,
+                                              dw_radius=lambda a, theta: w * 2 * np.pi / n, )
+    a = 0.6 + 0.1 * np.random.uniform(-1, 1, size=n)
+    #k = np.fft.fftfreq(len(a), 1 / len(a))
+    penetration =JKR.penetration(contact_radius=0.6)
+    # contact radius perturbation
+    da = np.random.uniform(-1, 1, size=n)
 
-@pytest.mark.parametrize("n",[8,9,512])
+
+
+    epsilons = np.logspace(-3,-8)
+    dUel = np.array([cf.energy(a+eps * da,penetration) - cf.energy(a,penetration) for eps in epsilons])
+
+    grad_da = np.vdot(cf.gradient(a,penetration),da)
+
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots()
+    #ax.plot(epsilons,abs(dUel/(grad_da * epsilons)- 1),".")
+    #ax.plot(epsilons,)
+    ax.plot(epsilons,dUel/epsilons,".")
+    ax.axhline(grad_da)
+
+    plt.show(block=True)
+
+
+def test_energy_vs_gradient_sinewave():
+    n = 8
+    w = 1 / np.pi
+    Es = 3. / 4
+    cf = SphereCrackFrontERRPenetrationEnergy(n,
+                                              w_radius_integral=lambda a, theta: a ** 2 / 2 * w * 2 * np.pi / n,
+                                              w_radius=lambda a, theta: a * w * 2 * np.pi / n,
+                                              dw_radius=lambda a, theta: w * 2 * np.pi / n, )
+    a = 0.65 * np.ones(n)
+    # k = np.fft.fftfreq(len(a), 1 / len(a))
+    penetration = JKR.penetration(contact_radius=0.6)
+    # contact radius perturbation
+    da = np.random.uniform(-1, 1, size=n)
+    angle = np.arange(n) * 2 * np.pi / n
+    da = 0.1 * np.sin(3 * angle)
+    epsilons = np.logspace(-3, -9)
+    dUel = np.array([cf.energy(a + eps * da, penetration) - cf.energy(a, penetration) for eps in epsilons])
+
+    grad_da = np.vdot(cf.gradient(a, penetration), da)
+
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots()
+    ax.loglog(epsilons,abs(dUel/(grad_da * epsilons)- 1),".")
+    # ax.plot(epsilons,)
+    #ax.plot(epsilons, dUel / epsilons, ".")
+    #ax.axhline(grad_da)
+
+    plt.show(block=True)
+
+@pytest.mark.parametrize("n",[8,9,512,513])
 def test_n_an2_random(n):
     n = 8
     w = 1 / np.pi
@@ -320,7 +377,7 @@ def test_n_an2_random(n):
         w_radius_integral=lambda a, theta: a ** 2 / 2 * w * 2 * np.pi / n,
         w_radius=lambda a, theta: a * w * 2 * np.pi / n,
         dw_radius=lambda a, theta: w * 2 * np.pi / n, )
-    a = 0.6 + np.random.normal(size=n)
+    a = 0.6 + 0.1 * np.random.uniform(-1,1,size=n)
     k = np.fft.fftfreq(len(a),1 / len(a))
     ak = np.fft.fft(a,norm="forward")
     ref = np.sum((abs(k) * ak * ak.conj() ))
@@ -340,7 +397,7 @@ def test_n_an2_sinusoidal(n):
                                               w_radius=lambda a, theta: a * w * 2 * np.pi / n,
                                               dw_radius=lambda a, theta: w * 2 * np.pi / n, )
     angle = np.arange(n) * 2 * np.pi/ n
-    a = 0.6 + np.sin(3*angle)
+    a = 0.6 + 0.1 * np.sin(3*angle)
     k = np.fft.fftfreq(len(a), 1 / len(a))
     ak = np.fft.fft(a, norm="forward")
     ref = np.sum((abs(k) * ak * ak.conj()))
