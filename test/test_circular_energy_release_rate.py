@@ -307,9 +307,9 @@ def test_total_energy(cfclass):
 
 
 #def test_circular_front_vs_jkr(cfclass):
+@pytest.mark.parametrize("n",[8,9,127,128])
 
-def test_energy_vs_gradient():
-    n = 8
+def test_energy_vs_gradient(n):
     w = 1 / np.pi
     Es = 3. / 4
     cf = SphereCrackFrontERRPenetrationEnergy(n,
@@ -324,49 +324,52 @@ def test_energy_vs_gradient():
 
 
 
-    epsilons = np.logspace(-3,-8)
+    epsilons = np.logspace(-2,-8,10)
     dUel = np.array([cf.energy(a+eps * da,penetration) - cf.energy(a,penetration) for eps in epsilons])
 
     grad_da = np.vdot(cf.gradient(a,penetration),da)
 
-    import matplotlib.pyplot as plt
-    fig, ax = plt.subplots()
-    #ax.plot(epsilons,abs(dUel/(grad_da * epsilons)- 1),".")
-    #ax.plot(epsilons,)
-    ax.plot(epsilons,dUel/epsilons,".")
-    ax.axhline(grad_da)
 
-    plt.show(block=True)
+    rel_error = abs(dUel/(grad_da * epsilons)- 1)
 
+    if False:
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots()
+        ax.loglog(epsilons, rel_error,".")
+        plt.show(block=True)
 
-def test_energy_vs_gradient_sinewave():
-    n = 8
+    assert rel_error[-1] < 1e-4
+    assert rel_error[-1] < 10 * rel_error[0] * epsilons[-1]/ epsilons[0]
+
+@pytest.mark.parametrize("n",[8,9,127,128])
+def test_energy_vs_gradient_sinewave(n):
+
     w = 1 / np.pi
     Es = 3. / 4
     cf = SphereCrackFrontERRPenetrationEnergy(n,
                                               w_radius_integral=lambda a, theta: a ** 2 / 2 * w * 2 * np.pi / n,
                                               w_radius=lambda a, theta: a * w * 2 * np.pi / n,
                                               dw_radius=lambda a, theta: w * 2 * np.pi / n, )
-    a = 0.65 * np.ones(n)
+    angle = np.arange(n) * 2 * np.pi / n
+    a = 0.6  + 0.1 * np.sin(3 * angle)
     # k = np.fft.fftfreq(len(a), 1 / len(a))
     penetration = JKR.penetration(contact_radius=0.6)
     # contact radius perturbation
-    da = np.random.uniform(-1, 1, size=n)
-    angle = np.arange(n) * 2 * np.pi / n
-    da = 0.1 * np.sin(3 * angle)
-    epsilons = np.logspace(-3, -9)
+    da =  np.sin(3 * angle)
+    epsilons = np.logspace(-3, -7,10)
     dUel = np.array([cf.energy(a + eps * da, penetration) - cf.energy(a, penetration) for eps in epsilons])
 
     grad_da = np.vdot(cf.gradient(a, penetration), da)
+    rel_error = abs(dUel / (grad_da * epsilons) - 1)
 
-    import matplotlib.pyplot as plt
-    fig, ax = plt.subplots()
-    ax.loglog(epsilons,abs(dUel/(grad_da * epsilons)- 1),".")
-    # ax.plot(epsilons,)
-    #ax.plot(epsilons, dUel / epsilons, ".")
-    #ax.axhline(grad_da)
+    if True:
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots()
+        ax.loglog(epsilons, rel_error, ".")
+        plt.show(block=True)
 
-    plt.show(block=True)
+    assert rel_error[-1] < 1e-4
+    assert rel_error[-1] < 10 * rel_error[0] * epsilons[-1] / epsilons[0]
 
 @pytest.mark.parametrize("n",[8,9,512,513])
 def test_n_an2_random(n):
