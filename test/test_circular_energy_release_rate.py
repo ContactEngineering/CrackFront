@@ -310,3 +310,39 @@ def test_total_energy(cfclass):
 
 def test_energy_vs_gradient():
     pass  # TODO: need to implement the surface energy term before.
+
+@pytest.mark.parametrize("n",[8,9,512])
+def test_n_an2_random(n):
+    n = 8
+    w = 1 / np.pi
+    Es = 3. / 4
+    cf = SphereCrackFrontERRPenetrationEnergy(n,
+        w_radius_integral=lambda a, theta: a ** 2 / 2 * w * 2 * np.pi / n,
+        w_radius=lambda a, theta: a * w * 2 * np.pi / n,
+        dw_radius=lambda a, theta: w * 2 * np.pi / n, )
+    a = 0.6 + np.random.normal(size=n)
+    k = np.fft.fftfreq(len(a),1 / len(a))
+    ak = np.fft.fft(a,norm="forward")
+    ref = np.sum((abs(k) * ak * ak.conj() ))
+    test = cf._n_an_2(a)
+    np.testing.assert_allclose(test,ref)
+
+    # This test fails
+    # But the following doesn't, meaning that the error is in the high frequency components.
+    # This also explains why this error has never been critical
+@pytest.mark.parametrize("n", [8, 9, 512])
+def test_n_an2_sinusoidal(n):
+    n = 8
+    w = 1 / np.pi
+    Es = 3. / 4
+    cf = SphereCrackFrontERRPenetrationEnergy(n,
+                                              w_radius_integral=lambda a, theta: a ** 2 / 2 * w * 2 * np.pi / n,
+                                              w_radius=lambda a, theta: a * w * 2 * np.pi / n,
+                                              dw_radius=lambda a, theta: w * 2 * np.pi / n, )
+    angle = np.arange(n) * 2 * np.pi/ n
+    a = 0.6 + np.sin(3*angle)
+    k = np.fft.fftfreq(len(a), 1 / len(a))
+    ak = np.fft.fft(a, norm="forward")
+    ref = np.sum((abs(k) * ak * ak.conj()))
+    test = cf._n_an_2(a)
+    np.testing.assert_allclose(test, ref)
