@@ -45,7 +45,7 @@ Dependencies
 The package requires :
 - **numpy** - https://www.numpy.org/
 - **NuMPI** - https://github.com/imtek-simulation/numpi
-- **pytorch** - https://gitlab.com/muspectre/muspectre
+- **pytorch** - https://pytorch.org/
 - **Adhesion** - https://github.com/ContactEngineering/Adhesion and the dependencies of that package
 
 
