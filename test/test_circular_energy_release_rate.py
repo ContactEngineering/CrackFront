@@ -261,7 +261,7 @@ def test_jkr_elastic_energy(cfclass):
     contact_radius = 0.6
     np.testing.assert_allclose(
         cf.elastic_energy(np.ones(n) * contact_radius, penetration),
-        JKR.nonequilibrium_elastic_energy(contact_radius=contact_radius, penetration=penetration)
+        JKR.elastic_energy(contact_radius=contact_radius, penetration=penetration)
     )
 
 @pytest.mark.parametrize("n", (8, 15))
@@ -301,12 +301,108 @@ def test_total_energy(cfclass):
     np.testing.assert_allclose(
         cf.energy(np.ones(n) * contact_radius, penetration),
         - contact_radius ** 2 *w * np.pi
-        + JKR.nonequilibrium_elastic_energy(contact_radius=contact_radius, penetration=penetration)
+        + JKR.elastic_energy(contact_radius=contact_radius, penetration=penetration)
     )
 
 
 
 #def test_circular_front_vs_jkr(cfclass):
+@pytest.mark.parametrize("n",[8,9,127,128])
 
-def test_energy_vs_gradient():
-    pass  # TODO: need to implement the surface energy term before.
+def test_energy_vs_gradient(n):
+    w = 1 / np.pi
+    Es = 3. / 4
+    cf = SphereCrackFrontERRPenetrationEnergy(n,
+                                              w_radius_integral=lambda a, theta: a ** 2 / 2 * w * 2 * np.pi / n,
+                                              w_radius=lambda a, theta: a * w * 2 * np.pi / n,
+                                              dw_radius=lambda a, theta: w * 2 * np.pi / n, )
+    a = 0.6 + 0.1 * np.random.uniform(-1, 1, size=n)
+    #k = np.fft.fftfreq(len(a), 1 / len(a))
+    penetration =JKR.penetration(contact_radius=0.6)
+    # contact radius perturbation
+    da = np.random.uniform(-1, 1, size=n)
+
+
+
+    epsilons = np.logspace(-2,-8,10)
+    dUel = np.array([cf.energy(a+eps * da,penetration) - cf.energy(a,penetration) for eps in epsilons])
+
+    grad_da = np.vdot(cf.gradient(a,penetration),da)
+
+
+    rel_error = abs(dUel/(grad_da * epsilons)- 1)
+
+    if False:
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots()
+        ax.loglog(epsilons, rel_error,".")
+        plt.show(block=True)
+
+    assert rel_error[-1] < 1e-4
+    assert rel_error[-1] < 10 * rel_error[0] * epsilons[-1]/ epsilons[0]
+
+@pytest.mark.parametrize("n",[8,9,127,128])
+def test_energy_vs_gradient_sinewave(n):
+
+    w = 1 / np.pi
+    Es = 3. / 4
+    cf = SphereCrackFrontERRPenetrationEnergy(n,
+                                              w_radius_integral=lambda a, theta: a ** 2 / 2 * w * 2 * np.pi / n,
+                                              w_radius=lambda a, theta: a * w * 2 * np.pi / n,
+                                              dw_radius=lambda a, theta: w * 2 * np.pi / n, )
+    angle = np.arange(n) * 2 * np.pi / n
+    a = 0.6  + 0.1 * np.sin(3 * angle)
+    # k = np.fft.fftfreq(len(a), 1 / len(a))
+    penetration = JKR.penetration(contact_radius=0.6)
+    # contact radius perturbation
+    da =  np.sin(3 * angle)
+    epsilons = np.logspace(-3, -7,10)
+    dUel = np.array([cf.energy(a + eps * da, penetration) - cf.energy(a, penetration) for eps in epsilons])
+
+    grad_da = np.vdot(cf.gradient(a, penetration), da)
+    rel_error = abs(dUel / (grad_da * epsilons) - 1)
+
+    if True:
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots()
+        ax.loglog(epsilons, rel_error, ".")
+        plt.show(block=True)
+
+    assert rel_error[-1] < 1e-4
+    assert rel_error[-1] < 10 * rel_error[0] * epsilons[-1] / epsilons[0]
+
+@pytest.mark.parametrize("n",[8,9,512,513])
+def test_n_an2_random(n):
+    n = 8
+    w = 1 / np.pi
+    Es = 3. / 4
+    cf = SphereCrackFrontERRPenetrationEnergy(n,
+        w_radius_integral=lambda a, theta: a ** 2 / 2 * w * 2 * np.pi / n,
+        w_radius=lambda a, theta: a * w * 2 * np.pi / n,
+        dw_radius=lambda a, theta: w * 2 * np.pi / n, )
+    a = 0.6 + 0.1 * np.random.uniform(-1,1,size=n)
+    k = np.fft.fftfreq(len(a),1 / len(a))
+    ak = np.fft.fft(a,norm="forward")
+    ref = np.sum((abs(k) * ak * ak.conj() ))
+    test = cf._n_an_2(a)
+    np.testing.assert_allclose(test,ref)
+
+    # This test fails
+    # But the following doesn't, meaning that the error is in the high frequency components.
+    # This also explains why this error has never been critical
+@pytest.mark.parametrize("n", [8, 9, 512])
+def test_n_an2_sinusoidal(n):
+    n = 8
+    w = 1 / np.pi
+    Es = 3. / 4
+    cf = SphereCrackFrontERRPenetrationEnergy(n,
+                                              w_radius_integral=lambda a, theta: a ** 2 / 2 * w * 2 * np.pi / n,
+                                              w_radius=lambda a, theta: a * w * 2 * np.pi / n,
+                                              dw_radius=lambda a, theta: w * 2 * np.pi / n, )
+    angle = np.arange(n) * 2 * np.pi/ n
+    a = 0.6 + 0.1 * np.sin(3*angle)
+    k = np.fft.fftfreq(len(a), 1 / len(a))
+    ak = np.fft.fft(a, norm="forward")
+    ref = np.sum((abs(k) * ak * ak.conj()))
+    test = cf._n_an_2(a)
+    np.testing.assert_allclose(test, ref)

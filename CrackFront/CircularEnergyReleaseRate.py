@@ -183,9 +183,9 @@ class SphereCrackFrontERRPenetrationLin(SphereCrackFrontPenetrationBase):
         #  shouldn't I weight part of this doubly because of the lack of the symmetrics in the rfft ?
         # Ah no it's ok since I do the sum in real space
         return 0.5 * pixel_size * (
-                    JKR.nonequilibrium_elastic_energy_release_rate(contact_radius=a0, penetration=penetration,
+                    JKR.elastic_energy_release_rate(contact_radius=a0, penetration=penetration,
                                                                    der="2_da") * a2
-                    + JKR.nonequilibrium_elastic_energy_release_rate(contact_radius=a0, penetration=penetration,
+                    + JKR.elastic_energy_release_rate(contact_radius=a0, penetration=penetration,
                                                                      der="1_d") * aQa) \
             / np.pi  # because the ERR is in unit of w, the expression above is in unit of w R.
         # We divide it by pi so that it is in unit of pi w R , i.e. the JKR units
@@ -383,23 +383,28 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
         self.w_radius = w_radius
         self.dw_radius = dw_radius
 
+    # @staticmethod
+    # def _n_an_2(contact_radius):
+    #     npx = len(contact_radius)
+    #     nq = np.fft.rfftfreq(npx, 1 / npx)
+    #     fourier_scalar_prod_factors = np.ones(npx // 2 + 1) * 2
+    #     fourier_scalar_prod_factors[0] = 1
+    #     if npx % 2 == 0:
+    #         fourier_scalar_prod_factors[-1] == 1
+    #     a_fourier = np.fft.rfft(contact_radius, norm="forward")
+    #     return np.vdot(a_fourier * nq * fourier_scalar_prod_factors, a_fourier).real
     @staticmethod
-    def _n_an_2(contact_radius):
-        npx = len(contact_radius)
-        nq = np.fft.rfftfreq(npx, 1 / npx)
-        fourier_scalar_prod_factors = np.ones(npx // 2 + 1) * 2
-        fourier_scalar_prod_factors[0] = 1
-        if npx % 2 == 0:
-            fourier_scalar_prod_factors[-1] == 1
-        a_fourier = np.fft.rfft(contact_radius, norm="forward")
-        return np.vdot(a_fourier * nq * fourier_scalar_prod_factors, a_fourier).real
+    def _n_an_2(a):
+        k = np.fft.fftfreq(len(a), 1 / len(a))
+        ak = np.fft.fft(a, norm="forward")
+        return np.sum((abs(k) * ak * ak.conj())).real
 
     def elastic_energy(self, contact_radius, penetration):
         # factors for the fourier space scalar product with rfft
 
         a0 = np.mean(contact_radius)
-        return np.mean(JKR.nonequilibrium_elastic_energy(contact_radius=contact_radius, penetration=penetration)) \
-            + np.pi * JKR.nonequilibrium_elastic_energy_release_rate(penetration=penetration,
+        return np.mean(JKR.elastic_energy(contact_radius=contact_radius, penetration=penetration)) \
+            + np.pi * JKR.elastic_energy_release_rate(penetration=penetration,
                                                                      contact_radius=a0) \
             * self._n_an_2(contact_radius)
 
@@ -504,7 +509,7 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
         """
         # see notes of the 210408
         a0 = np.mean(contact_radius)
-        return np.pi * JKR.nonequilibrium_elastic_energy_release_rate(penetration=penetration,
+        return np.pi * JKR.elastic_energy_release_rate(penetration=penetration,
                                                                       contact_radius=a0,
                                                                       der="1_d") \
             * SphereCrackFrontERRPenetrationEnergy._n_an_2(contact_radius)
@@ -513,15 +518,15 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
         if (radius <= 0).any():
             raise NegativeRadiusError
         a0 = np.mean(radius)
-        eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
+        eerr_j = JKR.elastic_energy_release_rate(
             contact_radius=radius,
             penetration=penetration,
             **_jkrkwargs)
-        eerr_0 = JKR.nonequilibrium_elastic_energy_release_rate(
+        eerr_0 = JKR.elastic_energy_release_rate(
             contact_radius=a0,
             penetration=penetration,
             **_jkrkwargs)
-        deerr_da_0 = JKR.nonequilibrium_elastic_energy_release_rate(
+        deerr_da_0 = JKR.elastic_energy_release_rate(
             contact_radius=a0,
             penetration=penetration,
             **_jkrkwargs, der="1_a")
@@ -537,23 +542,23 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
 
     def hessian_product(self, p, radius, penetration):
         a0 = np.mean(radius)
-        eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
+        eerr_j = JKR.elastic_energy_release_rate(
             contact_radius=radius,
             penetration=penetration,
             **_jkrkwargs)
-        eerr_0 = JKR.nonequilibrium_elastic_energy_release_rate(
+        eerr_0 = JKR.elastic_energy_release_rate(
             contact_radius=a0,
             penetration=penetration,
             **_jkrkwargs)
-        deerr_da_0 = JKR.nonequilibrium_elastic_energy_release_rate(
+        deerr_da_0 = JKR.elastic_energy_release_rate(
             contact_radius=a0,
             penetration=penetration,
             **_jkrkwargs, der="1_a")
-        deerr_da2_0 = JKR.nonequilibrium_elastic_energy_release_rate(
+        deerr_da2_0 = JKR.elastic_energy_release_rate(
             contact_radius=a0,
             penetration=penetration,
             **_jkrkwargs, der="2_a")
-        deerr_da_j = JKR.nonequilibrium_elastic_energy_release_rate(
+        deerr_da_j = JKR.elastic_energy_release_rate(
             contact_radius=radius,
             penetration=penetration,
             **_jkrkwargs, der="1_a")
@@ -597,7 +602,7 @@ class SphereCrackFrontERRPenetrationEnergyConstGc(SphereCrackFrontERRPenetration
     def elastic_energy(self, contact_radius, penetration):
         # factors for the fourier space scalar product with rfft
 
-        return np.mean(JKR.nonequilibrium_elastic_energy(contact_radius=contact_radius, penetration=penetration)) \
+        return np.mean(JKR.elastic_energy(contact_radius=contact_radius, penetration=penetration)) \
             + np.pi * self.wm * self._n_an_2(contact_radius)
 
     @staticmethod
@@ -618,7 +623,7 @@ class SphereCrackFrontERRPenetrationEnergyConstGc(SphereCrackFrontERRPenetration
     def gradient(self, radius, penetration):
         if (radius <= 0).any():
             raise NegativeRadiusError
-        eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
+        eerr_j = JKR.elastic_energy_release_rate(
             contact_radius=radius,
             penetration=penetration,
             **_jkrkwargs)
@@ -632,7 +637,7 @@ class SphereCrackFrontERRPenetrationEnergyConstGc(SphereCrackFrontERRPenetration
     def elastic_gradient(self, radius, penetration):
         if (radius <= 0).any():
             raise NegativeRadiusError
-        eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
+        eerr_j = JKR.elastic_energy_release_rate(
             contact_radius=radius,
             penetration=penetration,
             **_jkrkwargs)
@@ -642,11 +647,11 @@ class SphereCrackFrontERRPenetrationEnergyConstGc(SphereCrackFrontERRPenetration
                 + self.wm * self.elastic_hessp(radius))
 
     def hessian_product(self, p, radius, penetration):
-        eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
+        eerr_j = JKR.elastic_energy_release_rate(
             contact_radius=radius,
             penetration=penetration,
             **_jkrkwargs)
-        deerr_da_j = JKR.nonequilibrium_elastic_energy_release_rate(
+        deerr_da_j = JKR.elastic_energy_release_rate(
             contact_radius=radius,
             penetration=penetration,
             **_jkrkwargs, der="1_a")
@@ -723,7 +728,7 @@ class SphereCFPenetrationEnergyConstGcPiecewiseLinearField(SphereCrackFrontERRPe
                 logger.st(["it", "max. residual", "min. a", "mean a", "max. a", "min. collo", "max.collo"],
                       [nit, max_abs_grad, np.min(a), np.mean(a), np.max(a), np.min(colloc_point_above), np.max(colloc_point_above)])
 
-            eerr_j = JKR.nonequilibrium_elastic_energy_release_rate(
+            eerr_j = JKR.elastic_energy_release_rate(
                 contact_radius=a,
                 penetration=penetration,
                 **_jkrkwargs)
