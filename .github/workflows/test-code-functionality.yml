@@ -1,0 +1,57 @@
+name: Test code functionality
+
+on:
+  push:
+    branches:
+      - '**'
+    tags:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+  schedule:
+    - cron: "0 2 * * 5"
+jobs:
+  tests:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+
+    strategy:
+      matrix:
+        python-version: ['3.8', '3.9', '3.10', '3.11' ]
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up python3 ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qy
+          python3 -m venv venv
+          source venv/bin/activate
+          python3 -m pip install --upgrade pip pip-tools
+            sudo apt-get install -y \
+              libfftw3-dev \
+              libnetcdf-dev
+          fi
+          python3 -m pip install build
+          python3 -m pip list
+
+      - name: Install extension module
+        run: |
+          source venv/bin/activate
+          python3 -m pip install .[test]
+
+      - name: Test with pytest
+        run: |
+          source venv/bin/activate
+          python3 .check_netcdf_capabilities.py ${{ matrix.mpi }}
+          python3 .check_mufft_capabilities.py ${{ matrix.mpi }}
+          if [ "${{ matrix.mpi }}" == "yes" ]; then python3 run-tests.py --no-build --verbose --full-trace; else python3 -m pytest --verbose --full-trace -s; fi
