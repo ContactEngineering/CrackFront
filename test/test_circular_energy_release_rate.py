@@ -362,7 +362,7 @@ def test_energy_vs_gradient_sinewave(n):
     grad_da = np.vdot(cf.gradient(a, penetration), da)
     rel_error = abs(dUel / (grad_da * epsilons) - 1)
 
-    if True:
+    if False:
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
         ax.loglog(epsilons, rel_error, ".")
