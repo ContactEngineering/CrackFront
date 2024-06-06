@@ -14,7 +14,7 @@ The crack-perturbation model for the adhesion of spheres with work of adhesion h
 [Sanner, Pastewka, JMPS (2023)](https://www.sciencedirect.com/science/article/pii/S0022509622000059).
 
 The crack-perturbation model for the adhesion of rough spheres is described and validated against the boundary-element method in
-[Sanner, Kumar, Jacobs, Dhinojwala,Pastewka, Science Advances (2024)](https://doi.org/10.48550/arXiv.2307.14233](https://www.science.org/doi/10.1126/sciadv.adl1277).
+[Sanner, Kumar, Jacobs, Dhinojwala,Pastewka, Science Advances (2024)](https://www.science.org/doi/10.1126/sciadv.adl1277).
 
 
 The crack perturbation method is based on the first-order perturbation of the stress intensity factor derived by Gao and Rice using weight-function theory. 
