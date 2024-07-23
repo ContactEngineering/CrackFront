@@ -2,7 +2,7 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 import time
-from NuMPI.IO.NetCDF import NCStructuredGrid
+from CrackFront.IO.NetCDF import NCStructuredGrid
 
 # +
 
@@ -18,7 +18,7 @@ CrackFront.__file__
 
 # +
 # nondimensional units following Maugis Book:
-from NuMPI.IO.NetCDF import NCStructuredGrid
+from CrackFront.IO.NetCDF import NCStructuredGrid
 from SurfaceTopography.Generation import fourier_synthesis
 
 from CrackFront.Circular import Interpolator

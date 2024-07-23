@@ -3,7 +3,7 @@ from CrackFront.Optimization.propagate_elastic_line import propagate_rosso_kraut
 from CrackFront.Optimization.propagate_elastic_line_pytorch import propagate_rosso_krauth as propagate_rosso_krauth_torch
 
 import numpy as np
-from NuMPI.IO.NetCDF import NCStructuredGrid
+from CrackFront.IO.NetCDF import NCStructuredGrid
 
 
 def time_vs_line_length_scaling():
