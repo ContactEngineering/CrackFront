@@ -347,7 +347,7 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
         self.npx = npx
         self.angles = np.arange(npx) * 2 * np.pi / npx
         self.nq = np.fft.rfftfreq(npx, 1 / npx)
-
+        self.penetration = 0.
         self._elastic_jacobian = None
 
         if w_radius is None and dw_radius is None:
@@ -399,17 +399,18 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
         ak = np.fft.fft(a, norm="forward")
         return np.sum((abs(k) * ak * ak.conj())).real
 
-    def elastic_energy(self, contact_radius, penetration):
+    def elastic_energy(self, contact_radius):
         # factors for the fourier space scalar product with rfft
 
         a0 = np.mean(contact_radius)
-        return np.mean(JKR.elastic_energy(contact_radius=contact_radius, penetration=penetration)) \
-            + np.pi * JKR.elastic_energy_release_rate(penetration=penetration,
+        return np.mean(JKR.elastic_energy(contact_radius=contact_radius, penetration=self.penetration)) \
+            + np.pi * JKR.elastic_energy_release_rate(penetration=self.penetration,
                                                                      contact_radius=a0) \
             * self._n_an_2(contact_radius)
 
-    def energy(self, contact_radius, penetration):
-        return self.elastic_energy(contact_radius, penetration) \
+
+    def energy(self, contact_radius):
+        return self.elastic_energy(contact_radius) \
             + self.surface_energy(contact_radius)
 
     def surface_energy(self, contact_radius):
@@ -430,7 +431,7 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
     def elastic_hessp(self, a):
         return np.fft.irfft(self.nq * np.fft.rfft(a), n=self.npx)
 
-    def dump(self, ncFrame, penetration, a, dump_fields=True, dump_energy=False):
+    def dump(self, ncFrame, a, dump_fields=True, dump_energy=False):
         """
         Writes the results of the current solution into the ncFrame
 
@@ -447,7 +448,7 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
             `CrackFront.Optimization.trustregion_newton_cg``
         """
 
-        ncFrame.penetration = penetration
+        ncFrame.penetration = penetration = self.penetration
         if dump_fields:
             ncFrame.radius = a
         ncFrame.mean_radius = mean_radius = np.mean(a)
@@ -804,8 +805,10 @@ class SphereCFPenetrationEnergyConstGcPiecewiseLinearField(SphereCrackFrontERRPe
         # Reference, legacy implementation of rosso_krauth propagation
         """
 
-
-        nc = NCStructuredGrid(file, "w", (self.npx,))
+        if isinstance(file, str):
+            nc = NCStructuredGrid(file, "w", (self.npx,))
+        else:
+            nc = file
 
         minimum_radius = self.piecewise_linear_w_radius.kinks[0]
         a = np.ones(self.npx) * (minimum_radius+1e-14)
@@ -813,8 +816,9 @@ class SphereCFPenetrationEnergyConstGcPiecewiseLinearField(SphereCrackFrontERRPe
 
         for j, penetration in enumerate(penetrations):
             print(penetration)
+            self.penetration=penetration
             try:
-                sol = self.rosso_krauth(a, penetration, gtol=gtol, maxit=maxit,
+                sol = self.rosso_krauth(a, gtol=gtol, maxit=maxit,
                                       direction=1 if penetration > penetration_prev else -1,
                                       logger=logger)
             except RadiusTooLowError:
@@ -824,7 +828,7 @@ class SphereCFPenetrationEnergyConstGcPiecewiseLinearField(SphereCrackFrontERRPe
             a = sol.x
             assert (a > minimum_radius).all()
             penetration_prev = penetration
-            self.dump(nc[j], penetration, a, dump_fields=dump_fields)
+            self.dump(nc[j], a, dump_fields=dump_fields)
             nc[j].nit = sol.nit
             nc.sync()
 
