@@ -25,7 +25,7 @@
 import matplotlib.pyplot as plt
 import argparse
 
-from CrackRFront.IO.NetCDF import NCStructuredGrid
+from CrackFront.IO.IO.NetCDF import NCStructuredGrid
 
 parser = argparse.ArgumentParser()
 parser.add_argument('ncfile', metavar='nc', type=str,

@@ -25,7 +25,7 @@ import numpy as np
 import pytest
 from Adhesion.ReferenceSolutions import JKR
 from ContactMechanics.Tools.Logger import Logger
-from CrackRFront.IO.NetCDF import NCStructuredGrid
+from CrackFront.IO.IO.NetCDF import NCStructuredGrid
 from SurfaceTopography import Topography
 
 from CrackFront.Circular import Interpolator

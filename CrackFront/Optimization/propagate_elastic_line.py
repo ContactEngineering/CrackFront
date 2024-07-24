@@ -26,7 +26,7 @@ import time
 
 import numpy as np
 #from ContactMechanics.Tools.Logger import Logger
-from CrackRFront.IO.NetCDF import NCStructuredGrid
+from CrackFront.IO.IO.NetCDF import NCStructuredGrid
 import sys
 
 from CrackFront.GenericElasticLine import ElasticLine

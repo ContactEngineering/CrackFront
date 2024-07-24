@@ -26,9 +26,9 @@ import time
 import numpy as np
 # from ContactMechanics.Tools.Logger import Logger
 from Adhesion.ReferenceSolutions import JKR
-from CrackRFront.IO.NetCDF import NCStructuredGrid
+from CrackFront.IO.IO.NetCDF import NCStructuredGrid
 import sys
-from CrackRFront.IO import load_npy, make_mpi_file_view
+from CrackFront.IO.IO import load_npy, make_mpi_file_view
 from NuMPI import MPI
 
 from CrackFront.Circular import RadiusTooLowError

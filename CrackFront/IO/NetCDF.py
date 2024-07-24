@@ -27,6 +27,7 @@
 
 import numbers
 import numpy as np
+import CrackFront
 
 from netCDF4 import Dataset
 
@@ -196,8 +197,8 @@ class NCStructuredGrid(object):
         }
     """
 
-    _program = 'NuMPI'
-    _programVersion = NuMPI.__version__
+    _program = 'CrackFront'
+    _programVersion = CrackFront.__version__
 
     def __init__(self, fn, mode='r', nb_domain_grid_pts=None,
                  decomposition='serial', subdomain_locations=None,

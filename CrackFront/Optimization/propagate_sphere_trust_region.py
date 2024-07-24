@@ -24,7 +24,7 @@
 import sys
 
 import numpy as np
-from CrackRFront.IO.NetCDF import NCStructuredGrid
+from CrackFront.IO.IO.NetCDF import NCStructuredGrid
 
 from CrackFront.Circular import RadiusTooLowError
 from CrackFront.Optimization import trustregion_newton_cg

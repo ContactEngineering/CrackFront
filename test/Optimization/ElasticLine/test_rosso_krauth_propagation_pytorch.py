@@ -22,7 +22,7 @@
 # SOFTWARE.
 #
 import numpy as np
-from CrackRFront.IO.NetCDF import NCStructuredGrid
+from CrackFront.IO.IO.NetCDF import NCStructuredGrid
 
 from CrackFront.Optimization.propagate_elastic_line import propagate_rosso_krauth
 from CrackFront.Optimization.propagate_elastic_line_pytorch import \

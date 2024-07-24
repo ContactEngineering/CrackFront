@@ -32,7 +32,7 @@ from ContactMechanics import PeriodicFFTElasticHalfSpace
 from Adhesion.Interactions import PowerLaw
 from ContactMechanics.Tools import Logger
 from Adhesion.System import BoundedSmoothContactSystem
-from CrackRFront.IO.NetCDF import NCStructuredGrid
+from CrackFront.IO.IO.NetCDF import NCStructuredGrid
 
 from CrackFront.Straight import SinewaveCrackFrontLoad
 
