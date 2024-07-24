@@ -26,9 +26,9 @@ import time
 import numpy as np
 # from ContactMechanics.Tools.Logger import Logger
 from Adhesion.ReferenceSolutions import JKR
-from NuMPI.IO.NetCDF import NCStructuredGrid
+from CrackRFront.IO.NetCDF import NCStructuredGrid
 import sys
-from NuMPI.IO import load_npy, make_mpi_file_view
+from CrackRFront.IO import load_npy, make_mpi_file_view
 from NuMPI import MPI
 
 from CrackFront.Circular import RadiusTooLowError
@@ -105,6 +105,8 @@ class LinearInterpolatedPinningFieldUniformFromFile:
     @property
     def nb_domain_grid_pts(self):
         return self.npx_propagation, self.npx_front, 2
+
+
 
     def load_data(self, colloc_min=0, colloc_max=None):
         """

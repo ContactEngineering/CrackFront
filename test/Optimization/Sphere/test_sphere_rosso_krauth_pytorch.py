@@ -30,7 +30,7 @@ import time
 
 import torch
 from ContactMechanics.Tools.Logger import Logger
-from NuMPI.IO.NetCDF import NCStructuredGrid
+from CrackRFront.IO.NetCDF import NCStructuredGrid
 from Adhesion.ReferenceSolutions import JKR
 
 from CrackFront.Circular import Interpolator

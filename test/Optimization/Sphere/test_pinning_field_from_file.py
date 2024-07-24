@@ -24,7 +24,7 @@
 import numpy as np
 import torch
 from Adhesion.ReferenceSolutions import JKR
-from NuMPI.IO.NetCDF import NCStructuredGrid
+from CrackRFront.IO.NetCDF import NCStructuredGrid
 from matplotlib import pyplot as plt
 
 from CrackFront.Circular import Interpolator

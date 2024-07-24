@@ -23,7 +23,7 @@
 #
 import numpy as np
 from Adhesion.ReferenceSolutions import JKR
-from NuMPI.IO.NetCDF import NCStructuredGrid
+from CrackFront.IO.NetCDF import NCStructuredGrid
 from SurfaceTopography.Generation import fourier_synthesis
 
 from CrackFront.Circular import SphereCrackFrontPenetrationBase, NegativeRadiusError, RadiusTooLowError
@@ -464,7 +464,7 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
         ncFrame.max_radius = np.max(a)
 
         if dump_energy:
-            ncFrame.elastic_energy  = self.elastic_energy(a, penetration)
+            ncFrame.elastic_energy  = self.elastic_energy(a)
             ncFrame.surface_energy = self.surface_energy(a)
             print("test energy",  ncFrame.surface_energy, self.surface_energy(a))
             ncFrame.energy = ncFrame.elastic_energy + ncFrame.surface_energy
@@ -514,7 +514,8 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
                                                                       der="1_d") \
             * SphereCrackFrontERRPenetrationEnergy._n_an_2(contact_radius)
 
-    def gradient(self, radius, penetration):
+    def gradient(self, radius):
+        penetration = self.penetration
         if (radius <= 0).any():
             raise NegativeRadiusError
         a0 = np.mean(radius)
@@ -599,10 +600,10 @@ class SphereCrackFrontERRPenetrationEnergyConstGc(SphereCrackFrontERRPenetration
         super().__init__(npx, w, dw, kc, dkc,
                          w_radius=w_radius, dw_radius=dw_radius, w_radius_integral=w_radius_integral)
 
-    def elastic_energy(self, contact_radius, penetration):
+    def elastic_energy(self, contact_radius):
         # factors for the fourier space scalar product with rfft
 
-        return np.mean(JKR.elastic_energy(contact_radius=contact_radius, penetration=penetration)) \
+        return np.mean(JKR.elastic_energy(contact_radius=contact_radius, penetration=self.penetration)) \
             + np.pi * self.wm * self._n_an_2(contact_radius)
 
     @staticmethod
@@ -620,12 +621,12 @@ class SphereCrackFrontERRPenetrationEnergyConstGc(SphereCrackFrontERRPenetration
         """
         return SphereCrackFrontERRPenetrationEnergy._evaluate_normal_force_naive(contact_radius, penetration)
 
-    def gradient(self, radius, penetration):
+    def gradient(self, radius):
         if (radius <= 0).any():
             raise NegativeRadiusError
         eerr_j = JKR.elastic_energy_release_rate(
             contact_radius=radius,
-            penetration=penetration,
+            penetration=self.penetration,
             **_jkrkwargs)
 
         return 2 * np.pi / self.npx * (
@@ -634,26 +635,26 @@ class SphereCrackFrontERRPenetrationEnergyConstGc(SphereCrackFrontERRPenetration
             ) \
             - self.w_radius(radius, self.angles)
 
-    def elastic_gradient(self, radius, penetration):
+    def elastic_gradient(self, radius):
         if (radius <= 0).any():
             raise NegativeRadiusError
         eerr_j = JKR.elastic_energy_release_rate(
             contact_radius=radius,
-            penetration=penetration,
+            penetration=self.penetration,
             **_jkrkwargs)
 
         return 2 * np.pi / self.npx * (
                 radius * eerr_j
                 + self.wm * self.elastic_hessp(radius))
 
-    def hessian_product(self, p, radius, penetration):
+    def hessian_product(self, p, radius):
         eerr_j = JKR.elastic_energy_release_rate(
             contact_radius=radius,
-            penetration=penetration,
+            penetration=self.penetration,
             **_jkrkwargs)
         deerr_da_j = JKR.elastic_energy_release_rate(
             contact_radius=radius,
-            penetration=penetration,
+            penetration=self.penetration,
             **_jkrkwargs, der="1_a")
 
         return 2 * np.pi / self.npx * (
@@ -681,12 +682,13 @@ class SphereCFPenetrationEnergyConstGcPiecewiseLinearField(SphereCrackFrontERRPe
         # We have to compensate for that because the gradient and hessian product for the trust region solver
         # is implemented using w and dw.
 
-    def rosso_krauth(self, a, penetration, gtol=1e-4, maxit=10000, direction=1, logger=None):
+    def rosso_krauth(self, a, gtol=1e-4, maxit=10000, direction=1, logger=None):
         """
         This is an adaptation of the Algorithm by Krauth and Rosso PRE 65
 
         This version of Rosso Krauth uses the fact that the work of adhesion is piecewise linear
         """
+        penetration = self.penetration
         L = len(a)
         a_test = np.zeros(L)
         a_test[0] = 1
@@ -703,7 +705,7 @@ class SphereCFPenetrationEnergyConstGcPiecewiseLinearField(SphereCrackFrontERRPe
         pinning_field_slope = (
             values[indexes, colloc_point_above] - values[indexes, colloc_point_above - 1]
             ) / grid_spacing
-        grad = self.elastic_gradient(a, penetration) \
+        grad = self.elastic_gradient(a) \
             - values[indexes, colloc_point_above - 1] \
             - pinning_field_slope * (a - kinks[colloc_point_above - 1])
         if (grad * direction > 0).any():
@@ -714,7 +716,7 @@ class SphereCFPenetrationEnergyConstGcPiecewiseLinearField(SphereCrackFrontERRPe
             # Nullify the force on each pixel
             pinning_field_slope = (values[indexes, colloc_point_above] - values[indexes, colloc_point_above - 1]) \
                 / grid_spacing
-            grad = self.elastic_gradient(a, penetration) \
+            grad = self.elastic_gradient(a) \
                 - values[indexes, colloc_point_above - 1] \
                 - pinning_field_slope * (a - kinks[colloc_point_above - 1])
 
