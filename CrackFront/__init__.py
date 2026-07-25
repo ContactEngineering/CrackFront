@@ -48,3 +48,4 @@ peaks slightly offset wrt. to the collocation points.
 """
 
 from .DiscoverVersion import __version__  # noqa: F401
+from  . import Circular
