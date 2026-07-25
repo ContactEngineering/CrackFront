@@ -66,6 +66,7 @@ class SphereCrackFrontERRPenetrationLin(SphereCrackFrontPenetrationBase):
         self.npx = npx
         self.angles = np.arange(npx) * 2 * np.pi / npx
         self.nq = np.fft.rfftfreq(npx, 1 / npx)
+        self.penetration = 0.
 
         self._elastic_jacobian = None
 
@@ -100,7 +101,7 @@ class SphereCrackFrontERRPenetrationLin(SphereCrackFrontPenetrationBase):
         # In the rfft nq is positive only
         return np.fft.irfft(self.nq * np.fft.rfft(a), n=self.npx)
 
-    def dump(self, ncFrame, penetration, sol, dump_fields=True):
+    def dump(self, ncFrame, sol, dump_fields=True):
         """
         Writes the results of the current solution into the ncFrame
 
@@ -110,14 +111,13 @@ class SphereCrackFrontERRPenetrationLin(SphereCrackFrontPenetrationBase):
         ----------
         ncFrame:
             frame to the NCStructuredGrid
-        penetration:
-            current penetration value
         sol:
             output of the minimizer
             `CrackFront.Optimization.trustregion_newton_cg``
         """
 
         a = sol.x
+        penetration = self.penetration
 
         ncFrame.penetration = penetration
         if dump_fields:
@@ -190,7 +190,8 @@ class SphereCrackFrontERRPenetrationLin(SphereCrackFrontPenetrationBase):
             / np.pi  # because the ERR is in unit of w, the expression above is in unit of w R.
         # We divide it by pi so that it is in unit of pi w R , i.e. the JKR units
 
-    def gradient(self, radius, penetration):
+    def gradient(self, radius):
+        penetration = self.penetration
         if (radius <= 0).any():
             raise NegativeRadiusError
         a0 = np.mean(radius)
@@ -230,7 +231,8 @@ class SphereCrackFrontERRPenetrationLin(SphereCrackFrontPenetrationBase):
                       - self.dkc(radius, self.angles)
                       )
 
-    def hessian_product(self, p, radius, penetration):
+    def hessian_product(self, p, radius):
+        penetration = self.penetration
         a0 = np.mean(radius)
         K = JKR.stress_intensity_factor(
             contact_radius=a0,
@@ -269,7 +271,8 @@ class SphereCrackFrontERRPenetrationFull(SphereCrackFrontERRPenetrationLin):
         \right)
 
     """
-    def gradient(self, radius, penetration):
+    def gradient(self, radius):
+        penetration = self.penetration
         if (radius <= 0).any():
             raise NegativeRadiusError
 
@@ -282,25 +285,8 @@ class SphereCrackFrontERRPenetrationFull(SphereCrackFrontERRPenetrationLin):
     def hessian(self, radius, penetration):
         raise NotImplementedError
 
-    def hessian_product(self, p, radius, penetration):
-        """
-        computes efficiently the hessian product
-        :math:`H(radius, penetration) p`
-        """
-        K = JKR.stress_intensity_factor(contact_radius=radius,
-                                        penetration=penetration, **_jkrkwargs)
-        hesspr = self.elastic_hessp(radius)
-        return (
-                K * (- hesspr / radius ** 2 * p
-                     + self.elastic_hessp(p) / radius)
-                + JKR.stress_intensity_factor(contact_radius=radius,
-                                              penetration=penetration,
-                                              **_jkrkwargs, der="1_a")
-                * (1 + hesspr / radius) * p
-                - self.dkc(radius, self.angles) * p
-        )
-
-    def hessian_product(self, p, radius, penetration):
+    def hessian_product(self, p, radius):
+        penetration = self.penetration
 
         K = JKR.stress_intensity_factor(
             contact_radius=radius,
@@ -542,7 +528,8 @@ class SphereCrackFrontERRPenetrationEnergy(SphereCrackFrontPenetrationBase):
     def hessian(self, radius, penetration):
         raise NotImplementedError
 
-    def hessian_product(self, p, radius, penetration):
+    def hessian_product(self, p, radius):
+        penetration = self.penetration
         a0 = np.mean(radius)
         eerr_j = JKR.elastic_energy_release_rate(
             contact_radius=radius,

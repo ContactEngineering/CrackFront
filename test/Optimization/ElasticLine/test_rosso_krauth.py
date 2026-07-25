@@ -79,7 +79,7 @@ def test_no_pinning_field_moving_left(rosso_krauth, L, Lx):
     np.testing.assert_allclose(sol.x, w)
 
 @pytest.mark.parametrize("rosso_krauth", [brute_rosso_krauth, brute_rosso_krauth_other_spacing])
-def test_force_displacement_curve(rosso_krauth, plot=False):
+def test_force_displacement_curve(rosso_krauth, plot_reporter):
     np.random.seed(0)
 
     L = 256
@@ -146,18 +146,14 @@ def test_force_displacement_curve(rosso_krauth, plot=False):
         mean_a_trust.append(np.mean(a))
 
     # %%
-    if plot:
+    if plot_reporter.enabled:
         import matplotlib.pyplot as plt
-
         fig, ax = plt.subplots()
-
         ax.plot(a_forcings, a_forcings - mean_a_RK, label="KR")
         ax.plot(a_forcings, a_forcings - mean_a_trust, "+", label="TR, safe")
-
         ax.plot(a_forcings, a_forcings - mean_a_trust_coarse, "x", label="TR")
         ax.legend()
-        plt.show(block=True)
-    # %%
+        plot_reporter.attach(fig, name="force_displacement_curve")
 
     np.testing.assert_allclose(mean_a_trust, mean_a_RK)
 
@@ -165,7 +161,7 @@ def test_force_displacement_curve(rosso_krauth, plot=False):
 @pytest.mark.parametrize("rosso_krauth", [brute_rosso_krauth,
                                           brute_rosso_krauth_other_spacing
                                           ])
-def test_force_displacement_curve_hysteresis(rosso_krauth, plot=False):
+def test_force_displacement_curve_hysteresis(rosso_krauth, plot_reporter):
     np.random.seed(0)
 
     L = 256
@@ -226,18 +222,13 @@ def test_force_displacement_curve_hysteresis(rosso_krauth, plot=False):
         mean_a_trust.append(np.mean(a))
 
     print("trust  done")
-    # %%
-    if plot:
+    if plot_reporter.enabled:
         import matplotlib.pyplot as plt
-
         fig, ax = plt.subplots()
-
         ax.plot(a_forcings, a_forcings - mean_a_RK, label="KR")
         ax.plot(a_forcings, a_forcings - mean_a_trust, "+", label="TR, safe")
-
         ax.legend()
-        plt.show(block=True)
-    # %%
+        plot_reporter.attach(fig, name="force_displacement_hysteresis")
 
     np.testing.assert_allclose(mean_a_trust, mean_a_RK)
 
@@ -292,7 +283,7 @@ def test_no_pinning_field_moving_left(rosso_krauth, L, Lx):
 @pytest.mark.parametrize("rosso_krauth", [brute_rosso_krauth,
                                           brute_rosso_krauth_other_spacing
                                           ])
-def test_force_displacement_curve(rosso_krauth, plot=False):
+def test_force_displacement_curve(rosso_krauth, plot_reporter):
     np.random.seed(0)
 
     L = 256
@@ -358,26 +349,21 @@ def test_force_displacement_curve(rosso_krauth, plot=False):
 
         mean_a_trust.append(np.mean(a))
 
-    # %%
-    if plot:
+    if plot_reporter.enabled:
         import matplotlib.pyplot as plt
-
         fig, ax = plt.subplots()
-
         ax.plot(a_forcings, a_forcings - mean_a_RK, label="KR")
         ax.plot(a_forcings, a_forcings - mean_a_trust, "+", label="TR, safe")
-
         ax.plot(a_forcings, a_forcings - mean_a_trust_coarse, "x", label="TR")
         ax.legend()
-        plt.show(block=True)
-    # %%
+        plot_reporter.attach(fig, name="force_displacement_curve")
 
     np.testing.assert_allclose(mean_a_trust, mean_a_RK)
 
 @pytest.mark.parametrize("rosso_krauth", [
     brute_rosso_krauth,
     brute_rosso_krauth_other_spacing])
-def test_force_displacement_curve_hysteresis_do_not_wrap_periodic(rosso_krauth, plot=False):
+def test_force_displacement_curve_hysteresis_do_not_wrap_periodic(rosso_krauth, plot_reporter):
     """
 
     Here the starting position is well inside the random field, so that the solver doesn't need to support
@@ -442,18 +428,13 @@ def test_force_displacement_curve_hysteresis_do_not_wrap_periodic(rosso_krauth, 
         mean_a_trust.append(np.mean(a))
 
     print("trust  done")
-    # %%
-    if plot:
+    if plot_reporter.enabled:
         import matplotlib.pyplot as plt
-
         fig, ax = plt.subplots()
-
         ax.plot(a_forcings, a_forcings - mean_a_RK, label="KR")
         ax.plot(a_forcings, a_forcings - mean_a_trust, "+", label="TR, safe")
-
         ax.legend()
-        plt.show(block=True)
-    # %%
+        plot_reporter.attach(fig, name="force_displacement_hysteresis_no_wrap")
 
     np.testing.assert_allclose(mean_a_trust, mean_a_RK)
 

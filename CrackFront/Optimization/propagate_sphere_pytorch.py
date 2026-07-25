@@ -437,7 +437,8 @@ def propagate_rosso_krauth(line,
             #     nc[i].eigenvalue = eigval
             #     if dump_fields:
             #         nc[i].eigenvector = eigvec
-            line.dump(nc[i], penetration_cpu, a_cpu, dump_fields=dump_fields, dump_energy=dump_energy)
+            line.penetration = penetration_cpu
+            line.dump(nc[i], a_cpu, dump_fields=dump_fields, dump_energy=dump_energy)
 
             if not there_is_enough_time_left:
                 # if not dump_fields: # this is actually useless when we dumpfields, but who cares ?

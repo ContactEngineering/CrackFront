@@ -137,7 +137,7 @@ cf.hessian(a)
     # Above 2000, the sparse version speeds up by two orders of magnitude already
 
 
-def test_hessian_product():
+def test_hessian_product(plot_reporter):
     penetration = 0
 
     w = 10
@@ -164,7 +164,7 @@ def test_hessian_product():
     da = np.random.normal(size=npx) * np.mean(a) / 10
     a_forcing = 0.1
     grad = cf.gradient(a, a_forcing)
-    if False:
+    if plot_reporter.enabled:
         hs = np.array([10, 1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5,
                        1e-6, 1e-7])
         rms_errors = []
@@ -174,21 +174,13 @@ def test_hessian_product():
             dgrad_from_hess = cf.hessian_product(h * da, a)
             rms_errors.append(np.sqrt(np.mean((dgrad_from_hess - dgrad) ** 2)))
 
-        # Visualize the quadratic convergence of the taylor expansion
-        # What to expect:
-        # Taylor expansion: g(x + h ∆x) - g(x) = Hessian * h * ∆x + O(h^2)
-        # We should see quadratic convergence as long as h^2 > g epsmach,
-        # the precision with which we are able to determine ∆g.
-        # What is the precision with which the hessian product is made ?
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
-        ax.plot(hs, rms_errors / hs ** 2
-                , "+-")
-        print(rms_errors)
+        ax.plot(hs, rms_errors / hs ** 2, "+-")
         ax.set_xscale("log")
         ax.set_yscale("log")
         ax.grid(True)
-        plt.show()
+        plot_reporter.attach(fig, name="hessian_product_convergence")
 
     hs = np.array([1e-2, 1e-3, 1e-4])
     rms_errors = []

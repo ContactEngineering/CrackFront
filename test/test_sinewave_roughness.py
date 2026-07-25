@@ -23,8 +23,6 @@
 #
 import numpy as np
 
-from matplotlib import pyplot as plt
-
 from CrackFront.StraightForRoughness import SinewaveCrackFrontLoadEnergyConstK
 from CrackFront.Straight import SinewaveCrackFrontLoad
 from CrackFront.Optimization import trustregion_newton_cg
@@ -36,7 +34,7 @@ sinewave_lambda = 1.
 sx = 1.
 
 
-def test_CFRconstK_against_CFK_tangential_sinewave():
+def test_CFRconstK_against_CFK_tangential_sinewave(plot_reporter):
     """
     In the small roughness limit
     I can fully map the roughness to work of adhesion heterogeneity
@@ -49,9 +47,6 @@ def test_CFRconstK_against_CFK_tangential_sinewave():
     sy = 0.25
     load = 0
     n = 32
-    _plot = False
-    if _plot:
-        fig, ax = plt.subplots()
 
     for kr_amplitude in [0.01 * Kc
                          # 0.1 * Kc,
@@ -98,24 +93,24 @@ def test_CFRconstK_against_CFK_tangential_sinewave():
 
         a_k = sol.x
 
-        if _plot:
+    if plot_reporter.enabled:
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots()
+        al = a_R[:n]
+        ar = a_R[n:]
+        ax.plot(.5 + ar, cf_R.y, label="R right")
+        ax.plot(0.5 - al, cf_R.y, label="R left")
+        al = a_k[:n]
+        ar = a_k[n:]
+        ax.plot(.5 + ar, cf_k.y, label="k right")
+        ax.plot(0.5 - al, cf_k.y, label="k left")
+        ax.legend()
+        plot_reporter.attach(fig, name="cfr_vs_cfk_sinewave")
 
-            al = a_R[:n]
-            ar = a_R[n:]
-
-            ax.plot(.5 + ar, cf_R.y)
-            ax.plot(0.5 - al, cf_R.y)
-
-            al = a_k[:n]
-            ar = a_k[n:]
-
-            ax.plot(.5 + ar, cf_k.y)
-            ax.plot(0.5 - al, cf_k.y)
-            plt.show()
     assert np.max(np.abs(a_k - a_R) < 1e-2)
 
 
-def test_CFRconstK_against_CFK_eggbox():
+def test_CFRconstK_against_CFK_eggbox(plot_reporter):
     Kc = 0.4
     dK = 0.2
 
@@ -156,10 +151,6 @@ def test_CFRconstK_against_CFK_eggbox():
         w=Kc ** 2 / (2 * Es)
         )
 
-    _plot = False
-    if _plot:
-        fig, ax = plt.subplots()
-
     a = np.ones(2 * n) * 0.25
 
     sol = trustregion_newton_cg(
@@ -188,26 +179,22 @@ def test_CFRconstK_against_CFK_eggbox():
 
     a_k = sol.x
 
-    if _plot:
-
+    if plot_reporter.enabled:
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots()
         al = a_R[:n]
         ar = a_R[n:]
-
-        ax.plot(+ ar, cf_R.y)
-        ax.plot(- al, cf_R.y)
-
+        ax.plot(+ ar, cf_R.y, label="R right")
+        ax.plot(- al, cf_R.y, label="R left")
         al = a_k[:n]
         ar = a_k[n:]
-
-        ax.plot(+ ar, cf_k.y)
-        ax.plot(- al, cf_k.y)
-
+        ax.plot(+ ar, cf_k.y, label="k right")
+        ax.plot(- al, cf_k.y, label="k left")
         ax.set_xlim(-0.5, 0.5)
-
         workcmap = plt.get_cmap("coolwarm")
         x, y = np.meshgrid(np.arange(128) * (sx / 128) - 0.5, np.arange(n) * sy / n)
         ax.pcolormesh(x, y, kr(x, y), cmap=workcmap)
-
-        plt.show()
+        ax.legend()
+        plot_reporter.attach(fig, name="cfr_vs_cfk_eggbox")
 
     assert np.max(np.abs(a_k - a_R) < 1e-2)

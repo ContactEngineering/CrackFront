@@ -32,6 +32,7 @@ test = [
     "flake8<8",
     "pytest",
     "pytest-cov",
+    "pytest-html",
 ]
 
 [project.urls]

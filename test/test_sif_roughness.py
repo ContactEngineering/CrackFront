@@ -23,7 +23,6 @@
 #
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 from CrackFront.Roughness import (
     straight_crack_sif_from_roughness,
@@ -92,7 +91,7 @@ def test_straight_crack_sif_from_roughness_perpendicular(s):
                              circular_crack_sif_from_roughness,
                              circular_crack_sif_from_roughness_memory_friendly
                              ])
-def test_circular_waviness_amplitude(circular_crack_sif_from_roughness):
+def test_circular_waviness_amplitude(circular_crack_sif_from_roughness, plot_reporter):
     Es = 0.75
     R = 1
     w = 1 / np.pi
@@ -124,12 +123,13 @@ def test_circular_waviness_amplitude(circular_crack_sif_from_roughness):
     sif_expected = Es * roughness_amplitude * np.sqrt(np.pi / sinewave_period) \
                    * np.cos(2 * np.pi * cf_radii / sinewave_period - 3 * np.pi / 4)
 
-    if False:
+    if plot_reporter.enabled:
+        import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
         ax.plot(cf_radii.reshape(-1), sif.reshape(-1), label="actual")
         ax.plot(cf_radii.reshape(-1), sif_expected.reshape(-1), label="expected")
         ax.legend()
-        plt.show()
+        plot_reporter.attach(fig, name="sif_vs_expected")
 
     np.testing.assert_allclose(sif, sif_expected, rtol=1e-12, atol=1e-15)
 

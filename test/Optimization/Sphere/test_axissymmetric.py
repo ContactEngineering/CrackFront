@@ -51,7 +51,7 @@ maugis_K = 1.
 mean_Kc = np.sqrt(2 * Es * w)
 
 
-def test_axissymmetric_sinewave_linear_interp():
+def test_axissymmetric_sinewave_linear_interp(plot_reporter):
     n_radii = 400
     npx_front = 8
 
@@ -113,11 +113,9 @@ def test_axissymmetric_sinewave_linear_interp():
 
     # %%
 
-    if False:
-
+    if plot_reporter.enabled:
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
-
         a = np.linspace(0.001, 2, 300)
         ax.plot(JKR.penetration(contact_radius=a, work_of_adhesion=local_w(a)),
                 JKR.force(contact_radius=a, work_of_adhesion=local_w(a)),
@@ -125,14 +123,12 @@ def test_axissymmetric_sinewave_linear_interp():
         ax.plot(JKR.penetration(contact_radius=a, work_of_adhesion=w),
                 JKR.force(contact_radius=a, work_of_adhesion=w),
                 "--k")
-
         nc_interp = NCStructuredGrid("trust_lin_interp.nc")
         nc_direct = NCStructuredGrid("trust_direct.nc")
-
         ax.plot(nc_interp.penetration, nc_interp.force, "+", label="lin. interp")
         ax.plot(nc_direct.penetration, nc_direct.force, "x", label="analytical")
-
-        plt.show()
+        ax.legend()
+        plot_reporter.attach(fig, name="force_displacement")
 
 
     # %% TODO, eventually
@@ -140,7 +136,7 @@ def test_axissymmetric_sinewave_linear_interp():
 
 
 
-def test_axissymmetric_sinewave_rosso_krauth():
+def test_axissymmetric_sinewave_rosso_krauth(plot_reporter):
     n_radii = 400
     npx_front = 64  # Warning ! This needs to be reasonably high for the RK solvers to work !
 
@@ -247,20 +243,18 @@ def test_axissymmetric_sinewave_rosso_krauth():
 
     # %%
 
-    if False:
+    if plot_reporter.enabled:
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
-
         a = np.linspace(0.001, 2, 300)
         ax.plot(JKR.penetration(contact_radius=a, work_of_adhesion=local_w(a)), JKR.force(contact_radius=a, work_of_adhesion=local_w(a)), "-k")
         ax.plot(JKR.penetration(contact_radius=a, work_of_adhesion=w), JKR.force(contact_radius=a, work_of_adhesion=w), "--k")
-
         ax.plot(nc_direct.penetration, nc_direct.force, "o", label="analytical")
         ax.plot(nc_interp.penetration, nc_interp.force, "+", label="lin. interp")
         ax.plot(nc_rk_numpy.penetration, nc_rk_numpy.force, "x", label="rk_numpy")
         ax.plot(nc_rk_torch.penetration, nc_rk_torch.force, "--", label="rk_torch")
-
-        plt.show()
+        ax.legend()
+        plot_reporter.attach(fig, name="force_displacement")
 
     # %%
 
