@@ -17,9 +17,9 @@ classifiers = [
 requires-python = ">=3.10.0"
 dynamic = [ "version" ]
 dependencies = [
-    "Adhesion>=1.5.0",
+    "Adhesion>=0.93",
     "ContactMechanics>=1.8.1",
-    "NuMPI>=0.5.0",
+    "NuMPI>=0.12.0",
     "torch",
     "netCDF4",
     "numpy",
@@ -32,7 +32,6 @@ test = [
     "flake8<8",
     "pytest",
     "pytest-cov",
-    "pytest-flake8"
 ]
 
 [project.urls]
