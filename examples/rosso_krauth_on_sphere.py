@@ -25,7 +25,7 @@ import os
 
 import numpy as np
 from ContactMechanics.Tools.Logger import screen, Logger
-from CrackFront.IO.IO.NetCDF import NCStructuredGrid
+from CrackFront.IO.NetCDF import NCStructuredGrid
 from SurfaceTopography.Generation import fourier_synthesis
 from matplotlib import pyplot as plt
 

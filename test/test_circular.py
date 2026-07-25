@@ -22,7 +22,7 @@
 # SOFTWARE.
 #
 from Adhesion.ReferenceSolutions import JKR
-from CrackFront.IO.IO.NetCDF import NCStructuredGrid
+from CrackFront.IO.NetCDF import NCStructuredGrid
 
 from CrackFront.Optimization import trustregion_newton_cg
 from CrackFront.Circular import (

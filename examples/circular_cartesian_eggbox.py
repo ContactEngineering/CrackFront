@@ -27,7 +27,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
-from CrackFront.IO.IO.NetCDF import NCStructuredGrid
+from CrackFront.IO.NetCDF import NCStructuredGrid
 
 from CrackFront.Circular import  SphereCrackFrontPenetrationIntermediate, pol2cart, cart2pol
 from Adhesion.ReferenceSolutions import JKR

@@ -23,7 +23,7 @@
 #
 import numpy as np
 from ContactMechanics.Tools.Logger import Logger
-from CrackFront.IO.IO.NetCDF import NCStructuredGrid
+from CrackFront.IO.NetCDF import NCStructuredGrid
 
 from CrackFront.CircularEnergyReleaseRate import SphereCFPenetrationEnergyConstGcPiecewiseLinearField
 from CrackFront.Optimization.RossoKrauth import linear_interpolated_pinning_field_equaly_spaced

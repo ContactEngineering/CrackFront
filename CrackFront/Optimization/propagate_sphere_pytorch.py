@@ -26,9 +26,9 @@ import time
 import numpy as np
 # from ContactMechanics.Tools.Logger import Logger
 from Adhesion.ReferenceSolutions import JKR
-from CrackFront.IO.IO.NetCDF import NCStructuredGrid
+from CrackFront.IO.NetCDF import NCStructuredGrid
 import sys
-from CrackFront.IO.IO import load_npy, make_mpi_file_view
+from NuMPI.IO import mpi_open
 from NuMPI import MPI
 
 from CrackFront.Circular import RadiusTooLowError
@@ -60,9 +60,9 @@ class LinearInterpolatedPinningFieldUniformFromFile:
         self.filename = filename
         self.accelerator = accelerator # TODO: this is actually never used. I think I will leave the transfer to the accelerator to the rosso Krauth script
         self.data_device = data_device
-        self.file = make_mpi_file_view(filename, MPI.COMM_SELF, format="npy")
+        self.file = mpi_open(filename, MPI.COMM_SELF, format="npy")
 
-        Lx, L = self.file.nb_grid_pts
+        Lx, L = self.file.array_shape
         L = L // 2
 
         self.npx_front = L
@@ -127,8 +127,8 @@ class LinearInterpolatedPinningFieldUniformFromFile:
         self.subdomain = torch.tensor([colloc_min, colloc_max], device=self.data_device)
         n_subdomain = int(self.subdomain[1] - self.subdomain[0])
         self.subdomain_data = torch.from_numpy(
-            self.file.read([int(self.subdomain[0]), 0],
-                           (n_subdomain, self.npx_front * 2),
+            self.file.read(subdomain_locations=[int(self.subdomain[0]), 0],
+                           nb_subdomain_grid_pts=(n_subdomain, self.npx_front * 2),
                            ).reshape(n_subdomain, self.npx_front, 2)).to(device=self.data_device)
 
     @staticmethod

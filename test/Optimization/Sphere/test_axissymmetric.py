@@ -27,7 +27,7 @@ import pytest
 import torch
 from Adhesion.ReferenceSolutions import JKR
 from ContactMechanics.Tools.Logger import Logger
-from CrackFront.IO.IO.NetCDF import NCStructuredGrid
+from CrackFront.IO.NetCDF import NCStructuredGrid
 from SurfaceTopography import Topography
 
 from CrackFront.Circular import Interpolator
