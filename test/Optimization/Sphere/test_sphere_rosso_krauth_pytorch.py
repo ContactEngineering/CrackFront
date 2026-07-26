@@ -91,7 +91,7 @@ def test_JKR_curve():
 
 
 def test_restart():
-    params = dict(
+    slow_params = dict(
         # pixel_size_radial=0.1,
         n_pixels_front=512,
         rms=.5,
@@ -107,6 +107,24 @@ def test_restart():
         # n_pixels_fourier_interpolation=128,
         pixel_size=0.02,
         )
+
+    params = dict(
+        # pixel_size_radial=0.1,
+        n_pixels_front=128,
+        rms=.5,
+        max_penetration=1.,
+        penetration_increment=0.2,
+        shortcut_wavelength=0.32,
+        # randomness:
+        seed=0,
+        # numerics:
+        gtol=1e-8,
+        maxit=10000,
+        n_pixels=64,
+        # n_pixels_fourier_interpolation=128,
+        pixel_size=0.08,
+    )
+
     npx_front = params["n_pixels_front"]
     assert params["shortcut_wavelength"] > 2 * params["pixel_size"]
     params.update(dict(pixel_size_radial=params["shortcut_wavelength"] / 16))
