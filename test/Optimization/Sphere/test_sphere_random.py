@@ -273,7 +273,7 @@ def test_random_rosso_krauth(plot_reporter):
     if plot_reporter.enabled:
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
-        imax = np.argwhere(conv_data_RK[:, 0] == 1)[1] - 1
+        imax = np.argwhere(conv_data_RK[:, 0] == 1)[1, 0] - 1
         sl = slice(0, int(imax))
         ax.plot(conv_data_RK[sl, 0], conv_data_RK[sl, 1], label="torch")
         ax.plot(conv_data_np[sl, 0], conv_data_np[sl, 1], label="numpy")
@@ -284,7 +284,7 @@ def test_random_rosso_krauth(plot_reporter):
         plot_reporter.attach(fig, name="rosso_krauth_convergence")
 
     # first penetration
-    sl = slice(0, int(np.argwhere(conv_data_RK[:, 0] == 1)[1] - 1))
+    sl = slice(0, int(np.argwhere(conv_data_RK[:, 0] == 1)[1, 0]) - 1)
     np.testing.assert_allclose(conv_data_RK[sl, 1], conv_data_np[sl, 1], rtol=1e-7)
     # It is a bit strange that I needed to increase the rtol from 1e-7 to 1e-2
     # My<

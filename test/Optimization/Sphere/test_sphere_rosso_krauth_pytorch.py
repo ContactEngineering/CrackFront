@@ -91,23 +91,6 @@ def test_JKR_curve():
 
 
 def test_restart():
-    slow_params = dict(
-        # pixel_size_radial=0.1,
-        n_pixels_front=512,
-        rms=.5,
-        max_penetration=1.,
-        penetration_increment=0.2,
-        shortcut_wavelength=0.08,
-        # randomness:
-        seed=0,
-        # numerics:
-        gtol=1e-8,
-        maxit=10000,
-        n_pixels=256,
-        # n_pixels_fourier_interpolation=128,
-        pixel_size=0.02,
-        )
-
     params = dict(
         # pixel_size_radial=0.1,
         n_pixels_front=128,

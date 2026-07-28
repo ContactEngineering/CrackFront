@@ -165,14 +165,20 @@ class LinearInterpolatedPinningFieldUniformFromFile:
         value_below = values_and_slopes[:, 0]
         slope = values_and_slopes[:, 1]
 
+        kink_pos = self.kink_position(index_a_below)
+        if isinstance(a, np.ndarray):
+            a_rel = torch.from_numpy(np.ascontiguousarray(a - kink_pos))
+        else:
+            a_rel = a - torch.from_numpy(np.ascontiguousarray(kink_pos))
+
         if der == "0":
-            ret = value_below + slope * (a - self.kink_position(index_a_below))
+            ret = value_below + slope * a_rel
         elif der == "1":
             ret = slope
         elif der == "-1":
             ret = self.integral_values(index_a_below) \
-                         + value_below * (a - self.kink_position(index_a_below)) \
-                         + 0.5 * slope * (a -  self.kink_position(index_a_below)) ** 2
+                         + value_below * a_rel \
+                         + 0.5 * slope * a_rel ** 2
 
 
         if isinstance(a, np.ndarray):
