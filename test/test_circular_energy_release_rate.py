@@ -38,12 +38,11 @@ from Adhesion.ReferenceSolutions import JKR
     SphereCrackFrontERRPenetrationEnergy,
     SphereCrackFrontERRPenetrationEnergyConstGc
     ])
-def test_circular_front_vs_jkr(cfclass):
+def test_circular_front_vs_jkr(cfclass, plot_reporter):
     """
     assert we recover the JKR solution for an uniform distribution of
     work adhesion
     """
-    _plot = False
     n = 8
     w = 1 / np.pi
     Es = 3. / 4
@@ -58,18 +57,11 @@ def test_circular_front_vs_jkr(cfclass):
     radii = []
     a = np.ones(cf.npx) * JKR.contact_radius(penetration=penetrations[0])
 
-    if _plot:
-        import matplotlib.pyplot as plt
-        fig, ax = plt.subplots()
-        _a = np.linspace(0, 4)
-        ax.plot(JKR.penetration(_a), _a)
-        ax.axvline(penetrations[-1])
-        plt.pause(0.001)
-
     for penetration in penetrations:
+        cf.penetration = penetration
         sol = trustregion_newton_cg(
-            x0=a, gradient=lambda a: cf.gradient(a, penetration),
-            hessian_product=lambda a, p: cf.hessian_product(p, a, penetration),
+            x0=a, gradient=lambda a: cf.gradient(a),
+            hessian_product=lambda a, p: cf.hessian_product(p, a),
             trust_radius=0.1 * np.min(a),
             maxiter=3000,
             gtol=1e-11)
@@ -78,12 +70,17 @@ def test_circular_front_vs_jkr(cfclass):
         radii.append(contact_radius)
         assert abs(np.max(sol.x) - contact_radius) < 1e-10
         assert abs(np.min(sol.x) - contact_radius) < 1e-10
-        if _plot:
-            ax.plot(penetration, contact_radius, "+")
-            plt.pause(0.0011)
         assert abs(penetration - JKR.penetration(contact_radius, )) < 1e-10
-
         a = sol.x
+
+    if plot_reporter.enabled:
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots()
+        _a = np.linspace(0, 4)
+        ax.plot(JKR.penetration(_a), _a)
+        ax.axvline(penetrations[-1])
+        ax.plot(penetrations[:len(radii)], radii, "+")
+        plot_reporter.attach(fig, name="circular_front_vs_jkr")
 
 
 
@@ -95,7 +92,7 @@ def test_circular_front_vs_jkr(cfclass):
                                          #  discretisation !
                                          (128, 1),
                                          (128, 8)])
-def test_single_sinewave(penetration, n_rays, npx):
+def test_single_sinewave(penetration, n_rays, npx, plot_reporter):
     r"""
     For a sinusoidal work of adhesion distribution,
     the shape of the crack front can be solved by hand (using the fully
@@ -139,16 +136,17 @@ def test_single_sinewave(penetration, n_rays, npx):
     cf = SphereCrackFrontERRPenetrationLin(npx,
                                            w=w_landscape,
                                            dw=dw_landscape)
+    cf.penetration = penetration
     # initial guess:
     a = np.ones(npx) * JKR.contact_radius(penetration=penetration)
     sol = trustregion_newton_cg(
-        x0=a, gradient=lambda a: cf.gradient(a, penetration),
-        hessian_product=lambda a, p: cf.hessian_product(p, a, penetration),
+        x0=a, gradient=lambda a: cf.gradient(a),
+        hessian_product=lambda a, p: cf.hessian_product(p, a),
         trust_radius=0.25 * np.min(a),
         maxiter=3000,
         gtol=1e-11)
     assert sol.success
-    assert (abs(cf.gradient(sol.x, penetration)) < 1e-11).all()  #
+    assert (abs(cf.gradient(sol.x)) < 1e-11).all()  #
     radii_cf = sol.x
 
     # Reference
@@ -160,12 +158,13 @@ def test_single_sinewave(penetration, n_rays, npx):
 
     radii_lin_by_hand = da * np.cos(n_rays * cf.angles) + a0
 
-    if False:
+    if plot_reporter.enabled:
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
         ax.plot(radii_lin_by_hand, "o", label="by hand")
         ax.plot(radii_cf, "+", label="general model")
-        plt.show()
+        ax.legend()
+        plot_reporter.attach(fig, name="single_sinewave")
     np.testing.assert_allclose(radii_cf, radii_lin_by_hand)
 
 # TODO: Test that all three models converge together in the small delta w limit
@@ -175,7 +174,7 @@ def test_single_sinewave(penetration, n_rays, npx):
     SphereCrackFrontERRPenetrationFull,
     SphereCrackFrontERRPenetrationEnergy,
     SphereCrackFrontERRPenetrationEnergyConstGc])
-def test_hessian_product(cfclass):
+def test_hessian_product(cfclass, plot_reporter):
     penetration = 0
 
     w = 1 / np.pi
@@ -199,41 +198,35 @@ def test_hessian_product(cfclass):
                  w=w_landscape,
                  dw=dw_landscape)
 
+    cf.penetration = penetration
     a = np.ones(npx) * JKR.contact_radius(penetration=penetration)
     da = np.random.normal(size=npx) * np.mean(a) / 10
 
-    grad = cf.gradient(a, penetration)
-    if False:
+    grad = cf.gradient(a)
+    if plot_reporter.enabled:
         hs = np.array([1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5,
                        1e-6, 1e-7])
         rms_errors = []
         for h in hs:
-            grad_d = cf.gradient(a + h * da, penetration)
+            grad_d = cf.gradient(a + h * da)
             dgrad = grad_d - grad
-            dgrad_from_hess = cf.hessian_product(h * da, a, penetration)
+            dgrad_from_hess = cf.hessian_product(h * da, a)
             rms_errors.append(np.sqrt(np.mean((dgrad_from_hess - dgrad) ** 2)))
 
-        # Visualize the quadratic convergence of the taylor expansion
-        # What to expect:
-        # Taylor expansion: g(x + h ∆x) - g(x) = Hessian * h * ∆x + O(h^2)
-        # We should see quadratic convergence as long as h^2 > g epsmach,
-        # the precision with which we are able to determine ∆g.
-        # What is the precision with which the hessian product is made ?
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
-        ax.plot(hs, rms_errors / hs ** 2
-                , "+-")
+        ax.plot(hs, rms_errors / hs ** 2, "+-")
         ax.set_xscale("log")
         ax.set_yscale("log")
         ax.grid(True)
-        plt.show()
+        plot_reporter.attach(fig, name="hessian_product_convergence")
 
     hs = np.array([1e-2, 1e-3, 1e-4])
     rms_errors = []
     for h in hs:
-        grad_d = cf.gradient(a + h * da, penetration)
+        grad_d = cf.gradient(a + h * da)
         dgrad = grad_d - grad
-        dgrad_from_hess = cf.hessian_product(h * da, a, penetration)
+        dgrad_from_hess = cf.hessian_product(h * da, a)
         rms_errors.append(np.sqrt(np.mean((dgrad_from_hess - dgrad) ** 2)))
         rms_errors.append(
             np.sqrt(
@@ -259,8 +252,9 @@ def test_jkr_elastic_energy(cfclass):
 
     penetration = 1.
     contact_radius = 0.6
+    cf.penetration = penetration
     np.testing.assert_allclose(
-        cf.elastic_energy(np.ones(n) * contact_radius, penetration),
+        cf.elastic_energy(np.ones(n) * contact_radius),
         JKR.elastic_energy(contact_radius=contact_radius, penetration=penetration)
     )
 
@@ -298,8 +292,9 @@ def test_total_energy(cfclass):
                  dw_radius=lambda a, theta: w * 2 * np.pi / n, )
     penetration = 1.
     contact_radius = 0.6
+    cf.penetration = penetration
     np.testing.assert_allclose(
-        cf.energy(np.ones(n) * contact_radius, penetration),
+        cf.energy(np.ones(n) * contact_radius),
         - contact_radius ** 2 *w * np.pi
         + JKR.elastic_energy(contact_radius=contact_radius, penetration=penetration)
     )
@@ -309,7 +304,7 @@ def test_total_energy(cfclass):
 #def test_circular_front_vs_jkr(cfclass):
 @pytest.mark.parametrize("n",[8,9,127,128])
 
-def test_energy_vs_gradient(n):
+def test_energy_vs_gradient(n, plot_reporter):
     w = 1 / np.pi
     Es = 3. / 4
     cf = SphereCrackFrontERRPenetrationEnergy(n,
@@ -324,25 +319,28 @@ def test_energy_vs_gradient(n):
 
 
 
+    cf.penetration = penetration
     epsilons = np.logspace(-2,-8,10)
-    dUel = np.array([cf.energy(a+eps * da,penetration) - cf.energy(a,penetration) for eps in epsilons])
+    dUel = np.array([cf.energy(a+eps * da) - cf.energy(a) for eps in epsilons])
 
-    grad_da = np.vdot(cf.gradient(a,penetration),da)
+    grad_da = np.vdot(cf.gradient(a),da)
 
 
     rel_error = abs(dUel/(grad_da * epsilons)- 1)
 
-    if False:
+    if plot_reporter.enabled:
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
-        ax.loglog(epsilons, rel_error,".")
-        plt.show(block=True)
+        ax.loglog(epsilons, rel_error, ".")
+        ax.set_xlabel("epsilon")
+        ax.set_ylabel("relative error")
+        plot_reporter.attach(fig, name="energy_vs_gradient")
 
     assert rel_error[-1] < 1e-4
     assert rel_error[-1] < 10 * rel_error[0] * epsilons[-1]/ epsilons[0]
 
 @pytest.mark.parametrize("n",[8,9,127,128])
-def test_energy_vs_gradient_sinewave(n):
+def test_energy_vs_gradient_sinewave(n, plot_reporter):
 
     w = 1 / np.pi
     Es = 3. / 4
@@ -356,17 +354,20 @@ def test_energy_vs_gradient_sinewave(n):
     penetration = JKR.penetration(contact_radius=0.6)
     # contact radius perturbation
     da =  np.sin(3 * angle)
+    cf.penetration = penetration
     epsilons = np.logspace(-3, -7,10)
-    dUel = np.array([cf.energy(a + eps * da, penetration) - cf.energy(a, penetration) for eps in epsilons])
+    dUel = np.array([cf.energy(a + eps * da) - cf.energy(a) for eps in epsilons])
 
-    grad_da = np.vdot(cf.gradient(a, penetration), da)
+    grad_da = np.vdot(cf.gradient(a), da)
     rel_error = abs(dUel / (grad_da * epsilons) - 1)
 
-    if True:
+    if plot_reporter.enabled:
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
         ax.loglog(epsilons, rel_error, ".")
-        plt.show(block=True)
+        ax.set_xlabel("epsilon")
+        ax.set_ylabel("relative error")
+        plot_reporter.attach(fig, name="energy_vs_gradient_sinewave")
 
     assert rel_error[-1] < 1e-4
     assert rel_error[-1] < 10 * rel_error[0] * epsilons[-1] / epsilons[0]

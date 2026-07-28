@@ -2,7 +2,7 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 import time
-from NuMPI.IO.NetCDF import NCStructuredGrid
+from CrackFront.IO.NetCDF import NCStructuredGrid
 
 import sys, os
 sys.path.insert(0, os.path.abspath("../")) # Use local code and not the one in the singularity image

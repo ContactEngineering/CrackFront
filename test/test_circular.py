@@ -22,7 +22,7 @@
 # SOFTWARE.
 #
 from Adhesion.ReferenceSolutions import JKR
-from NuMPI.IO.NetCDF import NCStructuredGrid
+from CrackFront.IO.NetCDF import NCStructuredGrid
 
 from CrackFront.Optimization import trustregion_newton_cg
 from CrackFront.Circular import (
@@ -38,12 +38,11 @@ import pytest
                                      SphereCrackFrontPenetrationFull,
                                      SphereCrackFrontPenetrationIntermediate,
                                      SphereCrackFrontPenetrationLin])
-def test_circular_front_vs_jkr(cfclass):
+def test_circular_front_vs_jkr(cfclass, plot_reporter):
     """
     assert we recover the JKR solution for an uniform distribution of
     work adhesion
     """
-    _plot = False
     n = 8
     w = 1 / np.pi
     Es = 3. / 4
@@ -58,14 +57,6 @@ def test_circular_front_vs_jkr(cfclass):
     radii = []
     a = np.ones(cf.npx) * JKR.contact_radius(penetration=penetrations[0])
 
-    if _plot:
-        import matplotlib.pyplot as plt
-        fig, ax = plt.subplots()
-        _a = np.linspace(0, 4)
-        ax.plot(JKR.penetration(_a), _a)
-        ax.axvline(penetrations[-1])
-        plt.pause(0.001)
-
     for penetration in penetrations:
         sol = trustregion_newton_cg(
             x0=a, gradient=lambda a: cf.gradient(a, penetration),
@@ -78,12 +69,17 @@ def test_circular_front_vs_jkr(cfclass):
         radii.append(contact_radius)
         assert abs(np.max(sol.x) - contact_radius) < 1e-10
         assert abs(np.min(sol.x) - contact_radius) < 1e-10
-        if _plot:
-            ax.plot(penetration, contact_radius, "+")
-            plt.pause(0.00011)
         assert abs(penetration - JKR.penetration(contact_radius, )) < 1e-10
-
         a = sol.x
+
+    if plot_reporter.enabled:
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots()
+        _a = np.linspace(0, 4)
+        ax.plot(JKR.penetration(_a), _a)
+        ax.axvline(penetrations[-1])
+        ax.plot(penetrations[:len(radii)], radii, "+")
+        plot_reporter.attach(fig, name="circular_front_vs_jkr")
 
 
 @pytest.mark.parametrize("penetration", [-0.4, 1.])
@@ -94,7 +90,7 @@ def test_circular_front_vs_jkr(cfclass):
                                          #  discretisation !
                                          (128, 1),
                                          (128, 8)])
-def test_single_sinewave(penetration, n_rays, npx):
+def test_single_sinewave(penetration, n_rays, npx, plot_reporter):
     r"""
     For a sinusoidal stress intensity factor fluctuation,
     the shape of the crack front can be solved by hand (using the fully
@@ -161,12 +157,13 @@ def test_single_sinewave(penetration, n_rays, npx):
             + JKR.stress_intensity_factor(a0, penetration) * n_rays / (2 * a0)
     ) * np.cos(n_rays * cf.angles) + a0
 
-    if False:
+    if plot_reporter.enabled:
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
         ax.plot(radii_lin_by_hand, "o", label="by hand")
         ax.plot(radii_cf, "+", label="general model")
-        plt.show()
+        ax.legend()
+        plot_reporter.attach(fig, name="single_sinewave")
     np.testing.assert_allclose(radii_cf, radii_lin_by_hand)
 
 
@@ -179,7 +176,7 @@ def test_elastic_hessp_vs_brute_force_elastic_hessian():
 
 
 @pytest.mark.parametrize("penetration", [-0.4, 1.])
-def test_converges_to_linear(penetration):
+def test_converges_to_linear(penetration, plot_reporter):
     r"""
     asserts the less linearized model converges to the linearized one as the
     amplitude of sif fluctuations decrease.
@@ -245,7 +242,7 @@ def test_converges_to_linear(penetration):
     # verify error has approximately linearity in dK
     assert rel_errors[-1] / rel_errors[0] < 10 * dKs[-1] / dKs[0]
 
-    if False:
+    if plot_reporter.enabled:
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
         ax.plot(dKs, np.array(errors) / np.array(dKs))
@@ -255,7 +252,7 @@ def test_converges_to_linear(penetration):
         ax.set_ylim(1e-4, 1)
         ax.set_aspect(1)
         ax.grid()
-        plt.show()
+        plot_reporter.attach(fig, name="converges_to_linear")
 
         # the linear approximation has errors in the absolute value of order
         # da**2
@@ -334,7 +331,7 @@ def test_hessp_and_hessian_equivalent(cfclass):
     np.testing.assert_allclose(hessp, bruteforce)
 
 
-def test_hessian_product(plot=False):
+def test_hessian_product(plot_reporter):
 
     penetration = 0
 
@@ -361,7 +358,7 @@ def test_hessian_product(plot=False):
 
     grad = cf.gradient(a, penetration)
 
-    if plot:
+    if plot_reporter.enabled:
         hs = np.array([1, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5,
                        1e-6, 1e-7])
         rms_errors = []
@@ -371,20 +368,13 @@ def test_hessian_product(plot=False):
             dgrad_from_hess = cf.hessian_product(h * da, a, penetration)
             rms_errors.append(np.sqrt(np.mean((dgrad_from_hess - dgrad) ** 2)))
 
-        # Visualize the quadratic convergence of the taylor expansion
-        # What to expect:
-        # Taylor expansion: g(x + h ∆x) - g(x) = Hessian * h * ∆x + O(h^2)
-        # We should see quadratic convergence as long as h^2 > g epsmach,
-        # the precision with which we are able to determine ∆g.
-        # What is the precision with which the hessian product is made ?
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
-        ax.plot(hs, rms_errors / hs ** 2
-            , "+-")
+        ax.plot(hs, rms_errors / hs ** 2, "+-")
         ax.set_xscale("log")
         ax.set_yscale("log")
         ax.grid(True)
-        plt.show()
+        plot_reporter.attach(fig, name="hessian_product_convergence")
 
     hs = np.array([1e-2, 1e-3, 1e-4])
     rms_errors = []

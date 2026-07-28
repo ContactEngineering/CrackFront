@@ -23,7 +23,7 @@
 #
 import numpy as np
 from ContactMechanics.Tools.Logger import Logger
-from NuMPI.IO.NetCDF import NCStructuredGrid
+from CrackFront.IO.NetCDF import NCStructuredGrid
 
 from CrackFront.CircularEnergyReleaseRate import SphereCFPenetrationEnergyConstGcPiecewiseLinearField
 from CrackFront.Optimization.RossoKrauth import linear_interpolated_pinning_field_equaly_spaced
@@ -58,7 +58,8 @@ def test_JKR_single():
     a = np.ones(npx_front) * 0.1
 
     penetration = 0.5
-    sol = cf.rosso_krauth(a, penetration, gtol=1e-10, maxit=1000, direction=1, logger=Logger("RK.log", outevery=1))
+    cf.penetration = penetration
+    sol = cf.rosso_krauth(a, gtol=1e-10, maxit=1000, direction=1, logger=Logger("RK.log", outevery=1))
     assert sol.success
     np.testing.assert_allclose(sol.x, JKR.contact_radius(penetration=penetration))
 

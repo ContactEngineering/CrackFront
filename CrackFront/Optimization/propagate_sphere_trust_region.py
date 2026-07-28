@@ -24,7 +24,7 @@
 import sys
 
 import numpy as np
-from NuMPI.IO.NetCDF import NCStructuredGrid
+from CrackFront.IO.NetCDF import NCStructuredGrid
 
 from CrackFront.Circular import RadiusTooLowError
 from CrackFront.Optimization import trustregion_newton_cg
@@ -93,12 +93,11 @@ def simulate_crack_front(
     try:
         for penetration in penetrations:
             print(f"penetration: {penetration}")
+            cf.penetration = penetration
             try:
                 sol = trustregion_newton_cg(
-                    x0=a, gradient=lambda radius: cf.gradient(radius, penetration),
-                    hessian_product=lambda a, p: cf.hessian_product(p,
-                                                                    radius=a,
-                                                                    penetration=penetration),
+                    x0=a, gradient=lambda radius: cf.gradient(radius),
+                    hessian_product=lambda a, p: cf.hessian_product(p, radius=a),
                     trust_radius_from_x=trust_radius_from_x,
                     maxiter=1000000,
                     gtol=gtol,  # he has issues to reach the gtol at small values of a
@@ -111,7 +110,7 @@ def simulate_crack_front(
             assert sol.success
             print("nit, njev: {}, {}".format(sol.nit, sol.njev))
             a = sol.x
-            cf.dump(nc_CF[j], penetration, a, dump_fields)
+            cf.dump(nc_CF[j], a, dump_fields)
             j = j + 1
 
             nc_CF.sync()

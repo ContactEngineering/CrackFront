@@ -32,7 +32,7 @@ from SurfaceTopography import Topography
 
 from PythonBib.TopographyGeneration import make_topography_from_function
 
-from NuMPI.IO.NetCDF import NCStructuredGrid
+from CrackFront.IO.NetCDF import NCStructuredGrid
 from NuMPI import MPI
 import time
 import os, shutil 

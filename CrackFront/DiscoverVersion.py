@@ -34,7 +34,7 @@ def get_version_from_git():
     """
     Discover version from git repository.
     """
-    if not os.path.exists('.git'):
+    if not os.path.exists(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + '/.git'):
         raise CannotDiscoverVersion('.git subdirectory does not exist.')
 
     try:

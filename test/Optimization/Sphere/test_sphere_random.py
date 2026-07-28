@@ -27,7 +27,7 @@ import pytest
 import torch
 from Adhesion.ReferenceSolutions import JKR
 from ContactMechanics.Tools.Logger import Logger
-from NuMPI.IO.NetCDF import NCStructuredGrid
+from CrackFront.IO.NetCDF import NCStructuredGrid
 from SurfaceTopography import Topography
 from SurfaceTopography.Generation import fourier_synthesis
 
@@ -47,7 +47,7 @@ from CrackFront.Optimization.propagate_sphere_trust_region import penetrations_g
 from CrackFront.CircularEnergyReleaseRate import Es, w, R, maugis_K, generate_random_work_of_adhesion
 
 
-def test_random_linear_interp():
+def test_random_linear_interp(plot_reporter):
     params = dict(
         # pixel_size_radial=0.1,
         n_pixels_front=512,
@@ -129,16 +129,15 @@ def test_random_linear_interp():
     nc_interp = NCStructuredGrid("trust_lin_interp.nc")
     nc_direct = NCStructuredGrid("trust_direct.nc")
 
-    if False:
+    if plot_reporter.enabled:
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
-
         a = np.linspace(0.001, 2, 300)
         ax.plot(JKR.penetration(contact_radius=a, work_of_adhesion=w), JKR.force(contact_radius=a, work_of_adhesion=w), "--k")
         ax.plot(nc_interp.penetration, nc_interp.force, "+", label="lin. interp")
         ax.plot(nc_direct.penetration, nc_direct.force, "x", label="analytical")
-
-        plt.show()
+        ax.legend()
+        plot_reporter.attach(fig, name="force_displacement")
 
     np.testing.assert_allclose(nc_interp.penetration, nc_direct.penetration)
 
@@ -147,7 +146,7 @@ def test_random_linear_interp():
     np.testing.assert_allclose(nc_interp.mean_radius, nc_direct.mean_radius, rtol=1e-2)
 
 
-def test_random_rosso_krauth():
+def test_random_rosso_krauth(plot_reporter):
     torch.set_default_dtype(torch.float64)
 
     params = dict(
@@ -271,22 +270,21 @@ def test_random_rosso_krauth():
     conv_data_np = np.loadtxt("RK_numpy.log")
 
 
-    if True:
+    if plot_reporter.enabled:
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
-        imax = np.argwhere(conv_data_RK[:, 0] == 1)[1] - 1
+        imax = np.argwhere(conv_data_RK[:, 0] == 1)[1, 0] - 1
         sl = slice(0, int(imax))
         ax.plot(conv_data_RK[sl, 0], conv_data_RK[sl, 1], label="torch")
         ax.plot(conv_data_np[sl, 0], conv_data_np[sl, 1], label="numpy")
         ax.plot(conv_data_np[sl, 0], abs(conv_data_RK[sl, 1] - conv_data_np[sl, 1]), label="difference")
         ax.legend()
-
         ax.set_yscale("log")
         ax.set_ylabel("max(|grad|)")
-        plt.show(block=True)
+        plot_reporter.attach(fig, name="rosso_krauth_convergence")
 
     # first penetration
-    sl = slice(0, int(np.argwhere(conv_data_RK[:, 0] == 1)[1] - 1))
+    sl = slice(0, int(np.argwhere(conv_data_RK[:, 0] == 1)[1, 0]) - 1)
     np.testing.assert_allclose(conv_data_RK[sl, 1], conv_data_np[sl, 1], rtol=1e-7)
     # It is a bit strange that I needed to increase the rtol from 1e-7 to 1e-2
     # My<
